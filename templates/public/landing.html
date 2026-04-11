@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FarmLink Intelligence — Know your farmer. Trust your harvest.</title>
+  <meta name="description" content="Sensor-verified quality scores and harvest forecasts connecting Cameroonian smallholder farmers directly to buyers." />
+  <link rel="stylesheet" href="/static/css/landing.css" />
+</head>
+<body>
+
+  <!-- =============================================
+       NAVIGATION
+  ============================================== -->
+  <header class="site-header">
+    <nav class="nav container" aria-label="Main navigation">
+      <a href="/" class="nav__logo" aria-label="FarmLink Intelligence home">
+        <span class="nav__logo-mark" aria-hidden="true">FL</span>
+        FarmLink Intelligence
+      </a>
+
+      <!-- CSS-only mobile toggle using checkbox hack -->
+      <input type="checkbox" id="nav-toggle" class="nav__toggle-input" aria-hidden="true" />
+
+      <ul class="nav__links" role="list">
+        <li><a href="how-it-works.html" class="nav__link">How it works</a></li>
+        <li><a href="#marketplace" class="nav__link">Marketplace</a></li>
+        <li><a href="#about" class="nav__link">About us</a></li>
+      </ul>
+
+      <div class="nav__actions">
+        <a href="/login" class="btn btn--ghost">Log in</a>
+        <a href="/register" class="btn btn--solid">Register</a>
+      </div>
+
+      <!-- Hamburger label — activates the checkbox -->
+      <label for="nav-toggle" class="nav__hamburger" aria-label="Toggle navigation">
+        <span class="nav__hamburger-bar"></span>
+        <span class="nav__hamburger-bar"></span>
+        <span class="nav__hamburger-bar"></span>
+      </label>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- =============================================
+         HERO SECTION
+    ============================================== -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero__bg-pattern" aria-hidden="true"></div>
+      <div class="container hero__inner">
+        <div class="hero__content">
+          <span class="pill pill--outline">IoT-verified produce marketplace — Cameroon</span>
+          <h1 class="hero__heading" id="hero-heading">
+            Know your farmer.<br />
+            <em class="hero__heading-accent">Trust your harvest.</em>
+          </h1>
+          <p class="hero__description">
+            Sensor-verified quality scores and harvest forecasts connecting
+            Cameroonian smallholder farmers directly to buyers.
+          </p>
+          <div class="hero__cta-row">
+            <a href="/register?role=farmer" class="btn btn--primary btn--lg">
+              I am a farmer — join free
+            </a>
+            <a href="#marketplace" class="btn btn--secondary btn--lg">
+              Browse the marketplace
+            </a>
+          </div>
+        </div>
+
+        <div class="hero__visual" aria-hidden="true">
+          <div class="hero__visual-card hero__visual-card--main">
+            <div class="hero__visual-icon">🌱</div>
+            <div class="hero__visual-label">Quality Score</div>
+            <div class="hero__visual-score">84</div>
+            <div class="hero__visual-bar">
+              <div class="hero__visual-bar-fill" style="--fill: 84%"></div>
+            </div>
+          </div>
+          <div class="hero__visual-card hero__visual-card--sensor">
+            <div class="hero__sensor-row">
+              <span class="sensor-dot sensor-dot--live"></span>
+              <span class="hero__sensor-label">NODE-003 · Live</span>
+            </div>
+            <div class="hero__sensor-grid">
+              <div class="sensor-stat">
+                <span class="sensor-stat__icon">💧</span>
+                <span class="sensor-stat__val">72%</span>
+                <span class="sensor-stat__key">Moisture</span>
+              </div>
+              <div class="sensor-stat">
+                <span class="sensor-stat__icon">🌡</span>
+                <span class="sensor-stat__val">26°C</span>
+                <span class="sensor-stat__key">Temp</span>
+              </div>
+              <div class="sensor-stat">
+                <span class="sensor-stat__icon">☁️</span>
+                <span class="sensor-stat__val">68%</span>
+                <span class="sensor-stat__key">Humidity</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero__visual-card hero__visual-card--forecast">
+            <span class="pill pill--amber">🗓 Harvest forecast</span>
+            <p class="hero__forecast-text">Ready in <strong>14 days</strong></p>
+            <span class="hero__forecast-confidence">Confidence: 91%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decorative scroll hint -->
+      <div class="hero__scroll" aria-hidden="true">
+        <span class="hero__scroll-line"></span>
+      </div>
+    </section>
+
+    <!-- =============================================
+         FEATURES — THREE PROBLEMS
+    ============================================== -->
+    <section class="features" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Why FarmLink</span>
+          <h2 class="section-heading" id="features-heading">Three problems. One platform.</h2>
+          <p class="section-subtext">Built specifically for Cameroon's agricultural market.</p>
+        </div>
+
+        <div class="features__grid">
+
+          <article class="feature-card" aria-label="IoT quality score feature">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <h3 class="feature-card__heading">IoT quality score</h3>
+            <p class="feature-card__text">Sensor-measured, not farmer-typed. Every listing verified by hardware — quality you can trust, data you can trace.</p>
+            <div class="feature-card__tag">Cannot be faked</div>
+          </article>
+
+          <article class="feature-card feature-card--accent" aria-label="Harvest forecast feature">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <h3 class="feature-card__heading">Harvest forecast</h3>
+            <p class="feature-card__text">Know when produce is ready before it's even listed. Plan procurement weeks ahead with AI-generated forecasts.</p>
+            <div class="feature-card__tag">28-day prediction window</div>
+          </article>
+
+          <article class="feature-card" aria-label="Trust score feature">
+            <div class="feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <h3 class="feature-card__heading">Trust score</h3>
+            <p class="feature-card__text">Farmer reputation built from real transactions, delivery history, and buyer ratings. Accountability at every step.</p>
+            <div class="feature-card__tag">Real transaction history</div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         HOW IT WORKS — FOUR STEPS
+    ============================================== -->
+    <section class="pipeline" aria-labelledby="pipeline-heading">
+      <div class="container">
+        <div class="section-header section-header--center">
+          <span class="section-label">How it works</span>
+          <h2 class="section-heading" id="pipeline-heading">From sensor to sale in four steps.</h2>
+          <p class="section-subtext">A simple, automated pipeline for farmers and buyers alike.</p>
+        </div>
+
+        <ol class="pipeline__steps" role="list">
+
+          <li class="pipeline__step">
+            <div class="pipeline__step-num" aria-label="Step 1">1</div>
+            <div class="pipeline__step-connector" aria-hidden="true"></div>
+            <div class="pipeline__step-content">
+              <h3 class="pipeline__step-heading">Farmer registers &amp; installs sensor</h3>
+              <p class="pipeline__step-text">Farm profile created. IoT node begins reading soil and weather data. No manual monitoring needed after setup.</p>
+            </div>
+          </li>
+
+          <li class="pipeline__step">
+            <div class="pipeline__step-num" aria-label="Step 2">2</div>
+            <div class="pipeline__step-connector" aria-hidden="true"></div>
+            <div class="pipeline__step-content">
+              <h3 class="pipeline__step-heading">System scores quality automatically</h3>
+              <p class="pipeline__step-text">Every 30 minutes, a quality score is computed from live sensor data — soil moisture, temperature, humidity, light, and rain.</p>
+            </div>
+          </li>
+
+          <li class="pipeline__step">
+            <div class="pipeline__step-num" aria-label="Step 3">3</div>
+            <div class="pipeline__step-connector" aria-hidden="true"></div>
+            <div class="pipeline__step-content">
+              <h3 class="pipeline__step-heading">Harvest forecast is generated</h3>
+              <p class="pipeline__step-text">After 28 days of data, the system predicts the harvest window with a confidence percentage and links it to the listing.</p>
+            </div>
+          </li>
+
+          <li class="pipeline__step">
+            <div class="pipeline__step-num" aria-label="Step 4">4</div>
+            <div class="pipeline__step-content">
+              <h3 class="pipeline__step-heading">Buyers receive a pre-order alert</h3>
+              <p class="pipeline__step-text">Registered buyers are notified before the produce even hits the market — sorted by their crop, region, and quality preferences.</p>
+            </div>
+          </li>
+
+        </ol>
+
+        <div class="pipeline__cta">
+          <a href="how-it-works.html" class="btn btn--outline">
+            See the full pipeline explained →
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         AUDIENCE — FARMER OR BUYER
+    ============================================== -->
+    <section class="audience" aria-labelledby="audience-heading">
+      <div class="container">
+        <div class="section-header section-header--center">
+          <span class="section-label">For both sides of the market</span>
+          <h2 class="section-heading" id="audience-heading">Are you a farmer or a buyer?</h2>
+        </div>
+
+        <div class="audience__grid">
+
+          <article class="audience-card audience-card--farmer" aria-label="For farmers">
+            <div class="audience-card__header">
+              <span class="pill pill--green">For farmers</span>
+              <div class="audience-card__icon" aria-hidden="true">🌾</div>
+            </div>
+            <h3 class="audience-card__heading">Reach buyers directly</h3>
+            <p class="audience-card__desc">No more middlemen. List sensor-verified produce, earn your trust score, get paid fairly.</p>
+            <ul class="audience-card__list" role="list">
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Quality is measured — not just claimed
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Harvest forecasts are generated for you
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Buyers come to you before harvest
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                No middlemen taking your margin
+              </li>
+            </ul>
+            <a href="/register?role=farmer" class="btn btn--primary audience-card__btn">
+              Join as a farmer ↗
+            </a>
+          </article>
+
+          <article class="audience-card audience-card--buyer" aria-label="For buyers">
+            <div class="audience-card__header">
+              <span class="pill pill--blue">For buyers</span>
+              <div class="audience-card__icon" aria-hidden="true">🛒</div>
+            </div>
+            <h3 class="audience-card__heading">Buy with confidence</h3>
+            <p class="audience-card__desc">Filter by quality score and trust score. Get notified before harvest. Plan procurement ahead.</p>
+            <ul class="audience-card__list" role="list">
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Filter by verified quality &amp; trust score
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Get notified before produce hits market
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Plan procurement weeks in advance
+              </li>
+              <li class="audience-card__list-item">
+                <span class="list-check" aria-hidden="true">✓</span>
+                Contact farmers directly — no intermediary
+              </li>
+            </ul>
+            <a href="#marketplace" class="btn btn--secondary audience-card__btn">
+              Browse produce ↗
+            </a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         TRUST STRIP — STATS
+    ============================================== -->
+    <section class="trust-strip" aria-label="Platform statistics">
+      <div class="container">
+        <ul class="trust-strip__list" role="list">
+          <li class="trust-strip__item">
+            <span class="trust-strip__num">30 min</span>
+            <span class="trust-strip__label">Quality score refresh rate</span>
+          </li>
+          <li class="trust-strip__divider" aria-hidden="true"></li>
+          <li class="trust-strip__item">
+            <span class="trust-strip__num">28 days</span>
+            <span class="trust-strip__label">To first harvest forecast</span>
+          </li>
+          <li class="trust-strip__divider" aria-hidden="true"></li>
+          <li class="trust-strip__item">
+            <span class="trust-strip__num">10</span>
+            <span class="trust-strip__label">Cameroon regions covered</span>
+          </li>
+          <li class="trust-strip__divider" aria-hidden="true"></li>
+          <li class="trust-strip__item">
+            <span class="trust-strip__num">0</span>
+            <span class="trust-strip__label">Middlemen in the chain</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =============================================
+       FOOTER
+  ============================================== -->
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <div class="site-footer__brand">
+        <span class="nav__logo">
+          <span class="nav__logo-mark" aria-hidden="true">FL</span>
+          FarmLink Intelligence
+        </span>
+        <p class="site-footer__tagline">IoT-verified smart agricultural marketplace for Cameroonian smallholder farmers.</p>
+        <p class="site-footer__credit">The ICT University · Department of Computer Science · Spring 2026</p>
+      </div>
+      <nav class="site-footer__nav" aria-label="Footer navigation">
+        <ul role="list">
+          <li><a href="how-it-works.html">How it works</a></li>
+          <li><a href="#marketplace">Marketplace</a></li>
+          <li><a href="#about">About us</a></li>
+        </ul>
+        <ul role="list">
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/contact">Contact</a></li>
+          <li><a href="/login">Log in</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="site-footer__bottom">
+      <div class="container">
+        <p>© 2026 FarmLink Intelligence. Built at The ICT University.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
