@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+
+<div class="error-page-wrapper">
+
+  <!-- Minimal nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="{{ url_for('public.landing') }}" class="nav-logo">
+        <div class="nav-logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/></svg>
+        </div>
+        <div class="nav-logo-text">
+          <span class="nav-logo-name">FarmLink Intelligence</span>
+          <span class="nav-logo-sub">IoT Smart Marketplace</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log in</a>
+        <a href="{{ url_for('public.landing') }}" class="btn-secondary">Go to homepage</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Error body -->
+  <div class="error-body" style="padding-top: calc(var(--nav-height) + var(--space-2xl));">
+    <div class="error-card error-card-404">
+      <div class="error-card-deco"></div>
+
+      <!-- Icon -->
+      <div class="error-icon-box error-icon-box-neutral">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="11" y1="8" x2="11" y2="14"/><line x1="11" y1="16" x2="11.01" y2="16"/>
+        </svg>
+      </div>
+
+      <!-- Code + title -->
+      <div class="error-code error-code-404">404</div>
+      <h1 class="error-title">Page not found</h1>
+      <p class="error-desc">
+        The page you are looking for does not exist or may have been moved.
+        It could be a listing that was delisted, or a link that is no longer valid.
+      </p>
+
+      <!-- Suggestions -->
+      <div class="error-suggestions">
+        <a href="{{ url_for('public.landing') }}" class="error-suggestion">
+          <div class="error-suggestion-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="error-suggestion-text">
+            <div class="error-suggestion-title">Go to the homepage</div>
+            <div class="error-suggestion-sub">Return to the FarmLink landing page</div>
+          </div>
+          <div class="error-suggestion-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a href="{{ url_for('buyer.marketplace') }}" class="error-suggestion">
+          <div class="error-suggestion-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </div>
+          <div class="error-suggestion-text">
+            <div class="error-suggestion-title">Browse the marketplace</div>
+            <div class="error-suggestion-sub">See all active produce listings</div>
+          </div>
+          <div class="error-suggestion-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a href="{{ url_for('public.how_it_works') }}" class="error-suggestion">
+          <div class="error-suggestion-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="error-suggestion-text">
+            <div class="error-suggestion-title">How it works</div>
+            <div class="error-suggestion-sub">Learn about the FarmLink platform</div>
+          </div>
+          <div class="error-suggestion-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a href="javascript:history.back()" class="error-suggestion">
+          <div class="error-suggestion-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <div class="error-suggestion-text">
+            <div class="error-suggestion-title">Go back</div>
+            <div class="error-suggestion-sub">Return to the previous page</div>
+          </div>
+          <div class="error-suggestion-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+      </div>
+
+      <p class="error-meta">Error 404 &nbsp;·&nbsp; FarmLink Intelligence &nbsp;·&nbsp; The ICT University</p>
+    </div>
+  </div>
+
+</div><!-- /.error-page-wrapper -->
+</body>
+</html>
