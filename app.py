@@ -19,6 +19,11 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Please log in to access this page.'
 
+    # 👇 ADD THIS BLOCK RIGHT HERE
+    @login_manager.user_loader
+    def load_user(user_id):
+        return None
+
     from routes.public import public_bp
     from routes.auth import auth_bp
     app.register_blueprint(public_bp)
