@@ -1,493 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>How It Works — FarmLink Intelligence</title>
-  <meta name="description" content="FarmLink automates the entire supply chain — from planting to pre-order — using IoT sensors, quality scoring, and predictive forecasting." />
-  <link rel="stylesheet" href="/static/css/how-it-works.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
 </head>
 <body>
 
-  <!-- =============================================
-       NAVIGATION (same as landing)
-  ============================================== -->
-  <header class="site-header">
-    <nav class="nav container" aria-label="Main navigation">
-      <a href="landing.html" class="nav__logo" aria-label="FarmLink Intelligence home">
-        <span class="nav__logo-mark" aria-hidden="true">FL</span>
-        FarmLink Intelligence
-      </a>
-
-      <input type="checkbox" id="nav-toggle" class="nav__toggle-input" aria-hidden="true" />
-
-      <ul class="nav__links" role="list">
-        <li>
-          <a href="how-it-works.html" class="nav__link nav__link--active"
-             aria-current="page">How it works</a>
-        </li>
-        <li><a href="#marketplace" class="nav__link">Marketplace</a></li>
-        <li><a href="#about" class="nav__link">About us</a></li>
-      </ul>
-
-      <div class="nav__actions">
-        <a href="/login" class="btn btn--ghost">Log in</a>
-        <a href="/register" class="btn btn--solid">Register</a>
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="{{ url_for('public.landing') }}" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/></svg>
       </div>
-
-      <label for="nav-toggle" class="nav__hamburger" aria-label="Toggle navigation">
-        <span class="nav__hamburger-bar"></span>
-        <span class="nav__hamburger-bar"></span>
-        <span class="nav__hamburger-bar"></span>
-      </label>
-    </nav>
-  </header>
-
-  <main>
-
-    <!-- =============================================
-         HERO
-    ============================================== -->
-    <section class="hiw-hero" aria-labelledby="hiw-hero-heading">
-      <div class="hiw-hero__bg-accent" aria-hidden="true"></div>
-      <div class="container hiw-hero__inner">
-        <div class="hiw-hero__breadcrumb" aria-label="Breadcrumb">
-          <a href="landing.html">Home</a>
-          <span aria-hidden="true">›</span>
-          <span aria-current="page">How it works</span>
-        </div>
-        <span class="pill pill--outline">The full pipeline — explained</span>
-        <h1 class="hiw-hero__heading" id="hiw-hero-heading">
-          From a sensor on your farm<br />
-          <em class="hiw-hero__heading-accent">to a buyer's inbox.</em>
-        </h1>
-        <p class="hiw-hero__description">
-          FarmLink automates the entire supply chain — from planting to pre-order —
-          using IoT sensors, quality scoring, and predictive forecasting.
-        </p>
-
-        <!-- Summary pipeline bar -->
-        <div class="hiw-summary" role="list" aria-label="Four-step pipeline overview">
-          <div class="hiw-summary__step" role="listitem">
-            <div class="hiw-summary__num" aria-label="Step 1">1</div>
-            <div class="hiw-summary__label">Sensor install</div>
-          </div>
-          <div class="hiw-summary__arrow" aria-hidden="true">→</div>
-          <div class="hiw-summary__step" role="listitem">
-            <div class="hiw-summary__num" aria-label="Step 2">2</div>
-            <div class="hiw-summary__label">Quality score</div>
-          </div>
-          <div class="hiw-summary__arrow" aria-hidden="true">→</div>
-          <div class="hiw-summary__step" role="listitem">
-            <div class="hiw-summary__num" aria-label="Step 3">3</div>
-            <div class="hiw-summary__label">Harvest forecast</div>
-          </div>
-          <div class="hiw-summary__arrow" aria-hidden="true">→</div>
-          <div class="hiw-summary__step" role="listitem">
-            <div class="hiw-summary__num" aria-label="Step 4">4</div>
-            <div class="hiw-summary__label">Buyer alert</div>
-          </div>
-        </div>
+      <div class="nav-logo-text">
+        <span class="nav-logo-name">FarmLink Intelligence</span>
+        <span class="nav-logo-sub">IoT Smart Marketplace</span>
       </div>
-    </section>
-
-    <!-- =============================================
-         PIPELINE — FOUR DETAILED STEPS
-    ============================================== -->
-    <section class="pipeline-detail" aria-labelledby="pipeline-detail-heading">
-      <div class="container">
-        <div class="section-header">
-          <span class="section-label">The pipeline</span>
-          <h2 class="section-heading" id="pipeline-detail-heading">Four steps. Fully automatic.</h2>
-        </div>
-
-        <ol class="pipeline-detail__steps" role="list">
-
-          <!-- Step 1 -->
-          <li class="step-card" aria-label="Step 1: Farmer registers and installs IoT sensor node">
-            <div class="step-card__side">
-              <div class="step-card__num" aria-hidden="true">1</div>
-              <div class="step-card__line" aria-hidden="true"></div>
-            </div>
-            <div class="step-card__body">
-              <div class="step-card__header">
-                <h3 class="step-card__heading">Farmer registers &amp; installs the IoT sensor node</h3>
-                <div class="step-card__badges">
-                  <span class="pill pill--green">One-time setup</span>
-                </div>
-              </div>
-              <p class="step-card__text">
-                Creates a FarmLink account, registers their farm, and connects their Arduino sensor
-                node via the setup wizard. Data collection begins automatically — no further action needed.
-              </p>
-
-              <div class="step-card__detail-grid">
-                <div class="step-detail-block step-detail-block--green">
-                  <strong class="step-detail-block__label">Farmer does once</strong>
-                  <span class="step-detail-block__value">Register · Install node · Done</span>
-                </div>
-                <div class="step-detail-block">
-                  <strong class="step-detail-block__label">System does always</strong>
-                  <span class="step-detail-block__value">Logs soil, temperature, humidity, and light every 30 minutes</span>
-                </div>
-              </div>
-
-              <p class="step-card__annotation">
-                Covered in: Register → Add Farm → Farmer Dashboard
-              </p>
-            </div>
-          </li>
-
-          <!-- Step 2 -->
-          <li class="step-card" aria-label="Step 2: System computes a quality score every 30 minutes">
-            <div class="step-card__side">
-              <div class="step-card__num" aria-hidden="true">2</div>
-              <div class="step-card__line" aria-hidden="true"></div>
-            </div>
-            <div class="step-card__body">
-              <div class="step-card__header">
-                <h3 class="step-card__heading">System computes a quality score every 30 minutes</h3>
-                <div class="step-card__badges">
-                  <span class="pill pill--teal">IoT verified</span>
-                  <span class="pill pill--teal">Sensor-computed</span>
-                  <span class="pill pill--teal">Cannot be faked</span>
-                </div>
-              </div>
-              <p class="step-card__text">
-                The QualityScoreEngine reads each new sensor transmission and recalculates a score
-                from 0–100. This score is attached automatically to every listing the farmer creates.
-                No manual input is possible — quality is measured, not claimed.
-              </p>
-
-              <div class="step-card__detail-grid">
-                <div class="step-detail-block">
-                  <strong class="step-detail-block__label">Inputs</strong>
-                  <span class="step-detail-block__value">Soil · Temperature · Humidity · Light · Rain</span>
-                </div>
-                <div class="step-detail-block step-detail-block--teal">
-                  <strong class="step-detail-block__label">Output</strong>
-                  <span class="step-detail-block__value">Quality score 0–100 on every listing</span>
-                </div>
-              </div>
-
-              <!-- Visual score indicator -->
-              <div class="step-card__score-preview" aria-hidden="true">
-                <div class="score-preview__label">Live quality score example</div>
-                <div class="score-preview__bar-row">
-                  <span class="score-preview__metric">Soil moisture</span>
-                  <div class="score-preview__bar">
-                    <div class="score-preview__fill score-preview__fill--high" style="--w:78%"></div>
-                  </div>
-                  <span class="score-preview__badge score-preview__badge--good">Good</span>
-                </div>
-                <div class="score-preview__bar-row">
-                  <span class="score-preview__metric">Temperature</span>
-                  <div class="score-preview__bar">
-                    <div class="score-preview__fill score-preview__fill--mid" style="--w:62%"></div>
-                  </div>
-                  <span class="score-preview__badge score-preview__badge--fair">Fair</span>
-                </div>
-                <div class="score-preview__bar-row">
-                  <span class="score-preview__metric">Humidity</span>
-                  <div class="score-preview__bar">
-                    <div class="score-preview__fill score-preview__fill--high" style="--w:85%"></div>
-                  </div>
-                  <span class="score-preview__badge score-preview__badge--good">Good</span>
-                </div>
-              </div>
-
-              <p class="step-card__annotation">
-                Covered in: Farmer Dashboard → Listing Detail
-              </p>
-            </div>
-          </li>
-
-          <!-- Step 3 -->
-          <li class="step-card" aria-label="Step 3: After 28 days, a harvest forecast is generated">
-            <div class="step-card__side">
-              <div class="step-card__num" aria-hidden="true">3</div>
-              <div class="step-card__line" aria-hidden="true"></div>
-            </div>
-            <div class="step-card__body">
-              <div class="step-card__header">
-                <h3 class="step-card__heading">After 28 days — a harvest forecast is generated</h3>
-                <div class="step-card__badges">
-                  <span class="pill pill--amber">28-day trigger</span>
-                </div>
-              </div>
-              <p class="step-card__text">
-                Once 28 days of data exist, the HarvestForecast engine analyses trends to predict the
-                harvest window and confidence score. The forecast is linked to the farm's listings
-                automatically and a buyer alert dispatch is triggered.
-              </p>
-
-              <div class="step-card__detail-grid">
-                <div class="step-detail-block step-detail-block--amber">
-                  <strong class="step-detail-block__label">Trigger</strong>
-                  <span class="step-detail-block__value">28+ days of sensor data on any registered farm</span>
-                </div>
-                <div class="step-detail-block">
-                  <strong class="step-detail-block__label">Output</strong>
-                  <span class="step-detail-block__value">Harvest window · Confidence % · Buyer alert sent</span>
-                </div>
-              </div>
-
-              <!-- Forecast visual -->
-              <div class="step-card__forecast-preview" aria-hidden="true">
-                <div class="forecast-preview__header">
-                  <span class="forecast-preview__title">🗓 Harvest forecast — Tomatoes · Farm 1 Bafoussam</span>
-                  <span class="pill pill--amber">Confidence 91%</span>
-                </div>
-                <div class="forecast-preview__window">
-                  <div class="forecast-window__item">
-                    <span class="forecast-window__label">Window opens</span>
-                    <span class="forecast-window__val">May 14, 2026</span>
-                  </div>
-                  <div class="forecast-window__divider" aria-hidden="true">→</div>
-                  <div class="forecast-window__item">
-                    <span class="forecast-window__label">Window closes</span>
-                    <span class="forecast-window__val">May 22, 2026</span>
-                  </div>
-                  <div class="forecast-window__item forecast-window__item--days">
-                    <span class="forecast-window__label">Days remaining</span>
-                    <span class="forecast-window__val forecast-window__val--highlight">14</span>
-                  </div>
-                </div>
-              </div>
-
-              <p class="step-card__annotation">
-                Covered in: Forecast Detail page → HarvestForecast class
-              </p>
-            </div>
-          </li>
-
-          <!-- Step 4 -->
-          <li class="step-card step-card--last" aria-label="Step 4: Registered buyers receive a pre-order alert">
-            <div class="step-card__side">
-              <div class="step-card__num" aria-hidden="true">4</div>
-              <!-- No connecting line on last step -->
-            </div>
-            <div class="step-card__body">
-              <div class="step-card__header">
-                <h3 class="step-card__heading">Registered buyers receive a pre-order alert</h3>
-                <div class="step-card__badges">
-                  <span class="pill pill--blue">Automatic dispatch</span>
-                </div>
-              </div>
-              <p class="step-card__text">
-                The AlertDispatcher queries all BuyerAlert registrations matching crop type and region.
-                Matching buyers receive a notification with the forecast window and a link to the listing —
-                before produce is harvested.
-              </p>
-
-              <div class="step-card__detail-grid">
-                <div class="step-detail-block">
-                  <strong class="step-detail-block__label">Who gets alerted</strong>
-                  <span class="step-detail-block__value">Buyers matching: crop + region + quality minimum</span>
-                </div>
-                <div class="step-detail-block step-detail-block--blue">
-                  <strong class="step-detail-block__label">What they receive</strong>
-                  <span class="step-detail-block__value">Notification → Listing link → Contact farmer</span>
-                </div>
-              </div>
-
-              <p class="step-card__annotation">
-                Covered in: My Alerts → Buyer Notifications
-              </p>
-            </div>
-          </li>
-
-        </ol>
-      </div>
-    </section>
-
-    <!-- =============================================
-         FOR EACH ACTOR
-    ============================================== -->
-    <section class="actors" aria-labelledby="actors-heading">
-      <div class="container">
-        <div class="section-header section-header--center">
-          <span class="section-label">For each actor</span>
-          <h2 class="section-heading" id="actors-heading">What does FarmLink do for you?</h2>
-        </div>
-
-        <div class="actors__grid">
-
-          <article class="actor-card actor-card--farmer" aria-label="Benefits for farmers">
-            <div class="actor-card__icon" aria-hidden="true">🌾</div>
-            <h3 class="actor-card__heading">If you are a farmer</h3>
-            <ul class="actor-card__list" role="list">
-              <li class="actor-card__item">
-                <span class="actor-item-icon" aria-hidden="true">✓</span>
-                Quality is measured — not just claimed
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon" aria-hidden="true">✓</span>
-                Harvest forecasts are generated for you
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon" aria-hidden="true">✓</span>
-                Buyers come to you before harvest
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon" aria-hidden="true">✓</span>
-                Trust score grows with every transaction
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon" aria-hidden="true">✓</span>
-                No middlemen taking your margin
-              </li>
-            </ul>
-          </article>
-
-          <article class="actor-card actor-card--buyer" aria-label="Benefits for buyers">
-            <div class="actor-card__icon" aria-hidden="true">🛒</div>
-            <h3 class="actor-card__heading">If you are a buyer</h3>
-            <ul class="actor-card__list" role="list">
-              <li class="actor-card__item">
-                <span class="actor-item-icon actor-item-icon--blue" aria-hidden="true">✓</span>
-                Filter listings by verified quality score
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon actor-item-icon--blue" aria-hidden="true">✓</span>
-                See farmer trust scores before contacting
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon actor-item-icon--blue" aria-hidden="true">✓</span>
-                Get notified before produce hits the market
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon actor-item-icon--blue" aria-hidden="true">✓</span>
-                Plan procurement weeks in advance
-              </li>
-              <li class="actor-card__item">
-                <span class="actor-item-icon actor-item-icon--blue" aria-hidden="true">✓</span>
-                Contact farmers directly — no intermediary
-              </li>
-            </ul>
-          </article>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- =============================================
-         FAQ
-    ============================================== -->
-    <section class="faq" aria-labelledby="faq-heading">
-      <div class="container faq__inner">
-        <div class="section-header">
-          <span class="section-label">Common questions</span>
-          <h2 class="section-heading" id="faq-heading">Frequently asked questions</h2>
-        </div>
-
-        <div class="faq__list">
-
-          <details class="faq-item" open>
-            <summary class="faq-item__question">
-              Do I need to buy the IoT sensor node myself?
-              <span class="faq-item__toggle" aria-hidden="true">+</span>
-            </summary>
-            <p class="faq-item__answer">
-              The sensor node is provided as part of the FarmLink farmer onboarding kit and installed
-              by your team. It runs autonomously on solar power once set up.
-            </p>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-item__question">
-              What if my internet or sensor goes offline?
-              <span class="faq-item__toggle" aria-hidden="true">+</span>
-            </summary>
-            <p class="faq-item__answer">
-              The node has a local SD card buffer. It stores readings locally and syncs when
-              connection is restored. Buyers see a "last known" status on your listings.
-            </p>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-item__question">
-              Can I browse as a buyer without registering?
-              <span class="faq-item__toggle" aria-hidden="true">+</span>
-            </summary>
-            <p class="faq-item__answer">
-              Yes — you can browse listings and view details without an account. To register alerts
-              and contact farmers directly, you need a free buyer account.
-            </p>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-item__question">
-              How is the trust score calculated?
-              <span class="faq-item__toggle" aria-hidden="true">+</span>
-            </summary>
-            <p class="faq-item__answer">
-              Transaction completion (40%) + on-time delivery (30%) + buyer ratings (20%) + profile
-              completeness (10%). The trust score updates automatically after every transaction.
-            </p>
-          </details>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- =============================================
-         CTA BANNER
-    ============================================== -->
-    <section class="cta-banner" aria-label="Call to action">
-      <div class="container cta-banner__inner">
-        <div class="cta-banner__content">
-          <h2 class="cta-banner__heading">Ready to get started?</h2>
-          <p class="cta-banner__text">
-            Join as a farmer and install your sensor node, or browse as a buyer —
-            no registration required to explore the marketplace.
-          </p>
-        </div>
-        <div class="cta-banner__actions">
-          <a href="/register?role=farmer" class="btn btn--white btn--lg">
-            Join as a farmer ↗
-          </a>
-          <a href="/marketplace" class="btn btn--ghost-white btn--lg">
-            Browse marketplace ↗
-          </a>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- =============================================
-       FOOTER
-  ============================================== -->
-  <footer class="site-footer">
-    <div class="container site-footer__inner">
-      <div class="site-footer__brand">
-        <span class="nav__logo">
-          <span class="nav__logo-mark" aria-hidden="true">FL</span>
-          FarmLink Intelligence
-        </span>
-        <p class="site-footer__tagline">IoT-verified smart agricultural marketplace for Cameroonian smallholder farmers.</p>
-        <p class="site-footer__credit">The ICT University · Department of Computer Science · Spring 2026</p>
-      </div>
-      <nav class="site-footer__nav" aria-label="Footer navigation">
-        <ul role="list">
-          <li><a href="how-it-works.html" aria-current="page">How it works</a></li>
-          <li><a href="/marketplace">Marketplace</a></li>
-          <li><a href="/about">About us</a></li>
-        </ul>
-        <ul role="list">
-          <li><a href="/privacy">Privacy</a></li>
-          <li><a href="/contact">Contact</a></li>
-          <li><a href="/login">Log in</a></li>
-        </ul>
-      </nav>
+    </a>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('public.how_it_works') }}" class="nav-link" style="color:var(--green-mid);font-weight:500;">How it works</a></li>
+      <li><a href="{{ url_for('buyer.marketplace') }}" class="nav-link">Marketplace</a></li>
+      <li><a href="{{ url_for('public.about') }}" class="nav-link">About us</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log in</a>
+      <a href="{{ url_for('auth.register') }}" class="btn-primary">Join free</a>
     </div>
-    <div class="site-footer__bottom">
-      <div class="container">
-        <p>© 2026 FarmLink Intelligence. Built at The ICT University.</p>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section style="padding-top: calc(var(--nav-height) + var(--space-4xl)); padding-bottom: var(--space-3xl); background: var(--white);">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        The full process
+      </div>
+      <h1 class="section-title" style="font-size: clamp(1.75rem, 3.5vw, 2.5rem); letter-spacing: -0.02em;">
+        From soil sensor to sale — in four steps
+      </h1>
+      <p class="section-sub">
+        FarmLink Intelligence connects farms, data, and buyers into a single trusted pipeline.
+        Here is exactly how the platform works, from the first sensor reading to a buyer placing a pre-order.
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-md);flex-wrap:wrap;margin-top:var(--space-xl);">
+      <div class="badge badge-green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Readings every 30 minutes</div>
+      <div class="badge badge-teal"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>IoT-verified quality scores</div>
+      <div class="badge badge-amber"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>28-day harvest forecasting</div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">The pipeline</div>
+      <h2 class="section-title">Four steps. No guesswork.</h2>
+      <p class="section-sub">Every listing on FarmLink is backed by real sensor data moving through all four stages below.</p>
+    </div>
+    <div class="pipeline">
+
+      <!-- Step 1 -->
+      <div class="pipeline-step">
+        <div class="pipeline-step-left">
+          <div class="pipeline-num pipeline-num-green">1</div>
+        </div>
+        <div class="pipeline-step-right">
+          <div class="pipeline-eyebrow pipeline-eyebrow-green">IoT Hardware Layer</div>
+          <h3 class="pipeline-title">The sensor reads your farm</h3>
+          <p class="pipeline-desc">An Arduino Uno with a DHT22, soil moisture sensor, BH1750 light sensor, and DS3231 real-time clock is installed on each farm. Every 30 minutes, it captures five measurements and transmits them via ESP8266 Wi-Fi to Firebase in real time. The farmer does not do anything — the data flows automatically.</p>
+          <div class="pipeline-detail">
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Soil moisture</span><span class="pipeline-detail-value">0 – 100 %</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Temperature</span><span class="pipeline-detail-value">°C (DHT22)</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Humidity</span><span class="pipeline-detail-value">0 – 100 %</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Light intensity</span><span class="pipeline-detail-value">Lux (BH1750)</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Rainfall</span><span class="pipeline-detail-value">Yes / No</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Frequency</span><span class="pipeline-detail-value">Every 30 min</span></div>
+          </div>
+          <div class="pipeline-chips" style="margin-top:var(--space-md);">
+            <span class="badge badge-green">Arduino Uno</span>
+            <span class="badge badge-green">ESP8266 Wi-Fi</span>
+            <span class="badge badge-green">Firebase Realtime DB</span>
+            <span class="badge badge-green">DS3231 RTC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="pipeline-step">
+        <div class="pipeline-step-left">
+          <div class="pipeline-num pipeline-num-teal">2</div>
+        </div>
+        <div class="pipeline-step-right">
+          <div class="pipeline-eyebrow pipeline-eyebrow-teal">Quality Score Engine</div>
+          <h3 class="pipeline-title">The system computes a verified quality score</h3>
+          <p class="pipeline-desc">As sensor readings arrive, the FarmLink backend immediately calculates a quality score from 0 to 100. Each sensor reading is evaluated as <strong>Good</strong>, <strong>Fair</strong>, or <strong>Poor</strong> based on crop-specific thresholds. The combined score is attached to the farm and automatically carried into every produce listing. The farmer cannot edit it — which is exactly what makes buyers trust it.</p>
+          <div class="pipeline-detail">
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Score range</span><span class="pipeline-detail-value">0 – 100</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Ratings per sensor</span><span class="pipeline-detail-value">Good / Fair / Poor</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Update cycle</span><span class="pipeline-detail-value">Every reading</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Editable by farmer?</span><span class="pipeline-detail-value" style="color:#A32D2D;">Never</span></div>
+          </div>
+          <div class="pipeline-chips" style="margin-top:var(--space-md);">
+            <span class="badge badge-teal">QualityScoreEngine</span>
+            <span class="badge badge-teal">Flask + MySQL</span>
+            <span class="badge badge-teal">Auto-attached to listing</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="pipeline-step">
+        <div class="pipeline-step-left">
+          <div class="pipeline-num pipeline-num-amber">3</div>
+        </div>
+        <div class="pipeline-step-right">
+          <div class="pipeline-eyebrow pipeline-eyebrow-amber">Harvest Forecast Engine</div>
+          <h3 class="pipeline-title">The platform predicts the harvest window</h3>
+          <p class="pipeline-desc">After 28 days of readings, FarmLink has enough data to forecast when the crop will be ready. The HarvestForecast engine analyses moisture trends, temperature patterns, and data completeness to predict a harvest window with a confidence percentage. When a forecast is ready, the AlertDispatcher automatically notifies all buyers who registered an interest in that crop type, region, and quality level.</p>
+          <div class="pipeline-detail">
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Data required</span><span class="pipeline-detail-value">28+ days of readings</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Output</span><span class="pipeline-detail-value">Date window + %</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Buyers notified</span><span class="pipeline-detail-value">Auto — via alert</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Channels</span><span class="pipeline-detail-value">Web, email, SMS</span></div>
+          </div>
+          <div class="pipeline-chips" style="margin-top:var(--space-md);">
+            <span class="badge badge-amber">HarvestForecast</span>
+            <span class="badge badge-amber">AlertDispatcher</span>
+            <span class="badge badge-amber">BuyerAlert matching</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="pipeline-step">
+        <div class="pipeline-step-left">
+          <div class="pipeline-num pipeline-num-blue">4</div>
+        </div>
+        <div class="pipeline-step-right">
+          <div class="pipeline-eyebrow" style="color:var(--blue-mid);">Marketplace Layer</div>
+          <h3 class="pipeline-title">The buyer finds verified produce — before harvest</h3>
+          <p class="pipeline-desc">In the marketplace, every listing shows the IoT quality score, trust score, and — if available — the harvest forecast window. Buyers can filter by crop, region, quality threshold, trust level, and forecast availability. They can also register a standing alert, so they are notified automatically when a matching harvest approaches. This turns FarmLink into a <em>supply intelligence engine</em>, not just a listing board.</p>
+          <div class="pipeline-detail">
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Filter by</span><span class="pipeline-detail-value">Crop, region, quality</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Score shown</span><span class="pipeline-detail-value">Quality + Trust</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Pre-order alerts</span><span class="pipeline-detail-value">Yes — standing alerts</span></div>
+            <div class="pipeline-detail-item"><span class="pipeline-detail-label">Login required?</span><span class="pipeline-detail-value">No — browse freely</span></div>
+          </div>
+          <div class="pipeline-chips" style="margin-top:var(--space-md);">
+            <span class="badge badge-blue">ProduceListing</span>
+            <span class="badge badge-blue">TrustScoreEngine</span>
+            <span class="badge badge-blue">BuyerAlert</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHO IT'S FOR -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Who it's for</div>
+      <h2 class="section-title">Three roles. One platform.</h2>
+      <p class="section-sub">FarmLink serves farmers, buyers, and administrators — each with their own dedicated portal.</p>
+    </div>
+    <div class="actor-grid">
+      <div class="actor-card actor-card-farmer">
+        <div class="actor-icon actor-icon-farmer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-mid)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <div class="actor-role actor-role-farmer">Farmer portal</div>
+        <div class="actor-title">Smallholder Farmers</div>
+        <div class="actor-items">
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-green"></div>Register farms and link IoT sensor nodes</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-green"></div>View live sensor readings and quality scores</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-green"></div>Create and manage produce listings</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-green"></div>Track harvest forecast countdown</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-green"></div>Monitor trust score and delivery history</div>
+        </div>
+      </div>
+      <div class="actor-card actor-card-buyer">
+        <div class="actor-icon actor-icon-buyer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue-mid)" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
+        <div class="actor-role actor-role-buyer">Buyer portal</div>
+        <div class="actor-title">Wholesalers &amp; Traders</div>
+        <div class="actor-items">
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-blue"></div>Browse marketplace freely without an account</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-blue"></div>Filter by crop, region, quality, and trust score</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-blue"></div>See IoT-verified quality and trust breakdowns</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-blue"></div>Register standing alerts — get notified at harvest</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-blue"></div>Contact farmers directly through the listing</div>
+        </div>
+      </div>
+      <div class="actor-card actor-card-admin">
+        <div class="actor-icon actor-icon-admin"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="actor-role actor-role-admin">Admin panel</div>
+        <div class="actor-title">Platform Administrators</div>
+        <div class="actor-items">
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-gray"></div>Verify and approve farmer accounts</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-gray"></div>Monitor all sensor nodes across the country</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-gray"></div>Investigate offline nodes and alert farmers</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-gray"></div>Review trust score complaints and suspend accounts</div>
+          <div class="actor-item"><div class="actor-item-dot actor-item-dot-gray"></div>Generate regional agricultural reports</div>
+        </div>
       </div>
     </div>
-  </footer>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">Questions</div>
+      <h2 class="section-title">Common questions answered</h2>
+    </div>
+    <div class="faq-grid">
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>Do I need the IoT sensor to list produce as a farmer?</div>
+        <p class="faq-a">Yes. The quality score can only come from real sensor readings. Without a node linked to your farm, you cannot create a listing. The sensor is what makes your produce trustworthy to buyers.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>What happens when the sensor goes offline?</div>
+        <p class="faq-a">Every page that shows sensor data has a clear offline state — displaying the last known readings and time since last sync. Your listing remains visible but is flagged with a warning so buyers understand the context.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>Can a farmer change their quality score?</div>
+        <p class="faq-a">No. The quality score is read-only and labelled "system computed" on every listing. This design is intentional — an uneditable, sensor-generated score is the only kind buyers can fully trust.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>Do buyers need an account to browse the marketplace?</div>
+        <p class="faq-a">No. Anyone can browse listings, read quality scores, and view harvest forecasts freely. An account is only needed to register a standing alert or to contact a farmer directly.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>How is the trust score different from the quality score?</div>
+        <p class="faq-a">The quality score measures the farm's growing conditions. The trust score measures the farmer's reliability — built from transaction completion rate, on-time delivery, buyer ratings, and profile completeness.</p>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><div class="faq-q-mark">Q</div>How long does a harvest forecast take to generate?</div>
+        <p class="faq-a">The engine needs at least 28 days of readings. Once that threshold is met, the forecast is generated automatically and matching buyers are notified — with no action required from the farmer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="section-header" style="margin-bottom:var(--space-2xl);">
+      <div class="section-eyebrow">Ready to start?</div>
+      <h2 class="section-title">Join FarmLink Intelligence today</h2>
+      <p class="section-sub">Farmers get a verified quality score. Buyers get supply intelligence. The platform does the rest.</p>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:var(--space-md);flex-wrap:wrap;">
+      <a href="{{ url_for('auth.register') }}" class="btn-primary btn-lg">Join as a farmer</a>
+      <a href="{{ url_for('buyer.marketplace') }}" class="btn-secondary btn-lg" style="border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);">Browse the marketplace</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="footer-logo-mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <span class="footer-logo-name">FarmLink Intelligence</span>
+        </div>
+        <p class="footer-tagline">IoT-verified smart agricultural marketplace for Cameroonian smallholder farmers.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Platform</div>
+        <div class="footer-col-links">
+          <a href="{{ url_for('public.how_it_works') }}" class="footer-link">How it works</a>
+          <a href="{{ url_for('buyer.marketplace') }}" class="footer-link">Marketplace</a>
+          <a href="{{ url_for('public.about') }}" class="footer-link">About us</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Account</div>
+        <div class="footer-col-links">
+          <a href="{{ url_for('auth.register') }}" class="footer-link">Register</a>
+          <a href="{{ url_for('auth.login') }}" class="footer-link">Log in</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Project</div>
+        <div class="footer-col-links">
+          <span class="footer-link">OOAD · Spring 2026</span>
+          <span class="footer-link">The ICT University</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 FarmLink Intelligence · The ICT University, Cameroon</span>
+      <div class="footer-bottom-links">
+        <a href="#" class="footer-bottom-link">Privacy</a>
+        <a href="#" class="footer-bottom-link">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
 
 </body>
 </html>
