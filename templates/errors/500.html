@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Something Went Wrong — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+<div class="error-page-wrapper">
+
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="{{ url_for('public.landing') }}" class="nav-logo">
+        <div class="nav-logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/>
+            <path d="M12 6v6l4 2"/>
+            <circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/>
+          </svg>
+        </div>
+        <div class="nav-logo-text">
+          <span class="nav-logo-name">FarmLink Intelligence</span>
+          <span class="nav-logo-sub">IoT Smart Marketplace</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="{{ url_for('public.landing') }}" class="btn-secondary">Go to homepage</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="error-body" style="padding-top: calc(var(--nav-height) + var(--space-2xl));">
+    <div class="error-card error-card-404">
+      <div class="error-card-deco"></div>
+      <div class="error-icon-box error-icon-box-neutral">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="var(--gray-mid)" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="error-code error-code-404">500</div>
+      <h1 class="error-title">Something went wrong</h1>
+      <p class="error-desc">
+        An unexpected error occurred on our server.
+        This has been logged automatically. Please try again,
+        or return to the homepage.
+      </p>
+      <div class="error-actions">
+        <a href="javascript:history.back()" class="btn-primary">Go back</a>
+        <a href="{{ url_for('public.landing') }}" class="btn-secondary">Go to homepage</a>
+      </div>
+      <p class="error-meta">
+        Error 500 &nbsp;·&nbsp; FarmLink Intelligence &nbsp;·&nbsp; The ICT University
+      </p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<nav class="public-nav">
+  <a href="{{ url_for('public.landing') }}" class="topbar-logo">FarmLink Intelligence</a>
+  <div class="public-nav-links">
+    <a href="{{ url_for('public.how_it_works') }}">How it works</a>
+    <a href="{{ url_for('public.landing') }}#marketplace">Marketplace</a>
+    <a href="{{ url_for('public.about') }}">About us</a>
+  </div>
+  <div class="public-nav-actions">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm">Log in</a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">Register free</a>
+  </div>
+</nav>

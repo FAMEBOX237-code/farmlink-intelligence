@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Too Many Attempts — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+
+<div class="error-page-wrapper">
+
+  <!-- Minimal nav -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="{{ url_for('public.landing') }}" class="nav-logo">
+        <div class="nav-logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/>
+            <path d="M12 6v6l4 2"/>
+            <circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/>
+          </svg>
+        </div>
+        <div class="nav-logo-text">
+          <span class="nav-logo-name">FarmLink Intelligence</span>
+          <span class="nav-logo-sub">IoT Smart Marketplace</span>
+        </div>
+      </a>
+      <div class="nav-actions">
+        <a href="{{ url_for('public.landing') }}" class="btn-secondary">Go to homepage</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Error body -->
+  <div class="error-body" style="padding-top: calc(var(--nav-height) + var(--space-2xl));">
+    <div class="error-card error-card-429">
+
+      <div class="error-card-deco" style="background: radial-gradient(circle, #FAEEDA 0%, transparent 70%);"></div>
+
+      <!-- Icon -->
+      <div class="error-icon-box" style="background: var(--amber-bg); border: 0.5px solid var(--amber-light);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="var(--amber-mid)" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+
+      <!-- Code + title -->
+      <div class="error-code" style="color: var(--amber-bg); font-size: 72px;">429</div>
+      <h1 class="error-title">Too many attempts</h1>
+      <p class="error-desc">
+        You have made too many requests in a short period of time.
+        This limit protects the platform from automated attacks.
+        Please wait a few minutes and then try again.
+      </p>
+
+      <!-- What caused it -->
+      <div class="error-role-box" style="background: var(--amber-bg); border-color: var(--amber-light);">
+        <div class="error-role-box-title" style="color: var(--amber-dark);">
+          What are these limits?
+        </div>
+        <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+          <div style="display:flex; align-items:center; gap:var(--space-sm);
+                      font-size:var(--fs-xs); color:var(--amber-dark);">
+            <div style="width:6px;height:6px;border-radius:50%;
+                        background:var(--amber-mid);flex-shrink:0;"></div>
+            Login form: 5 submissions per 15 minutes per device
+          </div>
+          <div style="display:flex; align-items:center; gap:var(--space-sm);
+                      font-size:var(--fs-xs); color:var(--amber-dark);">
+            <div style="width:6px;height:6px;border-radius:50%;
+                        background:var(--amber-mid);flex-shrink:0;"></div>
+            Registration: 10 submissions per hour per device
+          </div>
+          <div style="display:flex; align-items:center; gap:var(--space-sm);
+                      font-size:var(--fs-xs); color:var(--amber-dark);">
+            <div style="width:6px;height:6px;border-radius:50%;
+                        background:var(--amber-mid);flex-shrink:0;"></div>
+            Password reset: 5 requests per hour per device
+          </div>
+          <div style="margin-top:var(--space-sm); padding-top:var(--space-sm);
+                      border-top: 0.5px solid var(--amber-light);
+                      font-size:var(--fs-xs); color:var(--gray-mid);">
+            Browsing pages is never limited — only form submissions are counted.
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="error-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn-primary">
+          Try logging in again
+        </a>
+        <a href="{{ url_for('public.landing') }}" class="btn-secondary">
+          Go to homepage
+        </a>
+      </div>
+
+      <!-- Countdown timer -->
+      <div id="countdown-wrap" style="margin-top: var(--space-2xl);
+           padding: var(--space-md) var(--space-lg);
+           background: var(--gray-bg); border: var(--border);
+           border-radius: var(--radius-md); text-align: center;">
+        <div style="font-size: var(--fs-xs); color: var(--gray-mid);
+                    margin-bottom: var(--space-xs);">
+          You can try again in
+        </div>
+        <div id="countdown" style="font-size: 1.5rem; font-weight: 500;
+             color: var(--black); letter-spacing: -0.02em;">
+          15:00
+        </div>
+        <div style="font-size: var(--fs-xs); color: var(--gray-mid);
+                    margin-top: var(--space-xs);">
+          The page will automatically refresh when the wait is over.
+        </div>
+      </div>
+
+      <p class="error-meta" style="margin-top: var(--space-2xl);">
+        Error 429 &nbsp;·&nbsp; FarmLink Intelligence &nbsp;·&nbsp; The ICT University
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Countdown timer — persistent across page refreshes ───────
+  //
+  // HOW IT WORKS:
+  //   The problem with a simple "let seconds = 900" approach is
+  //   that every refresh resets seconds back to 900.
+  //
+  //   The fix: instead of counting seconds down, we record the
+  //   exact moment the farmer first hit this page using
+  //   localStorage. On every load (including refreshes), we
+  //   calculate how much real time has passed and show what
+  //   is actually remaining.
+  //
+  //   localStorage stores data in the browser permanently until
+  //   cleared — it survives page refreshes, tab closes, and
+  //   browser restarts.
+  //
+  // STORAGE KEY:
+  //   'farmlink_429_start' — the Unix timestamp (milliseconds)
+  //   of when the 429 page was first shown to this browser.
+  //
+  // WAIT DURATION:
+  //   900 seconds = 15 minutes. Matches the login rate limit window.
+
+  const WAIT_SECONDS  = 15 * 60;          // 900 seconds = 15 minutes
+  const STORAGE_KEY   = 'farmlink_429_start';
+  const el            = document.getElementById('countdown');
+
+  // ── Step 1: Record start time ─────────────────────────────────
+  // Check if we already have a start time stored.
+  // If not — this is the first time the farmer hit this page —
+  // store the current timestamp NOW.
+  // If yes — this is a refresh — keep the original timestamp.
+
+  let startTime = localStorage.getItem(STORAGE_KEY);
+
+  if (startTime === null) {
+    // First visit — store the current time in milliseconds
+    startTime = Date.now();
+    localStorage.setItem(STORAGE_KEY, startTime);
+  } else {
+    // Refresh — convert the stored string back to a number
+    startTime = parseInt(startTime, 10);
+  }
+
+  // ── Step 2: Format helper ─────────────────────────────────────
+  function formatTime(s) {
+    if (s < 0) s = 0;
+    const m   = Math.floor(s / 60);
+    const sec = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  // ── Step 3: Calculate remaining seconds ───────────────────────
+  function getRemainingSeconds() {
+    const elapsedMs      = Date.now() - startTime;
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
+    return WAIT_SECONDS - elapsedSeconds;
+  }
+
+  // ── Step 4: Tick function — runs every second ─────────────────
+  function tick() {
+    const remaining = getRemainingSeconds();
+
+    if (remaining <= 0) {
+      // Wait is over
+      clearInterval(timer);
+      el.textContent = '00:00';
+
+      // Clear the stored start time so next 429 starts fresh
+      localStorage.removeItem(STORAGE_KEY);
+
+      // Auto-refresh so the farmer can try again
+      window.location.reload();
+      return;
+    }
+
+    el.textContent = formatTime(remaining);
+  }
+
+  // ── Step 5: Show correct time immediately on load ─────────────
+  // Without this, the display shows 15:00 for one full second
+  // before the first tick fires. Calling tick() immediately
+  // shows the correct remaining time the instant the page loads.
+  tick();
+
+  // ── Step 6: Start the interval ────────────────────────────────
+  const timer = setInterval(tick, 1000);
+</script>
+
+</body>
+</html>

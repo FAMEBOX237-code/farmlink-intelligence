@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Us — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAVIGATION
+════════════════════════════════════════════════════════════ -->
+<nav class="nav">
+  <div class="container nav-inner">
+
+    <a href="{{ url_for('public.landing') }}" class="nav-logo">
+      <div class="nav-logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12"/>
+          <path d="M12 6v6l4 2"/>
+          <circle cx="12" cy="12" r="3" fill="#fff" stroke="none"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text">
+        <span class="nav-logo-name">FarmLink Intelligence</span>
+        <span class="nav-logo-sub">IoT Smart Marketplace</span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="{{ url_for('public.how_it_works') }}" class="nav-link">How it works</a></li>
+      <li><a href="{{ url_for('buyer.marketplace') }}" class="nav-link">Marketplace</a></li>
+      <li><a href="{{ url_for('public.about') }}" class="nav-link" style="color:var(--green-mid);font-weight:500;">About us</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log in</a>
+      <a href="{{ url_for('auth.register') }}" class="btn-primary">Join free</a>
+    </div>
+
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO — "Built in Cameroon, for Cameroon"
+════════════════════════════════════════════════════════════ -->
+<section style="padding-top: calc(var(--nav-height) + var(--space-4xl)); padding-bottom: var(--space-3xl); background: var(--white);">
+  <div class="container">
+
+    <div class="section-header">
+      <div class="section-eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Our story
+      </div>
+      <h1 class="section-title" style="font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.025em;">
+        Built in Cameroon,<br>for Cameroon.
+      </h1>
+      <p class="section-sub" style="max-width: 620px;">
+        FarmLink Intelligence is a final-year OOAD project by eight Computer Science students at
+        The ICT University — combining software engineering and IoT hardware to solve real problems
+        in Cameroonian agriculture.
+      </p>
+    </div>
+
+    <!-- Four at-a-glance stats -->
+    <div class="about-stats">
+      <div class="about-stat">
+        <div class="about-stat-num">8</div>
+        <div class="about-stat-label">Team members</div>
+      </div>
+      <div class="about-stat">
+        <div class="about-stat-num">28</div>
+        <div class="about-stat-label">Pages built</div>
+      </div>
+      <div class="about-stat">
+        <div class="about-stat-num">5</div>
+        <div class="about-stat-label">Sensor types</div>
+      </div>
+      <div class="about-stat">
+        <div class="about-stat-num">10</div>
+        <div class="about-stat-label">Cameroon regions</div>
+      </div>
+    </div>
+
+    <!-- Team photo placeholder -->
+    <div class="team-photo-placeholder" style="margin-top: var(--space-3xl); margin-bottom: 0;">
+      <div class="team-photo-placeholder-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gray-mid)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <div class="team-photo-placeholder-label">Team photograph — all 8 members</div>
+      <div class="team-photo-placeholder-sub">Replace this placeholder with your actual team photo before launch</div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MISSION — Why we built this
+════════════════════════════════════════════════════════════ -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="mission-grid">
+
+      <!-- Left: text -->
+      <div class="mission-text">
+        <div class="section-eyebrow" style="margin-bottom: var(--space-md);">Our mission</div>
+        <h2 class="section-title" style="text-align:left; margin-bottom: var(--space-xl); font-size: 1.75rem;">
+          Close the trust gap between farmers and buyers
+        </h2>
+        <p>
+          Agriculture accounts for over 20% of Cameroon's GDP. Yet smallholder farmers —
+          the backbone of the sector — sell to middlemen at a fraction of the real market
+          price, because buyers have no way to trust quality claims made online.
+        </p>
+        <p>
+          FarmLink Intelligence changes this by attaching real IoT sensor data directly
+          to every marketplace listing. Quality is no longer a claim — it is a measurement.
+          Trust is no longer assumed — it is computed from every transaction.
+        </p>
+        <p>
+          We built this platform as engineering students who see this problem every day.
+          Our goal was never to build another marketplace. Our goal was to build a
+          supply intelligence engine.
+        </p>
+
+        <!-- Values grid below text -->
+        <div class="values-grid">
+          <div class="value-card">
+            <div class="value-icon" style="background: var(--green-bg);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green-mid)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div class="value-title">Transparency</div>
+            <p class="value-desc">Every quality score shows its sensor source. Buyers never see a naked number without understanding where it came from.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon" style="background: var(--teal-bg);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-mid)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="value-title">Trust</div>
+            <p class="value-desc">Farmer reliability is earned through real transaction history — not self-reported. Honest farmers gain a visible competitive advantage.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon" style="background: var(--amber-bg);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber-mid)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="value-title">Farmer-first</div>
+            <p class="value-desc">Every complex action is broken into the smallest possible steps. If a farmer with limited tech experience cannot complete it in 3 minutes, the design has failed.</p>
+          </div>
+          <div class="value-card">
+            <div class="value-icon" style="background: var(--blue-bg);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue-mid)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            </div>
+            <div class="value-title">Data integrity</div>
+            <p class="value-desc">Anything the system computes automatically — quality score, trust score, harvest forecast — is read-only. Farmers cannot edit what sensors measure.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: pull quote -->
+      <div>
+        <div class="mission-quote-block">
+          <p class="mission-quote-text">
+            "Don't build a marketplace. Build a supply intelligence engine that connects
+            sensor data, trust reputation, and predictive forecasting into a single
+            farm-to-buyer pipeline."
+          </p>
+          <span class="mission-quote-attr">— FarmLink Intelligence design principle, v1.0</span>
+        </div>
+
+        <!-- Extra context below quote -->
+        <div style="margin-top: var(--space-xl); padding: var(--space-xl); background: var(--white); border: var(--border); border-radius: var(--radius-lg);">
+          <div style="font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: var(--space-md);">Built with</div>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+            <span class="badge badge-green">Flask + Python</span>
+            <span class="badge badge-green">MySQL</span>
+            <span class="badge badge-teal">Arduino Uno</span>
+            <span class="badge badge-teal">ESP8266</span>
+            <span class="badge badge-teal">Firebase</span>
+            <span class="badge badge-amber">DHT22</span>
+            <span class="badge badge-amber">BH1750</span>
+            <span class="badge" style="background:var(--gray-bg);color:var(--gray-dark);border:var(--border);">HTML5 · CSS3 · JS</span>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-md); padding: var(--space-lg); background: var(--white); border: var(--border); border-radius: var(--radius-lg);">
+          <div style="font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: var(--space-md);">Project context</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+            <div style="display:flex; justify-content:space-between; font-size: var(--fs-xs);">
+              <span style="color:var(--gray-mid);">Course</span>
+              <span style="font-weight:500; color:var(--black);">Object-Oriented Analysis &amp; Design</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size: var(--fs-xs);">
+              <span style="color:var(--gray-mid);">Institution</span>
+              <span style="font-weight:500; color:var(--black);">The ICT University</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size: var(--fs-xs);">
+              <span style="color:var(--gray-mid);">Semester</span>
+              <span style="font-weight:500; color:var(--black);">Spring 2026</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size: var(--fs-xs);">
+              <span style="color:var(--gray-mid);">Team size</span>
+              <span style="font-weight:500; color:var(--black);">8 students</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     THREE GAPS — The problems we solve
+════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow">The problems we solve</div>
+      <h2 class="section-title">Three gaps no platform in Cameroon closes</h2>
+      <p class="section-sub">These three problems exist simultaneously in Cameroonian agriculture. FarmLink Intelligence is the first platform designed to solve all three at once.</p>
+    </div>
+
+    <div class="problem-list">
+
+      <div class="problem-item">
+        <div class="problem-num problem-num-1">01</div>
+        <div class="problem-body">
+          <div class="problem-title">Market invisibility</div>
+          <p class="problem-desc">
+            Cameroonian smallholder farmers have no direct channel to urban buyers. They sell
+            through intermediaries at a fraction of the real price — not because their produce
+            is inferior, but because they are invisible in the market. Buyers, meanwhile,
+            have no way to reach farmers directly, so they rely on middlemen who inflate costs.
+          </p>
+          <span class="problem-solution problem-solution-green">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            FarmLink solution: Direct farmer-to-buyer marketplace with verified listings
+          </span>
+        </div>
+      </div>
+
+      <div class="problem-item">
+        <div class="problem-num problem-num-2">02</div>
+        <div class="problem-body">
+          <div class="problem-title">Unverifiable quality claims</div>
+          <p class="problem-desc">
+            Any farmer can type "high quality produce" in a listing. Without hardware evidence,
+            buyers have no way to know if this is true. The result is a trust deficit that
+            prevents online agricultural commerce from functioning. Even genuinely high-quality
+            farmers cannot differentiate themselves from dishonest ones.
+          </p>
+          <span class="problem-solution problem-solution-teal">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            FarmLink solution: IoT sensor nodes generate read-only, tamper-proof quality scores
+          </span>
+        </div>
+      </div>
+
+      <div class="problem-item">
+        <div class="problem-num problem-num-3">03</div>
+        <div class="problem-body">
+          <div class="problem-title">No supply visibility</div>
+          <p class="problem-desc">
+            Buyers cannot plan procurement ahead of time because no platform tells them when
+            a harvest will be ready. This leads to last-minute, reactive purchasing — driving
+            up prices, increasing waste, and making supply chains fragile. Farmers also lose
+            out because buyers are not waiting for them.
+          </p>
+          <span class="problem-solution problem-solution-amber">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            FarmLink solution: 28-day harvest forecast engine with automatic buyer alerts
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TEAM — Meet the builders
+════════════════════════════════════════════════════════════ -->
+<section class="section section-alt" id="team">
+  <div class="container">
+
+    <div class="section-header">
+      <div class="section-eyebrow">The team</div>
+      <h2 class="section-title">Built by students, for Cameroon</h2>
+      <p class="section-sub">Eight Computer Science students at The ICT University — two teams working in parallel on software and hardware.</p>
+    </div>
+
+    <!-- ── Website & Database Team ── -->
+    <div class="team-group-label team-group-label-green">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Website &amp; Database Team — 5 members
+    </div>
+
+    <div class="member-grid">
+
+      <!-- Mark -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-green">
+          <img
+            src="{{ url_for('static', filename='images/team/mark.jpg') }}"
+            alt="Mark Ajinwi Nditapah"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">MN</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Mark Ajinwi Nditapah</div>
+              <div class="member-id">ICTU20241443</div>
+            </div>
+            <span class="team-role-pill team-role-pill-green">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Project Lead · Backend
+            </span>
+          </div>
+          <p class="member-bio">
+            Leads the FarmLink Intelligence project end-to-end — architecting the Flask backend,
+            designing the database schema, and coordinating the full team. Responsible for the
+            application factory, blueprint structure, and Flask-Login authentication system.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">Flask</span>
+            <span class="member-skill">MySQL</span>
+            <span class="member-skill">SQLAlchemy</span>
+            <span class="member-skill">System Design</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fotsi -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-green">
+          <img
+            src="{{ url_for('static', filename='images/team/fotsi.jpg') }}"
+            alt="Fotsi Fotsi Eric Yann"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">FE</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Fotsi Fotsi Eric Yann</div>
+              <div class="member-id">ICTU20241373</div>
+            </div>
+            <span class="team-role-pill team-role-pill-green">Backend Developer</span>
+          </div>
+          <p class="member-bio">
+            Builds the core server-side logic powering FarmLink — from API route handling to
+            sensor data ingestion. Works closely with the IoT team to ensure Firebase readings
+            arrive cleanly into MySQL and trigger the quality scoring pipeline.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">Python</span>
+            <span class="member-skill">Flask Routes</span>
+            <span class="member-skill">REST API</span>
+            <span class="member-skill">Firebase Bridge</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kokomo -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-green">
+          <img
+            src="{{ url_for('static', filename='images/team/kokomo.jpg') }}"
+            alt="Kokomo Bineli Franck Donald"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">KB</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Kokomo Bineli Franck Donald</div>
+              <div class="member-id">ICTU20241422</div>
+            </div>
+            <span class="team-role-pill team-role-pill-green">Database &amp; Backend</span>
+          </div>
+          <p class="member-bio">
+            Designs and maintains the relational database at the heart of FarmLink — defining
+            every table, relationship, and constraint that connects users, farms, sensor
+            readings, listings, and alerts into a single coherent data model.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">MySQL</span>
+            <span class="member-skill">Schema Design</span>
+            <span class="member-skill">SQLAlchemy ORM</span>
+            <span class="member-skill">Data Modelling</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daniella -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-green">
+          <img
+            src="{{ url_for('static', filename='images/team/daniella.jpg') }}"
+            alt="Daniella"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">DA</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Daniella</div>
+              <div class="member-id">ICTU · Spring 2026</div>
+            </div>
+            <span class="team-role-pill team-role-pill-green">Frontend Developer</span>
+          </div>
+          <p class="member-bio">
+            Translates wireframes into pixel-perfect, responsive HTML and CSS across the
+            FarmLink portal pages. Ensures every interface follows the design specification —
+            from colour variables and typography to component reuse and mobile responsiveness.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">HTML5</span>
+            <span class="member-skill">CSS3</span>
+            <span class="member-skill">JavaScript</span>
+            <span class="member-skill">Responsive Design</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5th member -->
+      <div class="member-card member-card-placeholder">
+        <div class="member-photo-wrap member-photo-gray">
+          <img
+            src="{{ url_for('static', filename='images/team/member5.jpg') }}"
+            alt="5th Web Team Member"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">?</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name" style="color:var(--gray-mid);">5th Web Team Member</div>
+              <div class="member-id">Name · Matricule — update before launch</div>
+            </div>
+            <span class="team-role-pill team-role-pill-gray">Role TBC</span>
+          </div>
+          <p class="member-bio" style="color:var(--gray-light);">
+            Bio and responsibilities to be added. Replace this card with the real team
+            member's name, matricule, role, photo, and contribution before launch.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill" style="opacity:0.4;">Skill TBC</span>
+            <span class="member-skill" style="opacity:0.4;">Skill TBC</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── IoT & Hardware Team ── -->
+    <div class="team-group-label team-group-label-teal" style="margin-top: var(--space-3xl);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/></svg>
+      IoT &amp; Hardware Team — 3 members
+    </div>
+
+    <div class="member-grid">
+
+      <!-- Rosaline -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-teal">
+          <img
+            src="{{ url_for('static', filename='images/team/rosaline.jpg') }}"
+            alt="Rosaline"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">RO</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Rosaline</div>
+              <div class="member-id">ICTU · Spring 2026</div>
+            </div>
+            <span class="team-role-pill team-role-pill-teal">IoT Hardware</span>
+          </div>
+          <p class="member-bio">
+            Assembles and calibrates the physical sensor nodes deployed on Cameroonian farms —
+            integrating the DHT22, soil moisture sensor, BH1750 light sensor, and DS3231 RTC
+            onto the Arduino Uno board and validating readings for accuracy in the field.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">Arduino Uno</span>
+            <span class="member-skill">DHT22</span>
+            <span class="member-skill">BH1750</span>
+            <span class="member-skill">Circuit Assembly</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ondoa Marie -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-teal">
+          <img
+            src="{{ url_for('static', filename='images/team/ondoa.jpg') }}"
+            alt="Ondoa Marie"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">OM</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Ondoa Marie</div>
+              <div class="member-id">ICTU · Spring 2026</div>
+            </div>
+            <span class="team-role-pill team-role-pill-teal">Firebase Integration</span>
+          </div>
+          <p class="member-bio">
+            Builds and maintains the real-time data bridge between the ESP8266 Wi-Fi module
+            and Firebase Realtime Database — ensuring every sensor reading is transmitted,
+            stored, and then synced reliably into the MySQL application database.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">ESP8266</span>
+            <span class="member-skill">Firebase</span>
+            <span class="member-skill">Realtime DB</span>
+            <span class="member-skill">MySQL Sync</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charles -->
+      <div class="member-card">
+        <div class="member-photo-wrap member-photo-teal">
+          <img
+            src="{{ url_for('static', filename='images/team/charles.jpg') }}"
+            alt="Charles"
+            class="member-photo"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+          >
+          <div class="member-photo-fallback" style="display:none;">CH</div>
+        </div>
+        <div class="member-body">
+          <div class="member-header">
+            <div>
+              <div class="member-name">Charles</div>
+              <div class="member-id">ICTU · Spring 2026</div>
+            </div>
+            <span class="team-role-pill team-role-pill-teal">Sensor Firmware</span>
+          </div>
+          <p class="member-bio">
+            Writes the C++ firmware running on each Arduino node — programming the 30-minute
+            reading loop, managing the DS3231 real-time clock for accurate timestamps,
+            and handling offline buffering so no readings are lost during connectivity gaps.
+          </p>
+          <div class="member-skills">
+            <span class="member-skill">C++ / Arduino IDE</span>
+            <span class="member-skill">DS3231 RTC</span>
+            <span class="member-skill">Firmware Loops</span>
+            <span class="member-skill">Offline Buffering</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     CTA BANNER
+════════════════════════════════════════════════════════════ -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="section-header" style="margin-bottom: var(--space-2xl);">
+      <div class="section-eyebrow">Ready to join?</div>
+      <h2 class="section-title">Whether you grow it or buy it —<br>there is a place for you here.</h2>
+      <p class="section-sub">Registration is free for both farmers and buyers. No middlemen. No hidden fees.</p>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:center; gap:var(--space-md); flex-wrap:wrap;">
+      <a href="{{ url_for('auth.register') }}" class="btn-primary btn-lg">Create a free account</a>
+      <a href="{{ url_for('public.how_it_works') }}" class="btn-secondary btn-lg" style="border-color:rgba(255,255,255,0.25); color:rgba(255,255,255,0.8);">See how it works</a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <div class="footer-logo-mark">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <span class="footer-logo-name">FarmLink Intelligence</span>
+        </div>
+        <p class="footer-tagline">IoT-verified smart agricultural marketplace for Cameroonian smallholder farmers.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Platform</div>
+        <div class="footer-col-links">
+          <a href="{{ url_for('public.how_it_works') }}" class="footer-link">How it works</a>
+          <a href="{{ url_for('buyer.marketplace') }}" class="footer-link">Marketplace</a>
+          <a href="{{ url_for('public.about') }}" class="footer-link">About us</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Account</div>
+        <div class="footer-col-links">
+          <a href="{{ url_for('auth.register') }}" class="footer-link">Register</a>
+          <a href="{{ url_for('auth.login') }}" class="footer-link">Log in</a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Project</div>
+        <div class="footer-col-links">
+          <a href="{{ url_for('public.about') }}#team" class="footer-link">Our team</a>
+          <span class="footer-link">OOAD · Spring 2026</span>
+          <span class="footer-link">The ICT University</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 FarmLink Intelligence · The ICT University, Cameroon</span>
+      <div class="footer-bottom-links">
+        <a href="#" class="footer-bottom-link">Privacy</a>
+        <a href="#" class="footer-bottom-link">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

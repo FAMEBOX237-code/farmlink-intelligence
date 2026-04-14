@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmer Dashboard — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <style>
+    body {
+      background: var(--gray-bg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 48px;
+      background: var(--white);
+      border-bottom: 0.5px solid var(--gray-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--black);
+      text-decoration: none;
+    }
+    .topbar-logo-mark {
+      width: 26px;
+      height: 26px;
+      background: var(--green-mid);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .topbar-portal {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--green-mid);
+      background: var(--green-bg);
+      border: 0.5px solid var(--green-light);
+      border-radius: 999px;
+      padding: 3px 10px;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-user {
+      font-size: 13px;
+      color: var(--gray-mid);
+    }
+    .topbar-logout {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-dark);
+      background: var(--white);
+      border: 0.5px solid var(--gray-light);
+      border-radius: 6px;
+      padding: 6px 14px;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+      cursor: pointer;
+    }
+    .topbar-logout:hover {
+      border-color: var(--gray-mid);
+      color: var(--black);
+    }
+
+    /* ── Page body ── */
+    .page-body {
+      min-height: calc(100vh - 48px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* ── Stub card ── */
+    .stub-card {
+      background: var(--white);
+      border: 0.5px solid var(--gray-light);
+      border-radius: 12px;
+      padding: 48px 40px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+    }
+    .stub-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-bg);
+      color: var(--green-dark);
+      border: 0.5px solid var(--green-light);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 12px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+    .stub-title {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+    .stub-sub {
+      font-size: 13px;
+      color: var(--gray-mid);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+    .stub-progress {
+      background: var(--gray-bg);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .stub-progress-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--gray-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .stub-bar {
+      height: 6px;
+      background: var(--gray-xbg, #E8E5DC);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .stub-bar-fill {
+      height: 100%;
+      background: var(--green-mid);
+      border-radius: 999px;
+      width: 30%;
+    }
+    .stub-hint {
+      font-size: 11px;
+      color: var(--gray-light);
+      margin-bottom: 28px;
+    }
+
+    /* ── Flash messages ── */
+    .flash-wrap {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 460px;
+      width: 90%;
+    }
+    .flash-msg {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .flash-success { background: #EAF3DE; border: 0.5px solid #C0DD97; color: #27500A; }
+    .flash-error   { background: #FCEBEB; border: 0.5px solid #F09595; color: #A32D2D; }
+    .flash-info    { background: #E6F1FB; border: 0.5px solid #85B7EB; color: #185FA5; }
+  </style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <a href="{{ url_for('public.landing') }}" class="topbar-logo">
+    <div class="topbar-logo-mark">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    FarmLink Intelligence
+  </a>
+
+  <span class="topbar-portal">Farmer Portal</span>
+
+  <div class="topbar-right">
+    <span class="topbar-user">{{ current_user.full_name }}</span>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</div>
+
+<!-- ── Flash messages ── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-wrap">
+      {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- ── Body ── -->
+<div class="page-body">
+  <div class="stub-card">
+    <div class="stub-badge">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      Sprint 4 — Next
+    </div>
+    <div class="stub-title">Farmer Dashboard</div>
+    <p class="stub-sub">
+      This page is being built in Sprint 4.<br>
+      Your account is active and working correctly.
+    </p>
+    <div class="stub-progress">
+      <div class="stub-progress-label">Build progress</div>
+      <div class="stub-bar"><div class="stub-bar-fill"></div></div>
+    </div>
+    <p class="stub-hint">Stage 4 of 10 — Farmer Portal</p>
+  </div>
+</div>
+
+</body>
+</html>

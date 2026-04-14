@@ -1,0 +1,16 @@
+<aside class="sidebar">
+  <nav>
+    <a href="{{ url_for('public.marketplace') }}" class="sidebar-item {% if request.endpoint == 'public.marketplace' %}active{% endif %}">
+      <span>Marketplace</span>
+    </a>
+    <a href="{{ url_for('buyer.alerts') }}" class="sidebar-item {% if 'alerts' in request.endpoint %}active{% endif %}">
+      <span>My alerts</span>
+    </a>
+    <a href="{{ url_for('buyer.notifications') }}" class="sidebar-item {% if 'notifications' in request.endpoint %}active{% endif %}">
+      <span>Notifications</span>
+    </a>
+    <div class="sidebar-divider"></div>
+    <a href="{{ url_for('buyer.profile') }}" class="sidebar-item">Profile</a>
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-item">Log out</a>
+  </nav>
+</aside>

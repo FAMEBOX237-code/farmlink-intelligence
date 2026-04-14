@@ -1,6 +1,38 @@
-Flask==3.0.0
+# ============================================================
+# requirements.txt — FarmLink Intelligence
+#
+# Install everything with:
+#   pip install -r requirements.txt
+#
+# After installing, initialise the database with:
+#   python create_tables.py
+# ============================================================
+
+# ── Flask core ───────────────────────────────────────────────
+Flask==3.0.3
+
+# ── Database ─────────────────────────────────────────────────
 Flask-SQLAlchemy==3.1.1
+PyMySQL==1.1.1
+cryptography==42.0.8        # PyMySQL needs this for some MySQL auth methods
+
+# ── Authentication ───────────────────────────────────────────
 Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
-PyMySQL==1.1.0
-python-dotenv==1.0.0
+
+# ── Form security (CSRF protection) ──────────────────────────
+Flask-WTF==1.2.1
+
+# ── Email (password reset) ───────────────────────────────────
+Flask-Mail==0.10.0
+itsdangerous==2.2.0         # secure signed tokens for password reset links
+
+# ── Rate limiting (brute-force protection) ───────────────────
+Flask-Limiter==3.7.0
+
+# ── Environment variables ─────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── Development utilities ─────────────────────────────────────
+# (safe to remove in production)
+Werkzeug==3.0.3              # ships with Flask — listed for version pinning

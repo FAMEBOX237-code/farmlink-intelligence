@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FarmLink Intelligence — IoT-verified agricultural marketplace connecting Cameroonian farmers to buyers with sensor-backed quality scores and harvest forecasting.">
+  <title>FarmLink Intelligence — From Farm Sensor to Buyer Inbox</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════
+       NAVIGATION BAR
+       Fixed at top. Contains logo, nav links, auth buttons.
+       ═══════════════════════════════════════════════════════ -->
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <div class="container nav-inner">
+
+      <!-- Logo -->
+      <a href="{{ url_for('public.landing') }}" class="nav-logo" aria-label="FarmLink Intelligence home">
+        <div class="nav-logo-mark">
+          <!-- Leaf icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+            <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+          </svg>
+        </div>
+        <div class="nav-logo-text">
+          <span class="nav-logo-name">FarmLink Intelligence</span>
+          <span class="nav-logo-sub">Agricultural Marketplace</span>
+        </div>
+      </a>
+
+      <!-- Centre links -->
+      <ul class="nav-links" role="list">
+        <li><a href="{{ url_for('public.how_it_works') }}" class="nav-link">How it works</a></li>
+        <li><a href="{{ url_for('buyer.marketplace') }}" class="nav-link">Marketplace</a></li>
+        <li><a href="{{ url_for('public.about') }}" class="nav-link">About us</a></li>
+      </ul>
+
+      <!-- Auth buttons -->
+      <div class="nav-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn-ghost">Log in</a>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary">Join free</a>
+      </div>
+
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       HERO SECTION
+       Full-width hero with text left, demo card right.
+       ═══════════════════════════════════════════════════════ -->
+  <section class="hero" aria-labelledby="hero-headline">
+
+    <!-- Background decorations -->
+    <div class="hero-bg-circle hero-bg-circle-1" aria-hidden="true"></div>
+    <div class="hero-bg-circle hero-bg-circle-2" aria-hidden="true"></div>
+
+    <div class="container hero-inner">
+
+      <!-- Left: Text -->
+      <div class="hero-content">
+
+        <div class="hero-eyebrow" aria-hidden="true">
+          <div class="hero-eyebrow-line"></div>
+          <span class="hero-eyebrow-text">IoT-Verified · Cameroon</span>
+        </div>
+
+        <h1 class="hero-headline" id="hero-headline">
+          The marketplace where quality is
+          <em>measured,</em> not claimed
+        </h1>
+
+        <p class="hero-sub">
+          FarmLink Intelligence connects Cameroonian smallholder farmers to buyers
+          through live sensor data, harvest forecasting, and trust scores — giving
+          buyers verified quality and farmers a direct market.
+        </p>
+
+        <div class="hero-actions">
+          <a href="{{ url_for('auth.register', role='farmer') }}" class="btn-primary btn-lg">
+            <!-- Sprout icon -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/>
+              <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/>
+              <path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>
+            </svg>
+            Join as a farmer
+          </a>
+          <a href="{{ url_for('buyer.marketplace') }}" class="btn-secondary btn-lg">
+            Browse the marketplace
+          </a>
+        </div>
+
+        <!-- Social proof strip -->
+        <div class="hero-trust-row" aria-label="Platform statistics">
+          <div class="hero-trust-item">
+            <span class="hero-trust-num">248+</span>
+            <span class="hero-trust-label">Verified farmers</span>
+          </div>
+          <div class="hero-trust-divider" aria-hidden="true"></div>
+          <div class="hero-trust-item">
+            <span class="hero-trust-num">12 sensors</span>
+            <span class="hero-trust-label">Per farm node</span>
+          </div>
+          <div class="hero-trust-divider" aria-hidden="true"></div>
+          <div class="hero-trust-item">
+            <span class="hero-trust-num">94%</span>
+            <span class="hero-trust-label">Forecast accuracy</span>
+          </div>
+          <div class="hero-trust-divider" aria-hidden="true"></div>
+          <div class="hero-trust-item">
+            <span class="hero-trust-num">35,700</span>
+            <span class="hero-trust-label">FCFA per sensor node</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Demo listing card -->
+      <div class="hero-visual" role="img" aria-label="Example produce listing with sensor data">
+
+        <!-- Floating badge: quality -->
+        <div class="hero-float-1" aria-hidden="true">
+          <div class="hero-float-1-num">82.4</div>
+          <div class="hero-float-1-lbl">Quality score</div>
+        </div>
+
+        <!-- Main card -->
+        <div class="hero-card">
+
+          <!-- Card header: produce info -->
+          <div class="hero-card-header">
+            <div class="hero-card-photo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <div class="hero-card-meta">
+              <div class="hero-card-crop">Roma Tomatoes</div>
+              <div class="hero-card-farmer">Farmer Nditapah · Bafoussam, West Region</div>
+              <div class="hero-card-badges">
+                <span class="score-pill score-pill-quality">
+                  <span class="dot dot-green"></span> Quality 82
+                </span>
+                <span class="score-pill score-pill-trust">
+                  <span class="dot dot-blue"></span> Trust 4.3★
+                </span>
+                <span class="score-pill score-pill-forecast">
+                  <span class="dot dot-amber"></span> Forecast ready
+                </span>
+              </div>
+            </div>
+            <div class="hero-card-price">
+              <div class="hero-card-price-num">850</div>
+              <div class="hero-card-price-unit">XAF / kg</div>
+            </div>
+          </div>
+
+          <!-- Sensor readings -->
+          <div class="hero-card-sensors">
+            <div class="hero-card-sensors-title">Live sensor readings — Farm NODE-007</div>
+            <div class="hero-sensor-row">
+              <div class="hero-sensor-item">
+                <div class="hero-sensor-val">68.4%</div>
+                <div class="hero-sensor-lbl">Soil moisture</div>
+              </div>
+              <div class="hero-sensor-item">
+                <div class="hero-sensor-val">24.2°C</div>
+                <div class="hero-sensor-lbl">Temperature</div>
+              </div>
+              <div class="hero-sensor-item">
+                <div class="hero-sensor-val">71%</div>
+                <div class="hero-sensor-lbl">Humidity</div>
+              </div>
+              <div class="hero-sensor-item">
+                <div class="hero-sensor-val">4,200 lx</div>
+                <div class="hero-sensor-lbl">Light</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quality score breakdown -->
+          <div style="margin-bottom: 16px;">
+            <div class="hero-progress-row">
+              <div class="hero-progress-label">Soil moisture</div>
+              <div class="hero-progress-bar"><div class="hero-progress-fill" style="width:82%"></div></div>
+              <div class="hero-progress-val">82/100</div>
+            </div>
+            <div class="hero-progress-row">
+              <div class="hero-progress-label">Temperature</div>
+              <div class="hero-progress-bar"><div class="hero-progress-fill" style="width:90%"></div></div>
+              <div class="hero-progress-val">90/100</div>
+            </div>
+            <div class="hero-progress-row">
+              <div class="hero-progress-label">Humidity</div>
+              <div class="hero-progress-bar"><div class="hero-progress-fill amber" style="width:74%"></div></div>
+              <div class="hero-progress-val">74/100</div>
+            </div>
+            <div class="hero-progress-row">
+              <div class="hero-progress-label">Light</div>
+              <div class="hero-progress-bar"><div class="hero-progress-fill blue" style="width:78%"></div></div>
+              <div class="hero-progress-val">78/100</div>
+            </div>
+          </div>
+
+          <!-- Harvest forecast strip -->
+          <div class="hero-forecast-strip">
+            <div>
+              <div class="hero-forecast-label">Harvest forecast</div>
+              <div class="hero-forecast-date">Apr 16 – Apr 20, 2026 · Confidence 87%</div>
+            </div>
+            <span class="badge badge-amber">14 days away</span>
+          </div>
+
+        </div>
+
+        <!-- Floating badge: sensor live -->
+        <div class="hero-float-2" aria-hidden="true">
+          <div class="hero-float-2-dot"></div>
+          <div class="hero-float-2-text">Sensor live · Updated 8 min ago</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       STATS BAR
+       Dark green strip with four headline numbers.
+       ═══════════════════════════════════════════════════════ -->
+  <div class="stats-bar" role="region" aria-label="Platform statistics">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-num">30 min</div>
+          <div class="stat-label">Sensor reading interval</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">28 days</div>
+          <div class="stat-label">Data needed for harvest forecast</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">10 regions</div>
+          <div class="stat-label">Across Cameroon</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">0 middlemen</div>
+          <div class="stat-label">Direct farmer-to-buyer channel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       THREE PROBLEMS SECTION
+       One card per problem FarmLink solves.
+       ═══════════════════════════════════════════════════════ -->
+  <section class="section" aria-labelledby="problems-title">
+    <div class="container">
+
+      <div class="section-header">
+        <div class="section-eyebrow" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Three unsolved problems
+        </div>
+        <h2 class="section-title" id="problems-title">
+          What makes farming in Cameroon hard — and how we fix it
+        </h2>
+        <p class="section-sub">
+          No existing platform in Cameroon addresses all three of these problems together.
+          FarmLink Intelligence does.
+        </p>
+      </div>
+
+      <div class="features-grid">
+
+        <!-- Card 1: Market invisibility -->
+        <article class="feature-card feature-card-green">
+          <div class="feature-icon feature-icon-green" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <div class="feature-problem feature-problem-green">Problem 1 — Market invisibility</div>
+          <h3 class="feature-title">Farmers are invisible to buyers</h3>
+          <p class="feature-desc">
+            Smallholder farmers sell cheaply to middlemen because they have no direct
+            channel to urban buyers. The middleman profits. The farmer and buyer both lose.
+            FarmLink gives every farmer a verified, data-backed listing that buyers can
+            trust and find.
+          </p>
+          <span class="feature-tag feature-tag-green">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Solved by the marketplace
+          </span>
+        </article>
+
+        <!-- Card 2: Unverifiable quality -->
+        <article class="feature-card feature-card-teal">
+          <div class="feature-icon feature-icon-teal" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div class="feature-problem feature-problem-teal">Problem 2 — Unverifiable quality</div>
+          <h3 class="feature-title">Quality claims cannot be trusted</h3>
+          <p class="feature-desc">
+            Any farmer can type "premium quality" on any platform. There is no hardware
+            evidence behind it. FarmLink attaches real IoT sensor readings — soil moisture,
+            temperature, humidity, light — to every listing. Quality is measured, not typed.
+          </p>
+          <span class="feature-tag feature-tag-teal">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Solved by the IoT quality score
+          </span>
+        </article>
+
+        <!-- Card 3: No supply visibility -->
+        <article class="feature-card feature-card-amber">
+          <div class="feature-icon feature-icon-amber" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="feature-problem feature-problem-amber">Problem 3 — Zero supply visibility</div>
+          <h3 class="feature-title">Buyers cannot plan ahead</h3>
+          <p class="feature-desc">
+            Buyers discover produce only after it is already listed. They cannot forecast
+            when their preferred crop will be available, leading to last-minute procurement
+            and wasted logistics. FarmLink predicts harvest windows from sensor trends and
+            notifies pre-registered buyers automatically.
+          </p>
+          <span class="feature-tag feature-tag-amber">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Solved by harvest forecasting
+          </span>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       HOW IT WORKS — 4 Steps
+       Sensor → Score → Forecast → Sale
+       ═══════════════════════════════════════════════════════ -->
+  <section class="section section-alt" aria-labelledby="how-title">
+    <div class="container">
+
+      <div class="section-header">
+        <div class="section-eyebrow" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          The pipeline
+        </div>
+        <h2 class="section-title" id="how-title">From farm sensor to buyer inbox</h2>
+        <p class="section-sub">
+          Every 30 minutes, the Arduino sensor node on the farm transmits readings.
+          By the time a buyer sees a listing, the quality score has already been computed
+          from real hardware data.
+        </p>
+      </div>
+
+      <div class="steps-grid" role="list">
+
+        <div class="step-item" role="listitem">
+          <div class="step-num" aria-hidden="true">1</div>
+          <div class="step-icon-wrap" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </div>
+          <div class="step-title">Sensor reads the farm</div>
+          <div class="step-desc">
+            The Arduino Uno reads soil moisture, temperature, humidity, light, and rainfall
+            every 30 minutes. The DS3231 clock timestamps each reading precisely.
+          </div>
+        </div>
+
+        <div class="step-item" role="listitem">
+          <div class="step-num" aria-hidden="true">2</div>
+          <div class="step-icon-wrap" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div class="step-title">Quality score is computed</div>
+          <div class="step-desc">
+            The QualityScoreEngine reads the last 24 hours of sensor data and computes
+            a score from 0 to 100. The score updates on every listing automatically.
+          </div>
+        </div>
+
+        <div class="step-item" role="listitem">
+          <div class="step-num" aria-hidden="true">3</div>
+          <div class="step-icon-wrap" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="step-title">Harvest is forecast</div>
+          <div class="step-desc">
+            After 28 days of sensor data, the system analyses temperature and moisture
+            trends to predict the harvest window — before the farmer even posts a listing.
+          </div>
+        </div>
+
+        <div class="step-item" role="listitem">
+          <div class="step-num" aria-hidden="true">4</div>
+          <div class="step-icon-wrap" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.5 2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.5 16z"/>
+            </svg>
+          </div>
+          <div class="step-title">Buyer is notified</div>
+          <div class="step-desc">
+            Registered buyers with matching pre-order alerts receive an automatic
+            notification. They contact the farmer directly — no middleman, no delay.
+          </div>
+        </div>
+
+      </div>
+
+      <div class="text-center" style="margin-top: 48px;">
+        <a href="{{ url_for('public.how_it_works') }}" class="btn-secondary">See the full pipeline</a>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       FARMER / BUYER CTA CARDS
+       Two cards side by side, one per user type.
+       ═══════════════════════════════════════════════════════ -->
+  <section class="section" aria-labelledby="portals-title">
+    <div class="container">
+
+      <div class="section-header">
+        <div class="section-eyebrow" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Two portals, one platform
+        </div>
+        <h2 class="section-title" id="portals-title">Built for both sides of the market</h2>
+      </div>
+
+      <div class="portal-grid">
+
+        <!-- Farmer card -->
+        <div class="portal-card portal-card-farmer" role="region" aria-labelledby="farmer-portal-title">
+          <div class="portal-card-deco" aria-hidden="true"></div>
+
+          <div class="portal-card-tag">For farmers</div>
+
+          <div>
+            <h3 class="portal-card-title" id="farmer-portal-title">
+              Sell directly.<br>No middlemen.
+            </h3>
+          </div>
+
+          <p class="portal-card-desc">
+            Register your farm, connect your IoT sensor node, and your quality score
+            builds automatically. Buyers find you. Your trust score grows with every
+            completed transaction.
+          </p>
+
+          <ul class="portal-card-features" role="list" aria-label="Farmer features">
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Live sensor dashboard — soil, temperature, humidity
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Auto-irrigation alerts when moisture drops below 30%
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Harvest forecast generated from 28 days of data
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Trust score built from transactions and buyer ratings
+            </li>
+          </ul>
+
+          <div>
+            <a href="{{ url_for('auth.register', role='farmer') }}" class="btn-primary btn-lg">
+              Register as a farmer
+            </a>
+          </div>
+        </div>
+
+        <!-- Buyer card -->
+        <div class="portal-card portal-card-buyer" role="region" aria-labelledby="buyer-portal-title">
+          <div class="portal-card-deco" aria-hidden="true"></div>
+
+          <div class="portal-card-tag">For buyers</div>
+
+          <div>
+            <h3 class="portal-card-title" id="buyer-portal-title">
+              Buy with confidence.<br>Before it is harvested.
+            </h3>
+          </div>
+
+          <p class="portal-card-desc">
+            Browse verified listings sorted by quality score and farmer trust.
+            Register a pre-order alert and receive a notification when your preferred
+            crop is forecast to be ready — before it is even listed.
+          </p>
+
+          <ul class="portal-card-features" role="list" aria-label="Buyer features">
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Filter listings by quality score, trust score, region
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              See 14-day sensor history behind every listing
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Pre-order alerts — get notified before harvest
+            </li>
+            <li class="portal-feature-item">
+              <div class="portal-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              Contact farmers directly — no intermediary
+            </li>
+          </ul>
+
+          <div>
+            <a href="{{ url_for('buyer.marketplace') }}" class="btn-primary btn-lg btn-buyer">
+              Browse the marketplace
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       TESTIMONIALS
+       Three farmer / buyer quotes.
+       ═══════════════════════════════════════════════════════ -->
+  <div class="testimonial-strip" role="region" aria-labelledby="testimonials-title">
+    <div class="container">
+
+      <div class="section-header">
+        <div class="section-eyebrow" aria-hidden="true">Voices from the field</div>
+        <h2 class="section-title" id="testimonials-title">What farmers and buyers say</h2>
+      </div>
+
+      <div class="testimonial-grid">
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars" aria-label="5 stars">
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "Before FarmLink I sold everything to a middleman at half price. Now I list
+            directly and buyers come to me. My quality score of 87 speaks for itself —
+            I did not type that number, the sensors measured it."
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #3B6D11;" aria-hidden="true">MN</div>
+            <div>
+              <div class="testimonial-name">Martin Nkeng</div>
+              <div class="testimonial-role">Tomato farmer · West Region</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars" aria-label="5 stars">
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "I run a school feeding programme for 400 students. The pre-order alert system
+            means I know two weeks in advance when our maize supply will be ready.
+            We have not had a shortage since we joined FarmLink."
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #185FA5;" aria-hidden="true">CF</div>
+            <div>
+              <div class="testimonial-name">Claudine Fotso</div>
+              <div class="testimonial-role">School procurement · Yaoundé</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="testimonial-stars" aria-label="5 stars">
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg class="testimonial-star" viewBox="0 0 24 24" fill="#854F0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <p class="testimonial-text">
+            "The sensor node cost me 37,000 FCFA. In the first month on FarmLink I sold
+            at 40% higher price than the market rate because buyers could see my quality
+            score was 91 out of 100. It paid for itself immediately."
+          </p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #0F6E56;" aria-hidden="true">PB</div>
+            <div>
+              <div class="testimonial-name">Paul Biya Ekwala</div>
+              <div class="testimonial-role">Maize farmer · North West Region</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       FINAL CTA BANNER
+       Dark green, centred, with both buttons.
+       ═══════════════════════════════════════════════════════ -->
+  <section class="section section-dark" aria-labelledby="cta-title">
+    <div class="container text-center">
+
+      <div class="section-eyebrow" style="justify-content:center; margin-bottom: 16px;">
+        Ready to start?
+      </div>
+
+      <h2 class="section-title" id="cta-title" style="color:#fff; margin-bottom:16px;">
+        Join FarmLink Intelligence today
+      </h2>
+
+      <p class="section-sub" style="margin-bottom: 40px;">
+        Registration is free. Sensor nodes ship within 5 business days.
+        Your first quality score appears within 30 minutes of installation.
+      </p>
+
+      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+        <a href="{{ url_for('auth.register', role='farmer') }}" class="btn-primary btn-lg"
+           style="background:#C0DD97; color:#27500A; border-color:#C0DD97;">
+          Register as a farmer
+        </a>
+        <a href="{{ url_for('buyer.marketplace') }}" class="btn-secondary btn-lg"
+           style="color:rgba(255,255,255,0.8); border-color:rgba(255,255,255,0.25);">
+          Browse without registering
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       FOOTER
+       Dark background with 4-column link grid.
+       ═══════════════════════════════════════════════════════ -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+
+      <div class="footer-inner">
+
+        <!-- Brand column -->
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <div class="footer-logo-mark" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+              </svg>
+            </div>
+            <span class="footer-logo-name">FarmLink Intelligence</span>
+          </div>
+          <p class="footer-tagline">
+            IoT-verified agricultural marketplace for Cameroonian smallholder farmers.
+            Built at The ICT University, Spring 2026.
+          </p>
+        </div>
+
+        <!-- Platform links -->
+        <div class="footer-col">
+          <div class="footer-col-title">Platform</div>
+          <ul class="footer-col-links" role="list">
+            <li><a href="{{ url_for('buyer.marketplace') }}" class="footer-link">Marketplace</a></li>
+            <li><a href="{{ url_for('public.how_it_works') }}" class="footer-link">How it works</a></li>
+            <li><a href="{{ url_for('auth.register', role='farmer') }}" class="footer-link">For farmers</a></li>
+            <li><a href="{{ url_for('auth.register', role='buyer') }}" class="footer-link">For buyers</a></li>
+          </ul>
+        </div>
+
+        <!-- Company links -->
+        <div class="footer-col">
+          <div class="footer-col-title">Company</div>
+          <ul class="footer-col-links" role="list">
+            <li><a href="{{ url_for('public.about') }}" class="footer-link">About us</a></li>
+            <li><a href="{{ url_for('public.about') }}#team" class="footer-link">The team</a></li>
+            <li><a href="{{ url_for('public.about') }}#mission" class="footer-link">Mission</a></li>
+          </ul>
+        </div>
+
+        <!-- Account links -->
+        <div class="footer-col">
+          <div class="footer-col-title">Account</div>
+          <ul class="footer-col-links" role="list">
+            <li><a href="{{ url_for('auth.register') }}" class="footer-link">Register free</a></li>
+            <li><a href="{{ url_for('auth.login') }}" class="footer-link">Log in</a></li>
+            <li><a href="{{ url_for('auth.reset_password') }}" class="footer-link">Reset password</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="footer-bottom">
+        <span class="footer-copy">
+          &copy; 2026 FarmLink Intelligence · The ICT University, Cameroon
+        </span>
+        <div class="footer-bottom-links">
+          <a href="/privacy" class="footer-bottom-link">Privacy</a>
+          <a href="/terms" class="footer-bottom-link">Terms</a>
+          <a href="/contact" class="footer-bottom-link">Contact</a>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!--
+    ═══════════════════════════════════════════════════════
+    JAVASCRIPT — Minimal, vanilla only
+    Handles: nav scroll effect, progress bar animation
+    ═══════════════════════════════════════════════════════
+  -->
+  <script>
+    /* ── Nav scroll effect ──────────────────────────────── */
+    const nav = document.querySelector('.nav');
+    const onScroll = () => {
+      if (window.scrollY > 12) {
+        nav.style.boxShadow = '0 1px 16px rgba(0,0,0,0.08)';
+      } else {
+        nav.style.boxShadow = 'none';
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    /* ── Animate progress bars on page load ─────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      const fills = document.querySelectorAll('.hero-progress-fill');
+      fills.forEach(fill => {
+        const target = fill.style.width;
+        fill.style.width = '0%';
+        setTimeout(() => { fill.style.width = target; }, 400);
+      });
+    });
+  </script>
+
+</body>
+</html>

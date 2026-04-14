@@ -1,0 +1,135 @@
+/* ============================================================
+   FarmLink Intelligence — auth.css
+   Styles for authentication pages only: register, login,
+   forgot password, reset password.
+   Loaded in addition to main.css on auth pages.
+   ============================================================ */
+
+/* ── Auth Navbar (minimal) ────────────────────────────────── */
+.auth-nav {
+  height: 64px;
+  background: var(--white);
+  border-bottom: var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2xl);
+  justify-content: space-between;
+}
+.nav-logo {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--green-dark);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.nav-logo:hover { text-decoration: none; }
+.auth-nav-hint { font-size: 13px; color: var(--gray-mid); }
+
+/* ── Auth Page Wrapper ────────────────────────────────────── */
+.auth-page {
+  min-height: calc(100vh - 64px);
+  background: var(--gray-bg);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-lg);
+}
+.auth-container { width: 100%; max-width: 480px; }
+
+/* ── Auth Logo ────────────────────────────────────────────── */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--green-dark);
+  margin-bottom: var(--space-xl);
+}
+
+/* ── Auth Card ────────────────────────────────────────────── */
+.auth-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+}
+.auth-card h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+.auth-card-subtitle { text-align: center; color: var(--gray-mid); font-size: 13px; margin-bottom: var(--space-xl); display: block; }
+
+/* ── Step Progress Bar ────────────────────────────────────── */
+.step-progress { display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-2xl); }
+.step-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--gray-light); color: var(--gray-mid); font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; flex-shrink: 0; }
+.step-dot.active { background: var(--green-mid); color: var(--white); }
+.step-dot.done   { background: var(--teal-mid);  color: var(--white); }
+.step-line       { height: 2px; width: 60px; background: var(--gray-light); }
+.step-line.done  { background: var(--teal-mid); }
+
+/* ── Role Selection Cards ─────────────────────────────────── */
+.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-xl); }
+.role-card { border: 2px solid var(--gray-light); border-radius: var(--radius-xl); padding: var(--space-xl); cursor: pointer; transition: border-color 0.2s, background 0.2s; text-align: center; }
+.role-card:hover    { border-color: var(--green-light); background: var(--green-bg); }
+.role-card.selected { border-color: var(--green-mid); background: var(--green-bg); }
+.role-card .role-icon { font-size: 32px; margin-bottom: var(--space-md); }
+.role-card h3 { margin-bottom: var(--space-xs); }
+.role-card p  { font-size: 12px; color: var(--gray-mid); }
+
+/* ── Selected Role Notice ─────────────────────────────────── */
+.role-selected-notice { background: var(--blue-bg); border: var(--border); border-color: var(--blue-light); border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md); font-size: 13px; color: var(--blue-mid); margin-bottom: var(--space-md); }
+
+/* ── Form Two Columns ─────────────────────────────────────── */
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+
+/* ── Farmer Fields (shown/hidden) ─────────────────────────── */
+.farmer-fields { border-top: var(--border); margin-top: var(--space-md); padding-top: var(--space-md); }
+
+/* ── Terms Checkbox ───────────────────────────────────────── */
+.terms-row { display: flex; align-items: flex-start; gap: var(--space-sm); margin-top: var(--space-md); }
+.terms-row input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+.terms-row label { font-size: 13px; color: var(--gray-mid); }
+
+/* ── Step Nav Buttons ─────────────────────────────────────── */
+.step-nav { display: flex; gap: var(--space-sm); margin-top: var(--space-xl); }
+.step-nav-back { flex-shrink: 0; }
+.step-nav-next { flex: 1; }
+
+/* ── Review Box ───────────────────────────────────────────── */
+.review-box { background: var(--gray-bg); border-radius: var(--radius-lg); padding: var(--space-lg); margin-bottom: var(--space-xl); }
+.review-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-mid); margin-bottom: var(--space-md); display: block; }
+.review-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: var(--border); }
+.review-row:last-child { border-bottom: none; }
+.review-key { color: var(--gray-mid); }
+.review-val { font-weight: 500; color: var(--black); }
+
+/* ── Login page specific ──────────────────────────────────── */
+.login-container { width: 100%; max-width: 420px; }
+.portal-pills { display: flex; justify-content: center; gap: var(--space-sm); }
+.portal-notice { text-align: center; }
+.portal-notice-label { font-size: 12px; color: var(--gray-mid); margin-bottom: var(--space-md); display: block; }
+.password-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.forgot-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--blue-mid); padding: 0; }
+
+/* ── Forgot password slide section ───────────────────────── */
+.forgot-section { margin-top: var(--space-xl); padding-top: var(--space-xl); border-top: var(--border); }
+.forgot-section h3 { font-size: 14px; margin-bottom: var(--space-sm); }
+
+/* ── Demo credentials box ─────────────────────────────────── */
+.demo-box { background: var(--amber-bg); border: 0.5px solid var(--amber-light); border-radius: var(--radius-xl); padding: var(--space-lg); margin-top: var(--space-lg); }
+.demo-box-title { font-size: 12px; font-weight: 500; color: var(--amber-mid); margin-bottom: var(--space-sm); display: block; }
+.demo-cred { font-size: 12px; color: var(--amber-mid); margin-bottom: 4px; }
+
+/* ── Reset Password page ──────────────────────────────────── */
+.reset-page { min-height: calc(100vh - 64px); background: var(--gray-bg); display: flex; align-items: center; justify-content: center; padding: var(--space-2xl); }
+.reset-container { width: 100%; max-width: 420px; }
+.reset-icon { font-size: 48px; text-align: center; margin-bottom: var(--space-lg); }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-card { padding: var(--space-lg); }
+  .role-cards { grid-template-columns: 1fr; }
+  .form-row-2 { grid-template-columns: 1fr; }
+  .auth-nav { padding: 0 var(--space-lg); }
+}
