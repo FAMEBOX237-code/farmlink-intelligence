@@ -12,6 +12,17 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
 
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            return "User not found"
+        
+        if bcrypt.check_password_hash(user.password, password):
+            login_user(user)
+            return "Login successful "
+        else:
+            return "Incorrect password"
+
         print("LOGIN:", email, password)
 
         return "Login submitted"
