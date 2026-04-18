@@ -1,0 +1,872 @@
+/* ============================================================
+   FARMLINK INTELLIGENCE — my-farms.css
+   My Farms · Farmer Portal · WF08
+   Author: FarmLink Frontend Team — The ICT University, 2026
+
+   TABLE OF CONTENTS
+   1.  CSS Variables
+   2.  Reset & Base
+   3.  Utility — sr-only
+   4.  Layout — Page Wrapper + Content Area
+   5.  Topbar
+   6.  Sidebar
+   7.  Main Content
+   8.  Page Header
+   9.  Summary Metrics Row (3 cards)
+  10.  Farm Card — base structure
+  11.  Farm Card — header (name, location, status)
+  12.  Farm Card — body (stats + sensor readings)
+  13.  Farm Card — footer (meta + actions)
+  14.  Farm Card — offline state modifier
+  15.  Offline Banner (red alert strip)
+  16.  Offline Note (inline message)
+  17.  Status Dot + Status Text
+  18.  Sensor Readings + Mini Progress Bar
+  19.  Score Badges / Pills
+  20.  Add Farm — Dashed CTA card
+  21.  Buttons
+  22.  Responsive — Tablet (≤ 840px)
+  23.  Responsive — Mobile (≤ 580px)
+============================================================ */
+
+
+/* ============================================================
+   1. CSS VARIABLES — exact values from design spec §3 + §5
+============================================================ */
+:root {
+  /* Green — farmer portal */
+  --green-dark:  #27500A;
+  --green-mid:   #3B6D11;
+  --green-light: #C0DD97;
+  --green-bg:    #EAF3DE;
+
+  /* Teal — IoT / verified */
+  --teal-mid:    #0F6E56;
+  --teal-bg:     #E1F5EE;
+
+  /* Amber — warnings / forecasts */
+  --amber-mid:   #854F0B;
+  --amber-light: #FAC775;
+  --amber-bg:    #FAEEDA;
+
+  /* Blue — informational */
+  --blue-mid:    #185FA5;
+  --blue-bg:     #E6F1FB;
+
+  /* Danger */
+  --danger-mid:  #A32D2D;
+  --danger-bg:   #FCEBEB;
+  --danger-light:#F5C1C1;
+
+  /* Neutrals */
+  --gray-dark:   #444441;
+  --gray-mid:    #5F5E5A;
+  --gray-light:  #D3D1C7;
+  --gray-bg:     #F1EFE8;
+  --gray-subtle: #E8E5DC;
+
+  --white:       #FFFFFF;
+  --black:       #1a1a18;
+
+  /* Semantic text */
+  --text-primary:   var(--black);
+  --text-secondary: var(--gray-mid);
+  --text-tertiary:  #9E9C94;
+  --text-success:   var(--green-dark);
+  --text-warning:   var(--amber-mid);
+  --text-danger:    var(--danger-mid);
+
+  /* Borders */
+  --border:        0.5px solid var(--gray-light);
+  --border-subtle: 0.5px solid var(--gray-subtle);
+  --border-success:0.5px solid var(--green-mid);
+  --border-warning:0.5px solid var(--amber-mid);
+  --border-danger: 0.5px solid var(--danger-mid);
+
+  /* Layout (from spec §5) */
+  --topbar-height: 48px;
+  --sidebar-width: 160px;
+  --content-max:   900px;
+
+  /* Spacing */
+  --sp-1:  4px;  --sp-2:  8px;  --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-7: 28px;  --sp-8: 32px;
+
+  /* Radius */
+  --r-sm:   4px;  --r-md:  6px;  --r-lg: 8px;
+  --r-xl:  12px;  --r-full:9999px;
+
+  /* Typography */
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.07);
+  --shadow-lg: 0 8px 28px rgba(0,0,0,0.09);
+
+  /* Transition */
+  --t: 0.20s ease;
+}
+
+
+/* ============================================================
+   2. RESET & BASE
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+
+body {
+  font-family:      var(--font);
+  font-size:        14px;
+  line-height:      1.55;
+  color:            var(--text-primary);
+  background-color: var(--gray-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+a   { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+button, input, select {
+  font-family: var(--font);
+  font-size: inherit;
+}
+svg { display: block; }
+
+
+/* ============================================================
+   3. UTILITY — Screen reader only
+============================================================ */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+
+/* ============================================================
+   4. LAYOUT
+============================================================ */
+.page-wrapper {
+  display:        flex;
+  flex-direction: column;
+  min-height:     100vh;
+}
+
+.content-area {
+  display:    flex;
+  flex:       1;
+  margin-top: var(--topbar-height);
+  position:   relative;
+}
+
+
+/* ============================================================
+   5. TOPBAR
+============================================================ */
+.topbar {
+  position:     fixed;
+  top: 0; left: 0; right: 0;
+  z-index:      900;
+  height:       var(--topbar-height);
+  background:   var(--white);
+  border-bottom: var(--border-subtle);
+  display:      flex;
+  align-items:  center;
+  justify-content: space-between;
+  padding:      0 var(--sp-5);
+  box-shadow:   var(--shadow-sm);
+}
+
+.topbar__left  { display: flex; align-items: center; gap: var(--sp-3); }
+.topbar__right { display: flex; align-items: center; gap: var(--sp-4); }
+
+/* Hamburger — hidden on desktop */
+.topbar__menu-btn {
+  display:        none;
+  flex-direction: column;
+  gap:            5px;
+  padding:        var(--sp-2);
+  background:     none;
+  border:         none;
+  cursor:         pointer;
+}
+.topbar__menu-btn span {
+  display:       block;
+  width:         18px;
+  height:        1.5px;
+  background:    var(--text-primary);
+  border-radius: var(--r-full);
+  transition:    transform var(--t), opacity var(--t);
+}
+
+/* Logo */
+.topbar__logo {
+  display:     flex;
+  align-items: center;
+  gap:         var(--sp-2);
+  font-size:   14px;
+  font-weight: 500;
+  color:       var(--text-primary);
+  transition:  color var(--t);
+}
+.topbar__logo:hover   { color: var(--green-mid); }
+.topbar__logo-icon    { color: var(--green-mid); font-size: 14px; }
+
+/* Portal label */
+.topbar__portal-label { font-size: 12px; color: var(--text-secondary); }
+
+/* Notification button */
+.topbar__notif-btn {
+  position: relative;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-secondary); padding: var(--sp-1);
+  display: flex; align-items: center;
+  transition: color var(--t);
+}
+.topbar__notif-btn:hover { color: var(--green-mid); }
+
+.topbar__notif-badge {
+  position: absolute; top: -2px; right: -4px;
+  width: 16px; height: 16px;
+  background: var(--green-mid); color: var(--white);
+  font-size: 9px; font-weight: 500;
+  border-radius: var(--r-full);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Avatar */
+.topbar__avatar {
+  width: 30px; height: 30px;
+  border-radius: var(--r-full);
+  background: var(--gray-bg); border: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: var(--text-secondary);
+  cursor: pointer; transition: border-color var(--t);
+}
+.topbar__avatar:hover { border-color: var(--green-mid); }
+
+
+/* ============================================================
+   6. SIDEBAR
+============================================================ */
+.sidebar {
+  width:          var(--sidebar-width);
+  flex-shrink:    0;
+  background:     var(--white);
+  border-right:   var(--border-subtle);
+  position:       fixed;
+  top:            var(--topbar-height);
+  bottom:         0;
+  left:           0;
+  z-index:        800;
+  display:        flex;
+  flex-direction: column;
+  overflow-y:     auto;
+  padding:        var(--sp-4) 0;
+  transition:     transform var(--t);
+}
+
+.sidebar__nav { display: flex; flex-direction: column; }
+
+/* Nav item — 40px tap target */
+.sidebar__item {
+  display:      flex;
+  align-items:  center;
+  gap:          var(--sp-2);
+  height:       40px;
+  padding:      0 var(--sp-4);
+  font-size:    12px;
+  color:        var(--text-secondary);
+  cursor:       pointer;
+  border-right: 2px solid transparent;
+  transition:   background var(--t), color var(--t), border-color var(--t);
+  white-space:  nowrap;
+}
+.sidebar__item:hover { background: var(--gray-bg); color: var(--text-primary); }
+
+/* Active item */
+.sidebar__item--active {
+  background:   var(--green-bg);
+  color:        var(--text-primary);
+  font-weight:  500;
+  border-right-color: var(--green-mid);
+}
+
+/* Log out danger hint */
+.sidebar__item--logout:hover { color: var(--danger-mid); }
+
+/* Icon box */
+.sidebar__icon {
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: inherit;
+}
+
+.sidebar__divider {
+  height: 0.5px; background: var(--gray-subtle);
+  margin: var(--sp-3) var(--sp-4);
+}
+
+/* Mobile overlay */
+.sidebar__overlay {
+  display:    none;
+  position:   fixed;
+  inset:      0;
+  background: rgba(26,26,24,0.35);
+  z-index:    799;
+}
+.sidebar__overlay--visible { display: block; }
+
+
+/* ============================================================
+   7. MAIN CONTENT
+============================================================ */
+.main-content {
+  flex:         1;
+  margin-left:  var(--sidebar-width);
+  padding:      var(--sp-5);
+  max-width:    calc(var(--content-max) + var(--sidebar-width));
+  min-width:    0;
+}
+
+
+/* ============================================================
+   8. PAGE HEADER
+   Title + subtitle left · Add farm button right.
+============================================================ */
+.page-header {
+  display:       flex;
+  align-items:   flex-start;
+  justify-content: space-between;
+  gap:           var(--sp-4);
+  margin-bottom: var(--sp-5);
+  flex-wrap:     wrap;
+}
+
+.page-header__title {
+  font-size:   22px; /* spec §4 — one h1 per page */
+  font-weight: 500;
+  color:       var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: var(--sp-1);
+}
+
+.page-header__sub {
+  font-size:  12px;
+  color:      var(--text-tertiary);
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+   9. SUMMARY METRICS ROW — 3 metric cards
+   Uses spec §6 Metric Card pattern:
+   label (11px) → number (18-20px) → sub-label (10px).
+============================================================ */
+.metrics-row {
+  display:               grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:                   var(--sp-2);
+  margin-bottom:         var(--sp-5);
+}
+
+.metric-card {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--sp-1);
+  background:     var(--gray-bg);
+  border:         var(--border-subtle);
+  border-radius:  var(--r-lg);
+  padding:        var(--sp-3);
+}
+
+.metric-card__label {
+  font-size:  11px;
+  color:      var(--text-tertiary);
+  font-weight: 400;
+}
+
+.metric-card__value {
+  font-size:   20px;
+  font-weight: 500;
+  color:       var(--text-primary);
+  line-height: 1.2;
+}
+
+/* Colour modifiers for metric values */
+.metric-card__value--success { color: var(--text-success); }
+.metric-card__value--warning { color: var(--text-warning); }
+
+.metric-card__sub {
+  font-size:  10px;
+  color:      var(--text-tertiary);
+  margin-top: var(--sp-1);
+}
+
+
+/* ============================================================
+  10. FARM CARD — base structure
+   White bordered card with rounded corners. Contains:
+   header (green tint bg), body, footer.
+============================================================ */
+.farm-card {
+  background:    var(--white);
+  border:        var(--border-subtle);
+  border-radius: var(--r-xl);
+  overflow:      hidden;
+  margin-bottom: var(--sp-4);
+  transition:    box-shadow var(--t), transform var(--t);
+}
+
+.farm-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+
+/* ============================================================
+  11. FARM CARD — header
+   Earthy tinted background, name + location left,
+   sensor status right.
+============================================================ */
+.farm-card__header {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
+  gap:             var(--sp-4);
+  padding:         var(--sp-3) var(--sp-4);
+  border-bottom:   var(--border-subtle);
+  background:      var(--gray-bg);
+}
+
+.farm-card__header-left { flex: 1; min-width: 0; }
+
+.farm-card__name-row {
+  display:     flex;
+  align-items: center;
+  gap:         var(--sp-2);
+  flex-wrap:   wrap;
+  margin-bottom: var(--sp-1);
+}
+
+.farm-card__name {
+  font-size:   13px;
+  font-weight: 500;
+  color:       var(--text-primary);
+  line-height: 1.3;
+}
+
+.farm-card__location {
+  font-size:  11px;
+  color:      var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Sensor status — right side of header */
+.farm-card__status {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+  12. FARM CARD — body
+   4-stat mini-grid + sensor reading rows.
+============================================================ */
+.farm-card__body {
+  padding: var(--sp-4);
+}
+
+/* 4-column stat mini-grid */
+.farm-stats {
+  display:               grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:                   var(--sp-2);
+  margin-bottom:         var(--sp-4);
+  padding-bottom:        var(--sp-4);
+  border-bottom:         var(--border-subtle);
+}
+
+.farm-stat {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            var(--sp-1);
+}
+
+.farm-stat__val {
+  font-size:   16px;
+  font-weight: 500;
+  color:       var(--text-primary);
+  line-height: 1;
+}
+
+.farm-stat__label {
+  font-size:   10px;
+  color:       var(--text-tertiary);
+  text-align:  center;
+  line-height: 1.3;
+}
+
+/* Faded variant for offline state */
+.farm-stats--faded {
+  opacity: 0.5;
+}
+
+/* Sensor reading rows */
+.sensor-readings { display: flex; flex-direction: column; }
+
+.sensor-row {
+  display:       flex;
+  align-items:   center;
+  justify-content: space-between;
+  padding:       6px 0;
+  border-bottom: var(--border-subtle);
+}
+
+.sensor-row--last { border-bottom: none; }
+
+.sensor-row__label {
+  font-size: 11px;
+  color:     var(--text-secondary);
+}
+
+.sensor-row__right {
+  display:     flex;
+  align-items: center;
+  gap:         var(--sp-2);
+}
+
+.sensor-row__val {
+  font-size:   11px;
+  font-weight: 500;
+  color:       var(--text-primary);
+}
+
+/* Timestamp value — slightly muted */
+.sensor-row__val--time {
+  font-weight: 400;
+  color:       var(--text-secondary);
+}
+
+
+/* ============================================================
+  13. FARM CARD — footer
+   Light background, metadata left, two action buttons right.
+============================================================ */
+.farm-card__footer {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  gap:             var(--sp-3);
+  padding:         10px var(--sp-4);
+  border-top:      var(--border-subtle);
+  background:      var(--gray-bg);
+  flex-wrap:       wrap;
+}
+
+.farm-card__footer-meta {
+  font-size:  11px;
+  color:      var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.farm-card__actions { display: flex; gap: var(--sp-2); }
+
+
+/* ============================================================
+  14. FARM CARD — offline state modifier
+   Red border replaces subtle border.
+============================================================ */
+.farm-card--offline {
+  border-color: var(--danger-mid);
+}
+
+.farm-card__body--offline {
+  padding: var(--sp-4);
+}
+
+
+/* ============================================================
+  15. OFFLINE BANNER
+   Full-width red strip at top of offline card.
+   Spec §6: "red for error/offline"
+============================================================ */
+.offline-banner {
+  display:     flex;
+  align-items: center;
+  gap:         var(--sp-2);
+  padding:     9px var(--sp-4);
+  background:  var(--danger-bg);
+  border-bottom: var(--border-danger);
+}
+
+.offline-banner svg { color: var(--danger-mid); flex-shrink: 0; }
+
+.offline-banner p {
+  font-size:   11px;
+  color:       var(--danger-mid);
+  line-height: 1.5;
+  margin:      0;
+}
+
+
+/* ============================================================
+  16. OFFLINE NOTE — inline message below greyed stats
+============================================================ */
+.offline-note {
+  display:     flex;
+  align-items: flex-start;
+  gap:         var(--sp-2);
+  font-size:   11px;
+  color:       var(--text-tertiary);
+  font-style:  italic;
+  line-height: 1.5;
+  margin-top:  var(--sp-2);
+}
+
+.offline-note svg { flex-shrink: 0; margin-top: 1px; color: var(--danger-mid); opacity: 0.7; }
+
+
+/* ============================================================
+  17. STATUS DOT + STATUS TEXT
+============================================================ */
+.status-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: var(--r-full);
+  flex-shrink:   0;
+}
+
+.status-dot--online  {
+  background: var(--green-mid);
+  animation: statusPulse 2.5s ease-in-out infinite;
+}
+.status-dot--offline { background: var(--danger-mid); }
+.status-dot--warning { background: var(--amber-mid);  }
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+.status-text            { font-size: 11px; }
+.status-text--online    { color: var(--text-success); }
+.status-text--offline   { color: var(--danger-mid);   }
+.status-text--warning   { color: var(--amber-mid);    }
+
+
+/* ============================================================
+  18. SENSOR MINI PROGRESS BAR
+============================================================ */
+.sensor-bar {
+  width:         52px;
+  height:        3px;
+  background:    var(--gray-subtle);
+  border-radius: var(--r-full);
+  overflow:      hidden;
+  flex-shrink:   0;
+}
+
+.sensor-bar__fill {
+  height:        100%;
+  background:    var(--green-mid);
+  border-radius: var(--r-full);
+  transition:    width 0.4s ease;
+}
+
+
+/* ============================================================
+  19. BADGES / PILLS — score and status labels
+  From spec §6: Score Badge — pill-shaped.
+============================================================ */
+.badge {
+  display:       inline-block;
+  font-size:     10px;
+  padding:       2px 8px;
+  border-radius: var(--r-full);
+  border:        0.5px solid transparent;
+  font-weight:   400;
+  white-space:   nowrap;
+}
+
+.badge--active   { color: var(--text-success); border-color: var(--green-mid);  background: var(--green-bg);  }
+.badge--draft    { color: var(--text-warning); border-color: var(--amber-mid);  background: var(--amber-bg);  }
+.badge--forecast { color: var(--text-warning); border-color: var(--amber-mid);  background: var(--amber-bg);  }
+.badge--quality  { color: var(--text-success); border-color: var(--green-mid);  background: var(--green-bg);  }
+.badge--neutral  { color: var(--text-secondary); border-color: var(--gray-light); background: var(--gray-bg); }
+.badge--sold     { color: var(--text-secondary); border-color: var(--gray-light); background: var(--white);   }
+
+
+/* ============================================================
+  20. ADD FARM — Dashed CTA card
+   Dashed border, centred content, hover interaction.
+============================================================ */
+.add-farm-card {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             var(--sp-2);
+  padding:         var(--sp-7) var(--sp-5);
+  border:          0.5px dashed var(--gray-light);
+  border-radius:   var(--r-xl);
+  text-align:      center;
+  cursor:          pointer;
+  background:      var(--white);
+  transition:      border-color var(--t), background var(--t);
+  margin-bottom:   var(--sp-4);
+}
+
+.add-farm-card:hover {
+  border-color: var(--green-mid);
+  background:   var(--green-bg);
+}
+
+.add-farm-card__icon {
+  width:           38px;
+  height:          38px;
+  border-radius:   var(--r-full);
+  border:          0.5px solid var(--gray-light);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-size:       20px;
+  color:           var(--text-tertiary);
+  background:      var(--white);
+  transition:      border-color var(--t), color var(--t);
+}
+
+.add-farm-card:hover .add-farm-card__icon {
+  border-color: var(--green-mid);
+  color:        var(--green-mid);
+}
+
+.add-farm-card__title {
+  font-size:   13px;
+  font-weight: 500;
+  color:       var(--text-secondary);
+  transition:  color var(--t);
+}
+
+.add-farm-card:hover .add-farm-card__title { color: var(--green-dark); }
+
+.add-farm-card__desc {
+  font-size:  11px;
+  color:      var(--text-tertiary);
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+  21. BUTTONS
+============================================================ */
+.btn {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             var(--sp-1);
+  font-size:       12px;
+  font-weight:     500;
+  line-height:     1;
+  padding:         8px 14px;
+  border-radius:   var(--r-md);
+  border:          0.5px solid transparent;
+  cursor:          pointer;
+  white-space:     nowrap;
+  transition:      background var(--t), border-color var(--t),
+                   color var(--t), transform var(--t), box-shadow var(--t);
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: translateY(0);    }
+
+/* Primary — green bordered (Add farm, View dashboard) */
+.btn--primary {
+  background:   var(--green-bg);
+  border-color: var(--green-mid);
+  color:        var(--green-dark);
+}
+.btn--primary:hover {
+  background:   var(--green-light);
+  border-color: var(--green-dark);
+  box-shadow:   0 3px 10px rgba(59,109,17,0.15);
+}
+
+/* Ghost — transparent, grey border (Edit farm) */
+.btn--ghost {
+  background:   transparent;
+  border-color: var(--gray-light);
+  color:        var(--text-secondary);
+}
+.btn--ghost:hover {
+  background:   var(--gray-bg);
+  border-color: var(--gray-mid);
+  color:        var(--text-primary);
+}
+
+/* Small size modifier */
+.btn--sm {
+  font-size: 11px;
+  padding:   5px 12px;
+}
+
+
+/* ============================================================
+  22. RESPONSIVE — TABLET (≤ 840px)
+   Sidebar slides off-screen. Main expands.
+============================================================ */
+@media (max-width: 840px) {
+
+  .topbar__menu-btn { display: flex; }
+
+  .sidebar {
+    transform:  translateX(-100%);
+    box-shadow: var(--shadow-md);
+  }
+  .sidebar--open { transform: translateX(0); }
+
+  .main-content  { margin-left: 0; max-width: 100%; }
+  .topbar__portal-label { display: none; }
+}
+
+
+/* ============================================================
+  23. RESPONSIVE — MOBILE (≤ 580px)
+   Grid collapses. Card sections stack.
+============================================================ */
+@media (max-width: 580px) {
+
+  /* Metrics: 3 → 1 row of 3 (squeeze) or wrap */
+  .metrics-row { grid-template-columns: repeat(3, 1fr); }
+
+  /* Farm stats: 4 → 2 columns */
+  .farm-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* Page header → stack */
+  .page-header { flex-direction: column; gap: var(--sp-3); }
+  .page-header .btn { align-self: flex-start; }
+
+  /* Card footer → stack */
+  .farm-card__footer {
+    flex-direction: column;
+    align-items:    flex-start;
+    gap:            var(--sp-2);
+  }
+
+  .farm-card__actions { flex-wrap: wrap; }
+
+  /* Main padding */
+  .main-content { padding: var(--sp-4); }
+
+  /* Metrics collapse further on very small */
+  .metric-card__value { font-size: 16px; }
+}
+
+@media (max-width: 380px) {
+  .metrics-row { grid-template-columns: repeat(3, 1fr); gap: var(--sp-1); }
+  .metric-card { padding: var(--sp-2); }
+}

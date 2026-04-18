@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Farms — FarmLink Intelligence</title>
+  <link rel="stylesheet" href="/static/css/farms.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       PAGE WRAPPER — full-height flex column
+       Topbar (fixed) sits at the top.
+       Content area = sidebar (fixed left) + scrollable main.
+  ============================================================ -->
+  <div class="page-wrapper">
+
+
+    <!-- ============================================================
+         TOPBAR — 48px fixed bar
+         Left : hamburger (mobile) + logo
+         Right: portal label · notification bell · avatar
+    ============================================================ -->
+    <header class="topbar" role="banner">
+      <div class="topbar__left">
+        <button class="topbar__menu-btn" id="menuToggle"
+                aria-label="Toggle navigation" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <a href="#" class="topbar__logo" aria-label="FarmLink Intelligence home">
+          <span class="topbar__logo-icon" aria-hidden="true">&#9652;</span>
+          FarmLink Intelligence
+        </a>
+      </div>
+
+      <div class="topbar__right">
+        <span class="topbar__portal-label">Farmer portal</span>
+
+        <button class="topbar__notif-btn" aria-label="Notifications, 3 unread">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 01-3.46 0"/>
+          </svg>
+          <span class="topbar__notif-badge" aria-hidden="true">3</span>
+        </button>
+
+        <div class="topbar__avatar" role="img" aria-label="User avatar: MN">MN</div>
+      </div>
+    </header>
+
+
+    <!-- ============================================================
+         CONTENT AREA — sidebar + main
+    ============================================================ -->
+    <div class="content-area">
+
+      <!-- SIDEBAR — My farms active -->
+      <aside class="sidebar" id="sidebar"
+             role="navigation" aria-label="Farmer portal navigation">
+
+        <nav class="sidebar__nav">
+          <a href="#" class="sidebar__item" aria-label="Dashboard">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </span>Dashboard
+          </a>
+
+          <!-- MY FARMS — active -->
+          <a href="#" class="sidebar__item sidebar__item--active"
+             aria-label="My farms" aria-current="page">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </span>My farms
+          </a>
+
+          <a href="#" class="sidebar__item" aria-label="My listings">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </span>My listings
+          </a>
+
+          <a href="#" class="sidebar__item" aria-label="Forecasts">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </span>Forecasts
+          </a>
+
+          <a href="#" class="sidebar__item" aria-label="Trust score">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </span>Trust score
+          </a>
+        </nav>
+
+        <div class="sidebar__divider" role="separator" aria-hidden="true"></div>
+
+        <nav class="sidebar__nav" aria-label="Account navigation">
+          <a href="#" class="sidebar__item" aria-label="Profile settings">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>Profile
+          </a>
+
+          <a href="#" class="sidebar__item sidebar__item--logout" aria-label="Log out">
+            <span class="sidebar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </span>Log out
+          </a>
+        </nav>
+      </aside>
+
+      <!-- Sidebar overlay (mobile) -->
+      <div class="sidebar__overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+
+      <!-- ============================================================
+           MAIN CONTENT
+           Page header → summary metrics → farm cards → add card
+      ============================================================ -->
+      <main class="main-content" id="mainContent" role="main">
+
+        <!-- Page header: title + subtitle + Add farm CTA -->
+        <div class="page-header">
+          <div class="page-header__text">
+            <h1 class="page-header__title">My farms</h1>
+            <p class="page-header__sub">All your registered farms and their live sensor status</p>
+          </div>
+          <a href="add-farm.html" class="btn btn--primary" aria-label="Add a new farm">
+            + Add farm
+          </a>
+        </div>
+
+
+        <!-- ── SUMMARY METRICS ── 3 metric cards -->
+        <div class="metrics-row" role="region" aria-label="Farm summary statistics">
+
+          <div class="metric-card">
+            <span class="metric-card__label">Total farms</span>
+            <span class="metric-card__value">2</span>
+            <span class="metric-card__sub">registered</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-card__label">Sensors online</span>
+            <span class="metric-card__value metric-card__value--success">1 / 2</span>
+            <span class="metric-card__sub">1 offline</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-card__label">Avg quality score</span>
+            <span class="metric-card__value metric-card__value--success">75</span>
+            <span class="metric-card__sub">across all farms</span>
+          </div>
+
+        </div>
+
+
+        <!-- ══════════════════════════════════════════
+             FARM CARD 1 — Online state
+             Green header, live sensor readings visible.
+        ══════════════════════════════════════════ -->
+        <article class="farm-card" aria-labelledby="farm1-name">
+
+          <!-- Card header: name/location + sensor status + forecast pill -->
+          <div class="farm-card__header">
+            <div class="farm-card__header-left">
+              <div class="farm-card__name-row">
+                <h2 class="farm-card__name" id="farm1-name">Farm 1 — Bafoussam</h2>
+                <span class="badge badge--forecast" aria-label="Harvest forecast active">
+                  Forecast active
+                </span>
+              </div>
+              <p class="farm-card__location">West Region · Tomatoes · 2.4 hectares</p>
+            </div>
+
+            <div class="farm-card__status">
+              <span class="status-dot status-dot--online" aria-hidden="true"></span>
+              <span class="status-text status-text--online">Sensor online</span>
+            </div>
+          </div>
+
+          <!-- Card body: 4 metrics + sensor readings -->
+          <div class="farm-card__body">
+
+            <!-- 4-column metric mini-grid -->
+            <div class="farm-stats" role="list" aria-label="Farm statistics">
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">78</span>
+                <span class="farm-stat__label">Quality score</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">56</span>
+                <span class="farm-stat__label">Readings logged</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">28d</span>
+                <span class="farm-stat__label">Days of data</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">3</span>
+                <span class="farm-stat__label">Active listings</span>
+              </div>
+            </div>
+
+            <!-- Live sensor readings with mini progress bars -->
+            <div class="sensor-readings" role="region" aria-label="Live sensor readings">
+
+              <div class="sensor-row">
+                <span class="sensor-row__label">Soil moisture</span>
+                <div class="sensor-row__right">
+                  <span class="sensor-row__val">62%</span>
+                  <div class="sensor-bar" role="presentation" aria-hidden="true">
+                    <div class="sensor-bar__fill" style="width: 62%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sensor-row">
+                <span class="sensor-row__label">Temperature</span>
+                <div class="sensor-row__right">
+                  <span class="sensor-row__val">24 °C</span>
+                  <div class="sensor-bar" role="presentation" aria-hidden="true">
+                    <div class="sensor-bar__fill" style="width: 55%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sensor-row">
+                <span class="sensor-row__label">Humidity</span>
+                <div class="sensor-row__right">
+                  <span class="sensor-row__val">71%</span>
+                  <div class="sensor-bar" role="presentation" aria-hidden="true">
+                    <div class="sensor-bar__fill" style="width: 71%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sensor-row sensor-row--last">
+                <span class="sensor-row__label">Last reading</span>
+                <span class="sensor-row__val sensor-row__val--time">
+                  <time datetime="PT30M">30 minutes ago</time>
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Card footer: metadata + action buttons -->
+          <div class="farm-card__footer">
+            <span class="farm-card__footer-meta">
+              Added Jan 2026 · Sensor ID: NODE-001
+            </span>
+            <div class="farm-card__actions">
+              <a href="edit-farm.html" class="btn btn--ghost btn--sm" aria-label="Edit Farm 1 Bafoussam">
+                Edit farm
+              </a>
+              <a href="#" class="btn btn--primary btn--sm" aria-label="View dashboard for Farm 1">
+                View dashboard ↗
+              </a>
+            </div>
+          </div>
+
+        </article>
+
+
+        <!-- ══════════════════════════════════════════
+             FARM CARD 2 — Offline state
+             Red border, offline banner, greyed readings.
+        ══════════════════════════════════════════ -->
+        <article class="farm-card farm-card--offline" aria-labelledby="farm2-name">
+
+          <!-- Offline banner — full-width red strip at top -->
+          <div class="offline-banner" role="alert" aria-live="polite">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p>Sensor offline — last reading was 6 hours ago. Check your device connection.</p>
+          </div>
+
+          <!-- Card header -->
+          <div class="farm-card__header">
+            <div class="farm-card__header-left">
+              <div class="farm-card__name-row">
+                <h2 class="farm-card__name" id="farm2-name">Farm 2 — Bamenda</h2>
+              </div>
+              <p class="farm-card__location">North West Region · Maize · 1.1 hectares</p>
+            </div>
+
+            <div class="farm-card__status">
+              <span class="status-dot status-dot--offline" aria-hidden="true"></span>
+              <span class="status-text status-text--offline">Sensor offline</span>
+            </div>
+          </div>
+
+          <!-- Card body: metrics + offline note -->
+          <div class="farm-card__body farm-card__body--offline">
+
+            <div class="farm-stats farm-stats--faded" role="list" aria-label="Farm statistics (last known values)">
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">71</span>
+                <span class="farm-stat__label">Quality score</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">12</span>
+                <span class="farm-stat__label">Readings logged</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">6d</span>
+                <span class="farm-stat__label">Days of data</span>
+              </div>
+              <div class="farm-stat" role="listitem">
+                <span class="farm-stat__val">1</span>
+                <span class="farm-stat__label">Active listings</span>
+              </div>
+            </div>
+
+            <!-- Offline note — replaces live readings -->
+            <p class="offline-note" aria-label="Sensor offline notice">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Sensor readings unavailable — last known values shown above. Readings resume once the node reconnects.
+            </p>
+          </div>
+
+          <!-- Card footer -->
+          <div class="farm-card__footer">
+            <span class="farm-card__footer-meta">
+              Added Mar 2026 · Sensor ID: NODE-002
+            </span>
+            <div class="farm-card__actions">
+              <a href="edit-farm.html" class="btn btn--ghost btn--sm" aria-label="Edit Farm 2 Bamenda">
+                Edit farm
+              </a>
+              <a href="#" class="btn btn--primary btn--sm" aria-label="View dashboard for Farm 2">
+                View dashboard ↗
+              </a>
+            </div>
+          </div>
+
+        </article>
+
+
+        <!-- ══════════════════════════════════════════
+             ADD FARM — Dashed card at bottom
+             Always visible, invites growth of portfolio.
+        ══════════════════════════════════════════ -->
+        <a href="add-farm.html" class="add-farm-card" aria-label="Add another farm">
+          <div class="add-farm-card__icon" aria-hidden="true">+</div>
+          <h3 class="add-farm-card__title">Add another farm</h3>
+          <p class="add-farm-card__desc">Register a new farm and connect its IoT sensor node</p>
+        </a>
+
+      </main>
+    </div><!-- /.content-area -->
+  </div><!-- /.page-wrapper -->
+
+
+  <!-- ============================================================
+       JAVASCRIPT — Sidebar mobile toggle
+  ============================================================ -->
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar    = document.getElementById('sidebar');
+    const overlay    = document.getElementById('sidebarOverlay');
+
+    const openSidebar = () => {
+      sidebar.classList.add('sidebar--open');
+      overlay.classList.add('sidebar__overlay--visible');
+      menuToggle.setAttribute('aria-expanded', 'true');
+      overlay.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeSidebar = () => {
+      sidebar.classList.remove('sidebar--open');
+      overlay.classList.remove('sidebar__overlay--visible');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      overlay.setAttribute('aria-hidden', 'true');
+    };
+
+    menuToggle.addEventListener('click', () =>
+      sidebar.classList.contains('sidebar--open') ? closeSidebar() : openSidebar()
+    );
+    overlay.addEventListener('click', closeSidebar);
+  </script>
+
+</body>
+</html>
