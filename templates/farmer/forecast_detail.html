@@ -1,0 +1,798 @@
+{# ============================================================
+   templates/farmer/forecast_detail.html — FarmLink Intelligence
+
+   Harvest Forecast detail page.
+   Shows the active forecast, countdown, confidence, data health,
+   and a full history of past forecasts.
+
+   CSS: public.css → farmer.css   (zero inline styles)
+   Route: GET /farmer/forecasts/<fid>
+
+   Context (all pre-computed in routes/farmer.py → forecast_detail()):
+     farmer              User
+     forecast            HarvestForecast
+     farm                Farm
+     days_to_start       int       — days until harvest window opens
+     days_to_end         int       — days until harvest window closes
+     window_label        str       — '15 Jun 2025 – 22 Jun 2025'
+     confidence_pct      int       — 0-100
+     confidence_css      str       — 'conf-high'|'conf-mid'|'conf-low'
+     data_points         int       — sensor readings used
+     data_points_pct     int       — 0-100 (28-day target)
+     buyers_alerted      int
+     is_active           bool
+     created_display     str
+     history             list[dict]
+     sensor_readings_7d  int
+     latest_reading_ago  str
+     active_page, unread_notifs, active_forecast
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Harvest Forecast · {{ farm.name }} · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+</head>
+<body class="portal-body">
+
+{# ── Topbar ── #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ farmer.full_name }}</span>
+    <div class="topbar-avatar" title="{{ farmer.full_name }}" aria-hidden="true">
+      {{ farmer.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# Breadcrumb #}
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('farmer.dashboard') }}">Dashboard</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span class="breadcrumb-cur">Harvest Forecast · {{ farm.name }}</span>
+    </nav>
+
+    {# Page header #}
+    <div class="inner-hd">
+      <h1 class="inner-title">Harvest Forecast</h1>
+      <p class="inner-subtitle">
+        {{ farm.name }} · {{ farm.crop_type }} · {{ farm.region }}{% if farm.town %}, {{ farm.town }}{% endif %}
+      </p>
+    </div>
+
+    {# Status banner #}
+    {% if not is_active %}
+      <div class="banner bn-offline" role="alert">
+        <span>This forecast is no longer active. A newer forecast may have replaced it.</span>
+        <a href="{{ url_for('farmer.dashboard') }}">View dashboard</a>
+      </div>
+    {% endif %}
+
+    {# ════ HERO CARD — countdown + window ════════════════════ #}
+    <div class="fc-hero" role="region" aria-label="Forecast overview">
+
+      <div class="fc-hero-countdown">
+        <div class="fc-hero-cd-label">Days until harvest</div>
+        <div class="fc-hero-cd-num {% if days_to_start == 0 %}fc-cd-now{% elif days_to_start <= 7 %}fc-cd-soon{% endif %}">
+          {% if days_to_start == 0 %}
+            Now
+          {% else %}
+            {{ days_to_start }}
+          {% endif %}
+        </div>
+        <div class="fc-hero-cd-sub">
+          {% if days_to_start == 0 and days_to_end > 0 %}
+            Harvest window open · closes in {{ days_to_end }} days
+          {% elif days_to_start == 0 and days_to_end == 0 %}
+            Harvest window has passed
+          {% else %}
+            Window: {{ window_label }}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="fc-hero-divider" aria-hidden="true"></div>
+
+      {# Confidence ring #}
+      <div class="fc-hero-conf">
+        <div class="fc-hero-conf-label">Model confidence</div>
+        {% set circ = 2 * 3.14159 * 32 %}
+        {% set offs = circ - (confidence_pct / 100 * circ) %}
+        <div class="ring" style="width:80px;height:80px;"
+             role="img" aria-label="Confidence {{ confidence_pct }}%">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle class="ring-track" cx="40" cy="40" r="32"/>
+            <circle class="ring-fill
+                {% if confidence_css == 'conf-high' %}{% elif confidence_css == 'conf-mid' %}r-warn{% else %}r-danger{% endif %}"
+              cx="40" cy="40" r="32"
+              stroke-dasharray="{{ circ | round(2) }}"
+              stroke-dashoffset="{{ offs | round(2) }}"
+              id="conf-ring"/>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-num" style="font-size:18px;">{{ confidence_pct }}%</span>
+          </div>
+        </div>
+        <div class="fc-hero-conf-sub">
+          {% if confidence_css == 'conf-high' %}
+            High confidence
+          {% elif confidence_css == 'conf-mid' %}
+            Medium confidence
+          {% else %}
+            Low confidence
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="fc-hero-divider" aria-hidden="true"></div>
+
+      {# Buyers alerted #}
+      <div class="fc-hero-buyers">
+        <div class="fc-hero-conf-label">Buyers alerted</div>
+        <div class="fc-hero-cd-num" style="font-size:36px;color:var(--blue-mid);">
+          {{ buyers_alerted }}
+        </div>
+        <div class="fc-hero-cd-sub">
+          {% if buyers_alerted == 0 %}
+            No buyers notified yet
+          {% elif buyers_alerted == 1 %}
+            1 buyer pre-alerted
+          {% else %}
+            {{ buyers_alerted }} buyers pre-alerted
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    {# ════ TWO-COLUMN BODY ════════════════════════════════════ #}
+    <div class="grid-2" style="margin-top:16px;">
+
+      {# ── Left: Forecast details + Timeline ── #}
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        {# Harvest window card #}
+        <section class="card" aria-label="Harvest window">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Harvest window</div>
+              <div class="card-sub">Predicted by IoT sensor trend analysis</div>
+            </div>
+            <span class="tag tag-forecast">
+              {% if is_active %}Active{% else %}Archived{% endif %}
+            </span>
+          </div>
+
+          {# Timeline bar #}
+          <div class="fc-timeline" aria-label="Harvest timeline">
+            <div class="fc-tl-track">
+              <div class="fc-tl-fill" style="width:{{ [100 - (days_to_start / 60 * 100)|round|int, 0]|max }}%"></div>
+              <div class="fc-tl-marker {% if days_to_start == 0 %}fc-tl-marker--now{% endif %}"
+                   style="left:{{ [100 - (days_to_start / 60 * 100)|round|int, 0]|max }}%"
+                   aria-hidden="true"></div>
+            </div>
+            <div class="fc-tl-labels">
+              <span>Today</span>
+              <span>{{ window_label }}</span>
+            </div>
+          </div>
+
+          <div class="fc-detail-grid">
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Window opens</div>
+              <div class="fc-detail-val">
+                {{ forecast.predicted_harvest_start.strftime('%-d %B %Y') }}
+              </div>
+            </div>
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Window closes</div>
+              <div class="fc-detail-val">
+                {{ forecast.predicted_harvest_end.strftime('%-d %B %Y') }}
+              </div>
+            </div>
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Window duration</div>
+              <div class="fc-detail-val">
+                {{ days_to_end - days_to_start + 1 if days_to_end >= days_to_start else '—' }} days
+              </div>
+            </div>
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Forecast created</div>
+              <div class="fc-detail-val">{{ created_display }}</div>
+            </div>
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Crop type</div>
+              <div class="fc-detail-val">{{ farm.crop_type }}</div>
+            </div>
+            <div class="fc-detail-item">
+              <div class="fc-detail-key">Farm size</div>
+              <div class="fc-detail-val">
+                {{ farm.size_hectares | round(1) ~ ' ha' if farm.size_hectares else '—' }}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {# Sensor data health card #}
+        <section class="card" aria-label="Sensor data quality">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Sensor data health</div>
+              <div class="card-sub">Quality of data used to generate this forecast</div>
+            </div>
+          </div>
+
+          {# Data points bar #}
+          <div class="fc-data-row">
+            <div class="fc-data-label">
+              <span>Data readings used</span>
+              <span class="fc-data-val">{{ data_points }}</span>
+            </div>
+            <div class="fc-prog-track" role="progressbar"
+                 aria-valuenow="{{ data_points_pct }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="Data points {{ data_points_pct }}% of target">
+              <div class="fc-prog-fill fc-prog-green" style="width:{{ data_points_pct }}%"></div>
+            </div>
+            <div class="fc-data-sub">{{ data_points_pct }}% of 28-day target</div>
+          </div>
+
+          <div class="fc-data-row" style="margin-top:14px;">
+            <div class="fc-data-label">
+              <span>Readings last 7 days</span>
+              <span class="fc-data-val {% if sensor_readings_7d < 5 %}fc-val-warn{% endif %}">
+                {{ sensor_readings_7d }}
+              </span>
+            </div>
+            {% set readings_pct = [sensor_readings_7d / 48 * 100, 100]|min|round|int %}
+            <div class="fc-prog-track" role="progressbar"
+                 aria-valuenow="{{ readings_pct }}" aria-valuemin="0" aria-valuemax="100">
+              <div class="fc-prog-fill {% if sensor_readings_7d < 5 %}fc-prog-warn{% else %}fc-prog-teal{% endif %}"
+                   style="width:{{ readings_pct }}%"></div>
+            </div>
+            <div class="fc-data-sub">
+              {% if sensor_readings_7d >= 40 %}Good data flow — sensor healthy
+              {% elif sensor_readings_7d >= 10 %}Moderate — check sensor connectivity
+              {% else %}Low — sensor may be offline or intermittent
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="fc-sensor-status-row">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Last reading: {{ latest_reading_ago }}
+          </div>
+        </section>
+
+      </div>
+
+      {# ── Right: Buyer alerts + History ── #}
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        {# Buyer alerts card #}
+        <section class="card" aria-label="Buyer alerts">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Buyer alerts</div>
+              <div class="card-sub">Buyers who have been notified about this harvest</div>
+            </div>
+          </div>
+
+          <div class="fc-buyers-hero">
+            <div class="fc-buyers-num">{{ buyers_alerted }}</div>
+            <div class="fc-buyers-label">
+              {% if buyers_alerted == 0 %}
+                No buyers have been alerted yet.
+                Alerts go out automatically when your forecast is first generated.
+              {% elif buyers_alerted == 1 %}
+                1 buyer has been pre-alerted and may reach out to arrange a purchase.
+              {% else %}
+                {{ buyers_alerted }} buyers have been pre-alerted.
+                They can see your forecast harvest date and may reach out to arrange a purchase.
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="fc-alert-info">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.5 2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 6 6z"/>
+            </svg>
+            <span>
+              Buyer alerts are sent automatically by FarmLink when your forecast
+              is generated. You do not need to do anything — just keep your sensor
+              running to maintain data quality.
+            </span>
+          </div>
+        </section>
+
+        {# Forecast history card #}
+        <section class="card" aria-label="Forecast history">
+          <div class="card-hd">
+            <div class="card-title">Forecast history</div>
+            <div class="card-sub">All forecasts generated for {{ farm.name }}</div>
+          </div>
+
+          {% if history %}
+            <div class="fc-history-list">
+              {% for h in history %}
+                <div class="fc-hist-row {% if h.is_active %}fc-hist-row--active{% endif %}">
+                  <div class="fc-hist-left">
+                    <div class="fc-hist-window">{{ h.window_label }}</div>
+                    <div class="fc-hist-meta">
+                      {{ h.created_display }}
+                      <span class="fc-hist-sep" aria-hidden="true">·</span>
+                      {{ h.days_label }}
+                    </div>
+                  </div>
+                  <div class="fc-hist-right">
+                    <div class="fc-hist-conf">{{ h.confidence_pct }}%</div>
+                    {% if h.is_active %}
+                      <span class="tag tag-forecast" style="font-size:9px;">Active</span>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state" style="padding:20px 0;">
+              <p class="empty-sub" style="max-width:100%;">No forecast history yet.</p>
+            </div>
+          {% endif %}
+        </section>
+
+      </div>
+    </div>
+
+    {# How forecasts are generated — explainer card #}
+    <section class="card" style="margin-top:12px;" aria-label="How forecasts work">
+      <div class="card-hd">
+        <div class="card-title">How FarmLink generates your forecast</div>
+      </div>
+      <div class="fc-explainer-grid">
+        <div class="fc-exp-step">
+          <div class="fc-exp-num">1</div>
+          <div class="fc-exp-text">
+            <strong>28 days of sensor data</strong> — your Arduino node collects
+            soil moisture, temperature, humidity, and light intensity every 30 minutes.
+          </div>
+        </div>
+        <div class="fc-exp-step">
+          <div class="fc-exp-num">2</div>
+          <div class="fc-exp-text">
+            <strong>Trend analysis</strong> — the FarmLink engine analyses the
+            sensor trends against known growth curves for your crop type.
+          </div>
+        </div>
+        <div class="fc-exp-step">
+          <div class="fc-exp-num">3</div>
+          <div class="fc-exp-text">
+            <strong>Forecast generated</strong> — a harvest window is computed
+            with a confidence score. Higher confidence = more consistent sensor readings.
+          </div>
+        </div>
+        <div class="fc-exp-step">
+          <div class="fc-exp-num">4</div>
+          <div class="fc-exp-text">
+            <strong>Buyers alerted</strong> — interested buyers in your region
+            are notified automatically so they can plan purchases in advance.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<style>
+/* ── Forecast Hero ───────────────────────────────────────── */
+.fc-hero {
+  display: flex;
+  align-items: stretch;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.fc-hero-countdown,
+.fc-hero-conf,
+.fc-hero-buyers {
+  flex: 1;
+  padding: 24px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.fc-hero-divider {
+  width: 0.5px;
+  background: var(--gray-light);
+  flex-shrink: 0;
+}
+
+.fc-hero-cd-label,
+.fc-hero-conf-label {
+  font-size: 11px;
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: var(--fw-medium);
+}
+
+.fc-hero-cd-num {
+  font-size: 52px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-mid);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.fc-cd-now  { color: var(--green-mid); }
+.fc-cd-soon { color: var(--amber-mid); }
+
+.fc-hero-cd-sub {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.45;
+}
+
+.fc-hero-conf-sub {
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+
+/* ── Timeline ────────────────────────────────────────────── */
+.fc-timeline {
+  margin: 16px 0;
+}
+
+.fc-tl-track {
+  position: relative;
+  height: 6px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  overflow: visible;
+  margin-bottom: 8px;
+}
+
+.fc-tl-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--amber-light);
+  border-radius: var(--radius-pill);
+  transition: width 0.8s ease;
+}
+
+.fc-tl-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: var(--amber-mid);
+  border: 2.5px solid var(--white);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--amber-light);
+}
+
+.fc-tl-marker--now {
+  background: var(--green-mid);
+  box-shadow: 0 0 0 2px var(--green-light);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.fc-tl-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+
+/* ── Detail grid ─────────────────────────────────────────── */
+.fc-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: var(--gray-bg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.fc-detail-item {
+  padding: 11px 14px;
+  border-bottom: 0.5px solid var(--gray-light);
+  border-right: 0.5px solid var(--gray-light);
+}
+
+.fc-detail-item:nth-child(even) { border-right: none; }
+.fc-detail-item:nth-last-child(-n+2) { border-bottom: none; }
+
+.fc-detail-key {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  color: var(--gray-mid);
+  margin-bottom: 3px;
+}
+
+.fc-detail-val {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+}
+
+/* ── Data health progress bars ───────────────────────────── */
+.fc-data-row { margin-bottom: 4px; }
+
+.fc-data-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gray-mid);
+  margin-bottom: 6px;
+}
+
+.fc-data-val {
+  font-weight: var(--fw-medium);
+  color: var(--black);
+}
+
+.fc-val-warn { color: var(--amber-mid) !important; }
+
+.fc-prog-track {
+  height: 6px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.fc-prog-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.8s ease;
+}
+
+.fc-prog-green { background: var(--green-mid); }
+.fc-prog-teal  { background: var(--teal-mid); }
+.fc-prog-warn  { background: var(--amber-mid); }
+
+.fc-data-sub {
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+
+.fc-sensor-status-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: var(--border);
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+/* ── Buyer alerts ────────────────────────────────────────── */
+.fc-buyers-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--blue-bg);
+  border: 0.5px solid var(--blue-light);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.fc-buyers-num {
+  font-size: 40px;
+  font-weight: var(--fw-medium);
+  color: var(--blue-mid);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+
+.fc-buyers-label {
+  font-size: 13px;
+  color: var(--blue-mid);
+  line-height: 1.5;
+}
+
+.fc-alert-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.55;
+  padding: 10px 12px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-md);
+}
+
+/* ── History list ────────────────────────────────────────── */
+.fc-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fc-hist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--gray-bg);
+  gap: 12px;
+}
+
+.fc-hist-row:last-child { border-bottom: none; }
+
+.fc-hist-row--active {
+  background: var(--amber-bg);
+  margin: 0 -20px;
+  padding: 10px 20px;
+  border-radius: 0;
+}
+
+.fc-hist-window {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 2px;
+}
+
+.fc-hist-meta {
+  font-size: 11px;
+  color: var(--gray-mid);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fc-hist-sep { color: var(--gray-light); }
+
+.fc-hist-conf {
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-mid);
+  flex-shrink: 0;
+}
+
+/* ── Explainer grid ──────────────────────────────────────── */
+.fc-explainer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fc-exp-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fc-exp-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--amber-bg);
+  color: var(--amber-dark);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0.5px solid var(--amber-light);
+}
+
+.fc-exp-text {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.55;
+}
+
+.fc-exp-text strong {
+  color: var(--black);
+  font-weight: var(--fw-medium);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .fc-hero { flex-direction: column; }
+  .fc-hero-divider { width: 100%; height: 0.5px; }
+  .fc-explainer-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<script>
+  document.querySelectorAll('.flash').forEach(function(el) {
+    setTimeout(function() {
+      el.classList.add('out');
+      setTimeout(function() { el.remove(); }, 200);
+    }, 5000);
+  });
+
+  (function animateRing() {
+    var el = document.getElementById('conf-ring');
+    if (!el) return;
+    var target = parseFloat(el.getAttribute('stroke-dashoffset'));
+    var total  = parseFloat(el.getAttribute('stroke-dasharray'));
+    el.style.transition = 'none';
+    el.setAttribute('stroke-dashoffset', total);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        el.style.transition = 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)';
+        el.setAttribute('stroke-dashoffset', target);
+      });
+    });
+  }());
+</script>
+</body>
+</html>
