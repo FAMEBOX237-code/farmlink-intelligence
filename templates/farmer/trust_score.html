@@ -1,0 +1,863 @@
+{# ============================================================
+   templates/farmer/trust_score.html — FarmLink Intelligence
+
+   Trust Score breakdown page.
+   Shows the farmer's overall trust score (0–5) and each of the
+   four components that build it, with a history of buyer ratings.
+
+   CSS: public.css → farmer.css   (zero inline styles)
+   Route: GET /farmer/trust
+
+   Context (all pre-computed in routes/farmer.py → trust_score()):
+     farmer                User
+     trust_score_display   str        — '4.2' or '0.0'
+     trust_score_pct       int        — 0-100 for main ring
+     trust_css             str        — 'ts-high'|'ts-mid'|'ts-low'|'ts-none'
+     total_transactions    int
+     completed_tx          int
+     completion_rate_pct   int
+     on_time_count         int
+     on_time_rate_pct      int
+     avg_rating            str        — '4.2' or '—'
+     avg_rating_pct        int
+     rating_count          int
+     profile_pct           int
+     profile_missing       list[str]
+     recent_ratings        list[dict]
+       score, comment, created_display, buyer_initial,
+       stars_full, stars_empty
+     total_revenue         str
+     active_listings_count int
+     active_page, unread_notifs, active_forecast
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Trust Score · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+</head>
+<body class="portal-body">
+
+{# ── Topbar ── #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ farmer.full_name }}</span>
+    <div class="topbar-avatar" title="{{ farmer.full_name }}" aria-hidden="true">
+      {{ farmer.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('farmer.dashboard') }}">Dashboard</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span class="breadcrumb-cur">Trust Score</span>
+    </nav>
+
+    <div class="inner-hd">
+      <h1 class="inner-title">Trust Score</h1>
+      <p class="inner-subtitle">
+        Your trust score is shown to buyers on the marketplace alongside every listing.
+        It is calculated automatically from your transaction history and buyer ratings.
+      </p>
+    </div>
+
+    {# ════ HERO SCORE CARD ════════════════════════════════════ #}
+    <div class="ts-hero" role="region" aria-label="Overall trust score">
+
+      {# Big score ring #}
+      <div class="ts-hero-ring-wrap">
+        {% set circ = 2 * 3.14159 * 42 %}
+        {% set offs = circ - (trust_score_pct / 100 * circ) %}
+        <div class="ts-ring" role="img"
+             aria-label="Trust score {{ trust_score_display }} out of 5">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle class="ts-ring-track" cx="60" cy="60" r="42"/>
+            <circle class="ts-ring-fill ts-ring-fill--{{ trust_css }}"
+              cx="60" cy="60" r="42"
+              stroke-dasharray="{{ circ | round(2) }}"
+              stroke-dashoffset="{{ offs | round(2) }}"
+              id="trust-ring"/>
+          </svg>
+          <div class="ts-ring-center">
+            <span class="ts-ring-num">{{ trust_score_display }}</span>
+            <span class="ts-ring-denom">/ 5.0</span>
+          </div>
+        </div>
+
+        <div class="ts-score-label ts-label--{{ trust_css }}">
+          {% if trust_css == 'ts-high' %}Excellent
+          {% elif trust_css == 'ts-mid' %}Good
+          {% elif trust_css == 'ts-low' %}Building
+          {% else %}New account{% endif %}
+        </div>
+      </div>
+
+      {# Summary stats beside the ring #}
+      <div class="ts-hero-stats">
+
+        <div class="ts-stat">
+          <div class="ts-stat-icon ts-stat-icon--green" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ts-stat-val">{{ completed_tx }}</div>
+            <div class="ts-stat-label">Completed sales</div>
+          </div>
+        </div>
+
+        <div class="ts-stat">
+          <div class="ts-stat-icon ts-stat-icon--teal" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ts-stat-val">{{ rating_count }}</div>
+            <div class="ts-stat-label">Buyer ratings</div>
+          </div>
+        </div>
+
+        <div class="ts-stat">
+          <div class="ts-stat-icon ts-stat-icon--blue" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ts-stat-val">{{ total_revenue }}</div>
+            <div class="ts-stat-label">Total revenue</div>
+          </div>
+        </div>
+
+        <div class="ts-stat">
+          <div class="ts-stat-icon ts-stat-icon--amber" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ts-stat-val">{{ active_listings_count }}</div>
+            <div class="ts-stat-label">Active listings</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# ════ FOUR COMPONENT BREAKDOWN ══════════════════════════ #}
+    <section aria-label="Trust score components">
+      <div class="ts-components-grid">
+
+        {# Component 1 — Transaction completion rate #}
+        <div class="ts-comp">
+          <div class="ts-comp-hd">
+            <div class="ts-comp-icon ts-comp-icon--green" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-comp-title">Transaction completion</div>
+              <div class="ts-comp-sub">Listings completed vs total</div>
+            </div>
+            <div class="ts-comp-score ts-score--green">{{ completion_rate_pct }}%</div>
+          </div>
+          <div class="ts-prog-track" role="progressbar"
+               aria-valuenow="{{ completion_rate_pct }}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="Completion rate {{ completion_rate_pct }}%">
+            <div class="ts-prog-fill ts-prog--green" style="width:{{ completion_rate_pct }}%"></div>
+          </div>
+          <div class="ts-comp-detail">
+            {{ completed_tx }} completed out of {{ total_transactions }} total
+            {% if total_transactions == 0 %}— Start selling to build this score.{% endif %}
+          </div>
+        </div>
+
+        {# Component 2 — On-time delivery #}
+        <div class="ts-comp">
+          <div class="ts-comp-hd">
+            <div class="ts-comp-icon ts-comp-icon--teal" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-comp-title">On-time delivery</div>
+              <div class="ts-comp-sub">Orders delivered on time</div>
+            </div>
+            <div class="ts-comp-score
+              {% if on_time_rate_pct >= 80 %}ts-score--green
+              {% elif on_time_rate_pct >= 50 %}ts-score--amber
+              {% else %}ts-score--red{% endif %}">
+              {{ on_time_rate_pct }}%
+            </div>
+          </div>
+          <div class="ts-prog-track" role="progressbar"
+               aria-valuenow="{{ on_time_rate_pct }}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="On-time rate {{ on_time_rate_pct }}%">
+            <div class="ts-prog-fill
+              {% if on_time_rate_pct >= 80 %}ts-prog--green
+              {% elif on_time_rate_pct >= 50 %}ts-prog--amber
+              {% else %}ts-prog--red{% endif %}"
+              style="width:{{ on_time_rate_pct }}%">
+            </div>
+          </div>
+          <div class="ts-comp-detail">
+            {{ on_time_count }} on-time out of {{ completed_tx }} completed
+            {% if completed_tx == 0 %}— Complete transactions to build this score.{% endif %}
+          </div>
+        </div>
+
+        {# Component 3 — Buyer ratings #}
+        <div class="ts-comp">
+          <div class="ts-comp-hd">
+            <div class="ts-comp-icon ts-comp-icon--amber" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-comp-title">Buyer ratings</div>
+              <div class="ts-comp-sub">Average score from buyers</div>
+            </div>
+            <div class="ts-comp-score ts-score--amber">{{ avg_rating }}</div>
+          </div>
+          <div class="ts-prog-track" role="progressbar"
+               aria-valuenow="{{ avg_rating_pct }}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="Rating {{ avg_rating_pct }}%">
+            <div class="ts-prog-fill ts-prog--amber" style="width:{{ avg_rating_pct }}%"></div>
+          </div>
+          <div class="ts-comp-detail">
+            {% if rating_count == 0 %}
+              No ratings yet — ratings appear after buyers complete purchases.
+            {% else %}
+              {{ avg_rating }} average from {{ rating_count }} buyer rating{{ 's' if rating_count != 1 else '' }}
+            {% endif %}
+          </div>
+        </div>
+
+        {# Component 4 — Profile completeness #}
+        <div class="ts-comp">
+          <div class="ts-comp-hd">
+            <div class="ts-comp-icon ts-comp-icon--blue" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-comp-title">Profile completeness</div>
+              <div class="ts-comp-sub">Your public farmer profile</div>
+            </div>
+            <div class="ts-comp-score
+              {% if profile_pct == 100 %}ts-score--green
+              {% elif profile_pct >= 60 %}ts-score--amber
+              {% else %}ts-score--red{% endif %}">
+              {{ profile_pct }}%
+            </div>
+          </div>
+          <div class="ts-prog-track" role="progressbar"
+               aria-valuenow="{{ profile_pct }}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="Profile {{ profile_pct }}% complete">
+            <div class="ts-prog-fill
+              {% if profile_pct == 100 %}ts-prog--green
+              {% elif profile_pct >= 60 %}ts-prog--amber
+              {% else %}ts-prog--red{% endif %}"
+              style="width:{{ profile_pct }}%">
+            </div>
+          </div>
+          <div class="ts-comp-detail">
+            {% if profile_missing %}
+              Missing: {{ profile_missing | join(', ') }}
+              <a href="{{ url_for('farmer.profile') }}" class="ts-comp-link">Complete profile ↗</a>
+            {% else %}
+              Profile is complete — buyers can see all your details.
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    {# ════ BUYER RATINGS ════════════════════════════════════ #}
+    <div class="grid-2" style="margin-top:12px;">
+
+      {# Recent ratings #}
+      <section class="card" aria-label="Recent buyer ratings">
+        <div class="card-hd">
+          <div class="card-title">Recent buyer ratings</div>
+          <div class="card-sub">{{ rating_count }} total</div>
+        </div>
+
+        {% if recent_ratings %}
+          <div class="ts-rating-list">
+            {% for r in recent_ratings %}
+              <div class="ts-rating-item">
+                <div class="ts-rating-avatar" aria-hidden="true">
+                  {{ r.buyer_initial }}
+                </div>
+                <div class="ts-rating-body">
+                  <div class="ts-rating-top">
+                    <div class="ts-stars" aria-label="{{ r.score }} out of 5 stars">
+                      {% for i in range(r.stars_full) %}
+                        <svg class="ts-star ts-star--full" width="12" height="12" viewBox="0 0 24 24"
+                             fill="currentColor" stroke="currentColor" stroke-width="1" aria-hidden="true">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      {% endfor %}
+                      {% for i in range(r.stars_empty) %}
+                        <svg class="ts-star ts-star--empty" width="12" height="12" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      {% endfor %}
+                    </div>
+                    <span class="ts-rating-date">{{ r.created_display }}</span>
+                  </div>
+                  {% if r.comment %}
+                    <p class="ts-rating-comment">{{ r.comment }}</p>
+                  {% else %}
+                    <p class="ts-rating-comment ts-rating-comment--empty">No comment left</p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state" style="padding:24px 0;">
+            <div class="empty-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.8" stroke-linecap="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <p class="empty-title">No ratings yet</p>
+            <p class="empty-sub">
+              Buyer ratings appear here after a buyer completes a purchase
+              and rates their experience.
+            </p>
+          </div>
+        {% endif %}
+      </section>
+
+      {# How trust score is calculated #}
+      <section class="card" aria-label="How trust score works">
+        <div class="card-hd">
+          <div class="card-title">How your trust score is calculated</div>
+        </div>
+
+        <div class="ts-how-list">
+          <div class="ts-how-item">
+            <div class="ts-how-icon ts-how-icon--green" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-how-label">Transaction completion <span class="ts-how-weight">35%</span></div>
+              <div class="ts-how-sub">Did you complete the sales you committed to?</div>
+            </div>
+          </div>
+
+          <div class="ts-how-item">
+            <div class="ts-how-icon ts-how-icon--teal" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-how-label">On-time delivery <span class="ts-how-weight">30%</span></div>
+              <div class="ts-how-sub">Were your deliveries on time as agreed?</div>
+            </div>
+          </div>
+
+          <div class="ts-how-item">
+            <div class="ts-how-icon ts-how-icon--amber" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-how-label">Buyer ratings <span class="ts-how-weight">25%</span></div>
+              <div class="ts-how-sub">How did buyers rate their experience?</div>
+            </div>
+          </div>
+
+          <div class="ts-how-item">
+            <div class="ts-how-icon ts-how-icon--blue" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div>
+              <div class="ts-how-label">Profile completeness <span class="ts-how-weight">10%</span></div>
+              <div class="ts-how-sub">Is your public farmer profile fully filled in?</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ts-how-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>
+            Scores update automatically after every completed transaction.
+            New accounts start at 0.0 and build over time.
+          </span>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<style>
+/* ── Trust Hero ──────────────────────────────────────────── */
+.ts-hero {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 16px;
+}
+
+/* Big trust ring */
+.ts-hero-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ts-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.ts-ring svg { display: block; transform: rotate(-90deg); }
+
+.ts-ring-track { fill: none; stroke: var(--gray-bg); stroke-width: 10; }
+
+.ts-ring-fill {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.1s cubic-bezier(0.4,0,0.2,1);
+}
+
+.ts-ring-fill--ts-high { stroke: var(--teal-mid); }
+.ts-ring-fill--ts-mid  { stroke: var(--green-mid); }
+.ts-ring-fill--ts-low  { stroke: var(--amber-mid); }
+.ts-ring-fill--ts-none { stroke: var(--gray-light); }
+
+.ts-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ts-ring-num   { font-size: 28px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; }
+.ts-ring-denom { font-size: 11px; color: var(--gray-mid); margin-top: 1px; }
+
+.ts-score-label {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.ts-label--ts-high { background: var(--teal-bg);  color: var(--teal-dark);  border: 0.5px solid var(--teal-light); }
+.ts-label--ts-mid  { background: var(--green-bg); color: var(--green-dark); border: 0.5px solid var(--green-light); }
+.ts-label--ts-low  { background: var(--amber-bg); color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
+.ts-label--ts-none { background: var(--gray-bg);  color: var(--gray-mid);   border: var(--border); }
+
+/* Summary stats row */
+.ts-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  flex: 1;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.ts-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-right: var(--border);
+}
+
+.ts-stat:last-child { border-right: none; }
+
+.ts-stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ts-stat-icon--green { background: var(--green-bg); color: var(--green-mid); }
+.ts-stat-icon--teal  { background: var(--teal-bg);  color: var(--teal-mid); }
+.ts-stat-icon--blue  { background: var(--blue-bg);  color: var(--blue-mid); }
+.ts-stat-icon--amber { background: var(--amber-bg); color: var(--amber-mid); }
+
+.ts-stat-val   { font-size: 18px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; margin-bottom: 3px; }
+.ts-stat-label { font-size: 11px; color: var(--gray-mid); }
+
+/* ── Component cards ─────────────────────────────────────── */
+.ts-components-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ts-comp {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+.ts-comp-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ts-comp-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ts-comp-icon--green { background: var(--green-bg); color: var(--green-mid); }
+.ts-comp-icon--teal  { background: var(--teal-bg);  color: var(--teal-mid); }
+.ts-comp-icon--amber { background: var(--amber-bg); color: var(--amber-mid); }
+.ts-comp-icon--blue  { background: var(--blue-bg);  color: var(--blue-mid); }
+
+.ts-comp-title { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); }
+.ts-comp-sub   { font-size: 11px; color: var(--gray-mid); margin-top: 1px; }
+
+.ts-comp-score {
+  margin-left: auto;
+  font-size: 20px;
+  font-weight: var(--fw-medium);
+  flex-shrink: 0;
+}
+
+.ts-score--green { color: var(--green-mid); }
+.ts-score--amber { color: var(--amber-mid); }
+.ts-score--red   { color: #A32D2D; }
+
+/* Progress bars */
+.ts-prog-track {
+  height: 6px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.ts-prog-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.8s ease;
+}
+
+.ts-prog--green { background: var(--green-mid); }
+.ts-prog--teal  { background: var(--teal-mid); }
+.ts-prog--amber { background: var(--amber-mid); }
+.ts-prog--red   { background: #A32D2D; }
+
+.ts-comp-detail {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.4;
+}
+
+.ts-comp-link {
+  color: var(--teal-mid);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  margin-left: 4px;
+}
+
+.ts-comp-link:hover { text-decoration: underline; }
+
+/* ── Rating list ─────────────────────────────────────────── */
+.ts-rating-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ts-rating-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--gray-bg);
+}
+
+.ts-rating-item:last-child { border-bottom: none; }
+
+.ts-rating-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue-bg);
+  color: var(--blue-mid);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0.5px solid var(--blue-light);
+}
+
+.ts-rating-body { flex: 1; min-width: 0; }
+
+.ts-rating-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.ts-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ts-star--full  { color: var(--amber-mid); }
+.ts-star--empty { color: var(--gray-light); }
+
+.ts-rating-date { font-size: 11px; color: var(--gray-mid); }
+
+.ts-rating-comment {
+  font-size: 12px;
+  color: var(--gray-dark);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.ts-rating-comment--empty {
+  color: var(--gray-light);
+  font-style: italic;
+}
+
+/* ── How it's calculated ─────────────────────────────────── */
+.ts-how-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ts-how-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--gray-bg);
+}
+
+.ts-how-item:last-child { border-bottom: none; }
+
+.ts-how-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ts-how-icon--green { background: var(--green-bg); color: var(--green-mid); }
+.ts-how-icon--teal  { background: var(--teal-bg);  color: var(--teal-mid); }
+.ts-how-icon--amber { background: var(--amber-bg); color: var(--amber-mid); }
+.ts-how-icon--blue  { background: var(--blue-bg);  color: var(--blue-mid); }
+
+.ts-how-label {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ts-how-weight {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+}
+
+.ts-how-sub { font-size: 11px; color: var(--gray-mid); }
+
+.ts-how-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: var(--gray-mid);
+  line-height: 1.5;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .ts-hero { flex-direction: column; gap: 20px; }
+  .ts-hero-stats { grid-template-columns: repeat(2,1fr); width: 100%; }
+}
+
+@media (max-width: 700px) {
+  .ts-components-grid { grid-template-columns: 1fr; }
+  .ts-hero-stats { grid-template-columns: repeat(2,1fr); }
+}
+
+@media (max-width: 480px) {
+  .ts-hero { padding: 20px 16px; }
+}
+</style>
+
+<script>
+  document.querySelectorAll('.flash').forEach(function(el) {
+    setTimeout(function() {
+      el.classList.add('out');
+      setTimeout(function() { el.remove(); }, 200);
+    }, 5000);
+  });
+
+  (function animateRing() {
+    var el = document.getElementById('trust-ring');
+    if (!el) return;
+    var target = parseFloat(el.getAttribute('stroke-dashoffset'));
+    var total  = parseFloat(el.getAttribute('stroke-dasharray'));
+    el.style.transition = 'none';
+    el.setAttribute('stroke-dashoffset', total);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        el.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(0.4,0,0.2,1)';
+        el.setAttribute('stroke-dashoffset', target);
+      });
+    });
+  }());
+</script>
+</body>
+</html>

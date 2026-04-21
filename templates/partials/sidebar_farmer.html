@@ -1,0 +1,130 @@
+{# templates/partials/sidebar_farmer.html
+   Include: {% include 'partials/sidebar_farmer.html' %}
+   Requires: current_user, active_page, active_forecast, unread_notifs #}
+
+<aside class="sidebar" role="complementary" aria-label="Farmer portal navigation">
+
+  <div class="sidebar-top">
+    <a href="{{ url_for('public.landing') }}" class="sidebar-logo" aria-label="FarmLink home">
+      <div class="sidebar-logo-mark" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="rgba(192,221,151,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="sidebar-logo-name">FarmLink</span>
+    </a>
+  </div>
+
+  <div class="sidebar-identity">
+    <div class="sidebar-identity-name">{{ current_user.full_name }}</div>
+    <div class="sidebar-identity-role">
+      Farmer · {{ current_user.region or 'Cameroon' }}
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section-label">Portal</div>
+
+    <a href="{{ url_for('farmer.dashboard') }}"
+       class="sidebar-link {% if active_page == 'dashboard' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'dashboard' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      </span>
+      Dashboard
+    </a>
+
+    <a href="{{ url_for('farmer.farms') }}"
+       class="sidebar-link {% if active_page == 'farms' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'farms' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </span>
+      My farms
+    </a>
+
+    <a href="{{ url_for('farmer.listings') }}"
+       class="sidebar-link {% if active_page == 'listings' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'listings' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+      </span>
+      My listings
+    </a>
+
+    <a href="{% if active_forecast %}{{ url_for('farmer.forecast_detail', forecast_id=active_forecast.id) }}{% else %}{{ url_for('farmer.forecasts') }}{% endif %}"
+       class="sidebar-link {% if active_page == 'forecasts' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'forecasts' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </span>
+      Forecasts
+    </a>
+
+    <a href="{{ url_for('farmer.trust_score') }}"
+       class="sidebar-link {% if active_page == 'trust' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'trust' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </span>
+      Trust score
+    </a>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-divider" aria-hidden="true"></div>
+
+    <a href="{{ url_for('farmer.profile') }}"
+       class="sidebar-link {% if active_page == 'profile' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'profile' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </span>
+      Profile
+    </a>
+
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-link is-logout">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </span>
+      Log out
+    </a>
+  </div>
+
+</aside>
