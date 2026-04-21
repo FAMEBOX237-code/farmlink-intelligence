@@ -1,0 +1,370 @@
+{# ============================================================
+   templates/farmer/listing_edit.html — FarmLink Intelligence
+
+   CSS: public.css → farmer.css
+   Zero queries. Zero math.
+
+   Context from routes/farmer.py → edit_listing():
+     listing         ProduceListing
+     current_farm    Farm
+     farm_choices    list[dict]
+     crops           list[str]
+     form_errors     dict|None
+     ts_display      str
+     is_live         bool
+     active_page     str
+     unread_notifs   int
+     active_forecast HarvestForecast|None
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Edit listing · {{ listing.crop_type }} · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+</head>
+<body class="portal-body">
+
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
+      {% endif %}
+    </a>
+    <div class="topbar-avatar" aria-hidden="true">{{ current_user.full_name[:2].upper() }}</div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+  <main class="portal-main" id="main" role="main">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('farmer.listings') }}">My listings</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span class="breadcrumb-cur">Edit · {{ listing.crop_type }}</span>
+    </nav>
+
+    <div class="inner-hd">
+      <h1 class="inner-title">Edit listing</h1>
+      <p class="inner-subtitle">
+        {{ listing.crop_type }} · {{ current_farm.name if current_farm else '—' }}
+        {% if is_live %}
+          · <span class="status-live-dot"></span> Live on marketplace
+        {% endif %}
+      </p>
+    </div>
+
+    {# Live listing notice #}
+    {% if is_live %}
+      <div class="banner bn-info" role="status">
+        <span>This listing is currently live and visible to buyers.</span>
+        <a href="{{ url_for('farmer.listings') }}">View all listings</a>
+      </div>
+    {% elif listing.status == 'draft' %}
+      <div class="banner bn-offline" role="status">
+        <span>This listing is a draft — not visible to buyers yet. Publish it to go live.</span>
+      </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('farmer.edit_listing', lid=listing.id) }}" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="listing-form-layout">
+
+        {# ══ LEFT COLUMN ══ #}
+        <div class="listing-form-main">
+
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-sec-hd">
+                <span class="form-sec-num is-done">✓</span>
+                <span class="form-sec-title">Produce details</span>
+              </div>
+
+              {# Farm — read-only in edit mode #}
+              <div class="field">
+                <label class="field-label">Farm</label>
+                <div class="field-readonly-display">
+                  {{ current_farm.name if current_farm else '—' }}
+                  {% if current_farm %}
+                    <span class="field-readonly-sub">{{ current_farm.region }}{% if current_farm.town %}, {{ current_farm.town }}{% endif %}</span>
+                  {% endif %}
+                </div>
+                <span class="field-hint">Farm cannot be changed after listing is created.</span>
+              </div>
+
+              {# Crop type #}
+              <div class="field">
+                <label class="field-label" for="crop_type">
+                  Crop type <span class="field-label-required">*</span>
+                </label>
+                <select id="crop_type" name="crop_type"
+                        class="field-select {% if form_errors and form_errors.crop_type %}error{% endif %}">
+                  {% for c in crops %}
+                    <option value="{{ c }}" {% if listing.crop_type == c %}selected{% endif %}>{{ c }}</option>
+                  {% endfor %}
+                </select>
+                {% if form_errors and form_errors.crop_type %}
+                  <span class="field-hint error">{{ form_errors.crop_type }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-sec-hd">
+                <span class="form-sec-num is-done">✓</span>
+                <span class="form-sec-title">Quantity &amp; pricing</span>
+              </div>
+
+              <div class="form-2col">
+                <div class="field">
+                  <label class="field-label" for="quantity_kg">
+                    Quantity (kg) <span class="field-label-required">*</span>
+                  </label>
+                  <input type="number" id="quantity_kg" name="quantity_kg"
+                         class="field-input {% if form_errors and form_errors.quantity_kg %}error{% endif %}"
+                         value="{{ listing.quantity_kg | round(1) }}"
+                         min="1" step="0.1">
+                  {% if form_errors and form_errors.quantity_kg %}
+                    <span class="field-hint error">{{ form_errors.quantity_kg }}</span>
+                  {% endif %}
+                </div>
+                <div class="field">
+                  <label class="field-label" for="price_per_kg">
+                    Price per kg (XAF) <span class="field-label-required">*</span>
+                  </label>
+                  <input type="number" id="price_per_kg" name="price_per_kg"
+                         class="field-input {% if form_errors and form_errors.price_per_kg %}error{% endif %}"
+                         value="{{ listing.price_per_kg | round(0) | int }}"
+                         min="1" step="1">
+                  {% if form_errors and form_errors.price_per_kg %}
+                    <span class="field-hint error">{{ form_errors.price_per_kg }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="min_order_kg">
+                  Minimum order (kg)
+                  <span class="field-label-optional">optional</span>
+                </label>
+                <input type="number" id="min_order_kg" name="min_order_kg"
+                       class="field-input"
+                       value="{{ listing.min_order_kg | round(1) if listing.min_order_kg else '' }}"
+                       min="1" step="0.1">
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-sec-hd">
+                <span class="form-sec-num is-done">✓</span>
+                <span class="form-sec-title">Description</span>
+              </div>
+              <div class="field">
+                <label class="field-label" for="description">
+                  Produce description
+                  <span class="field-label-optional">optional</span>
+                </label>
+                <textarea id="description" name="description" class="field-textarea"
+                          rows="4" maxlength="2000">{{ listing.description or '' }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          {# ── Form actions ── #}
+          <div class="form-actions">
+            <a href="{{ url_for('farmer.listings') }}" class="btn-secondary">Cancel</a>
+            <div class="form-actions-right">
+              {% if listing.status == 'draft' %}
+                <button type="submit" name="action" value="publish" class="btn-primary">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Publish listing
+                </button>
+              {% endif %}
+              <button type="submit" name="action" value="save" class="btn-primary">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <polyline points="17 21 17 13 7 13 7 21"/>
+                </svg>
+                Save changes
+              </button>
+            </div>
+          </div>
+
+          {# ── Delist zone — always at bottom ── #}
+          {% if listing.status in ['active', 'draft'] %}
+            <div class="delete-zone" role="region" aria-label="Delist zone">
+              <div class="dz-info">
+                <div class="dz-title">Delist this listing</div>
+                <div class="dz-desc">
+                  Removes this listing from the marketplace immediately.
+                  Your transaction history and quality record are preserved.
+                  You can relist the produce as a new listing at any time.
+                </div>
+              </div>
+              <button type="submit" name="action" value="delist"
+                      class="btn-danger"
+                      onclick="return confirm('Delist {{ listing.crop_type }}? It will be removed from the marketplace.')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                Delist listing
+              </button>
+            </div>
+          {% endif %}
+        </div>
+
+        {# ══ RIGHT COLUMN — Read-only auto-attached ══ #}
+        <aside class="listing-form-aside" aria-label="Auto-maintained values">
+
+          <div class="aside-card">
+            <div class="aside-card-hd">
+              <div class="aside-card-title">Auto-maintained values</div>
+              <div class="aside-card-sub">Updated automatically by the system. Read-only.</div>
+            </div>
+
+            <div class="auto-attach-row">
+              <div class="aar-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Live quality score
+              </div>
+              <div class="aar-value">
+                {{ listing.quality_score_live }}<span class="aar-denom">/100</span>
+              </div>
+              <div class="aar-note">
+                {% if listing.quality_score_live != listing.quality_score_at_listing %}
+                  Changed from {{ listing.quality_score_at_listing }} at listing time
+                {% else %}
+                  Same as when listed ({{ listing.quality_score_at_listing }})
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="auto-attach-row">
+              <div class="aar-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Trust score
+              </div>
+              <div class="aar-value">
+                {{ ts_display }}<span class="aar-denom">/5.0</span>
+              </div>
+              <div class="aar-note">Updated after every completed transaction</div>
+            </div>
+
+            {% if active_forecast %}
+              <div class="auto-attach-row aar-forecast">
+                <div class="aar-label">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Harvest forecast
+                </div>
+                <div class="aar-value aar-value-amber">Active</div>
+                <div class="aar-note">
+                  {{ active_forecast.predicted_harvest_start.strftime('%b %d') }} –
+                  {{ active_forecast.predicted_harvest_end.strftime('%b %d') }}
+                  · {{ active_forecast.confidence_score | round | int }}% confidence
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          {# Listing stats #}
+          <div class="aside-card">
+            <div class="aside-card-hd">
+              <div class="aside-card-title">Listing statistics</div>
+            </div>
+            <div class="auto-attach-row">
+              <div class="aar-label">Status</div>
+              <div class="aar-value">
+                <span class="tag tag-{{ listing.status }}">{{ listing.status | title }}</span>
+              </div>
+            </div>
+            <div class="auto-attach-row">
+              <div class="aar-label">Created</div>
+              <div class="aar-value" style="font-size:13px">
+                {{ listing.created_at.strftime('%d %b %Y') if listing.created_at else '—' }}
+              </div>
+            </div>
+            <div class="auto-attach-row">
+              <div class="aar-label">Inquiries</div>
+              <div class="aar-value">{{ listing.inquiry_count or 0 }}</div>
+            </div>
+          </div>
+
+        </aside>
+      </div>
+    </form>
+
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll('.flash').forEach(function(el) {
+    setTimeout(function() {
+      el.classList.add('out');
+      setTimeout(function() { el.remove(); }, 200);
+    }, 5000);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,541 @@
+{# ============================================================
+   templates/farmer/listings.html — FarmLink Intelligence
+
+   My Listings — farmer's management view of all produce listings.
+
+   NOTE: This is the FARMER'S internal management view.
+   What BUYERS see in the marketplace is built separately
+   in templates/buyer/ and will look like a full product
+   marketplace with large photos and rich filters.
+   This page is for managing your listings, not the buying experience.
+
+   CSS: public.css → farmer.css + inline additions
+   Route: GET /farmer/listings?tab=all|active|draft|sold
+
+   Context (all pre-computed in route, no logic here):
+     current_tab       str
+     tab_counts        dict — {all, active, draft, sold}
+     listings_display  list[dict]:
+       id, crop, quantity, price, status,
+       q_live, q_css, trust, has_forecast,
+       created, farm_name, photo_url,
+       inquiry_count, description
+     farmer            User
+     active_page, unread_notifs, active_forecast
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Listings · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+</head>
+<body class="portal-body">
+
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ farmer.full_name }}</span>
+    <div class="topbar-avatar" title="{{ farmer.full_name }}" aria-hidden="true">
+      {{ farmer.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# Page header #}
+    <div class="listings-page-hd">
+      <div>
+        <h1 class="inner-title">My listings</h1>
+        <p class="inner-subtitle">
+          {{ tab_counts.all }} listing{{ 's' if tab_counts.all != 1 else '' }} total ·
+          {{ tab_counts.active }} active · {{ tab_counts.draft }} draft
+        </p>
+      </div>
+      <a href="{{ url_for('farmer.new_listing') }}" class="btn-primary">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New listing
+      </a>
+    </div>
+
+    {# Summary strip #}
+    <div class="listing-summary-strip">
+      <div class="lss-item">
+        <div class="lss-value">{{ tab_counts.all }}</div>
+        <div class="lss-label">Total</div>
+      </div>
+      <div class="lss-divider" aria-hidden="true"></div>
+      <div class="lss-item">
+        <div class="lss-value lss-value-green">{{ tab_counts.active }}</div>
+        <div class="lss-label">Active</div>
+      </div>
+      <div class="lss-divider" aria-hidden="true"></div>
+      <div class="lss-item">
+        <div class="lss-value lss-value-amber">{{ tab_counts.draft }}</div>
+        <div class="lss-label">Drafts</div>
+      </div>
+      <div class="lss-divider" aria-hidden="true"></div>
+      <div class="lss-item">
+        <div class="lss-value">{{ tab_counts.sold }}</div>
+        <div class="lss-label">Sold</div>
+      </div>
+    </div>
+
+    {# Tab bar #}
+    <div class="listing-tabs" role="tablist" aria-label="Filter listings">
+      {% for tab_key, tab_label in [('all','All'),('active','Active'),('draft','Drafts'),('sold','Sold')] %}
+        <a href="{{ url_for('farmer.listings') }}?tab={{ tab_key }}"
+           class="listing-tab {% if current_tab == tab_key %}listing-tab--active{% endif %}"
+           role="tab" aria-selected="{{ 'true' if current_tab == tab_key else 'false' }}">
+          {{ tab_label }}
+          <span class="listing-tab-count">{{ tab_counts[tab_key] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+
+    {# Listing cards #}
+    {% if listings_display %}
+
+      {# Crop-to-icon lookup table — pure data, no logic #}
+      {% set crop_icons = {
+        'Tomatoes':       '🍅',
+        'Maize':          '🌽',
+        'Plantains':      '🍌',
+        'Cassava':        '🌿',
+        'Yams':           '🟤',
+        'Sweet potatoes': '🍠',
+        'Groundnuts':     '🥜',
+        'Beans':          '🫘',
+        'Pepper':         '🌶',
+        'Cocoa':          '🍫',
+        'Coffee':         '☕',
+        'Palm oil':       '🌴',
+        'Mixed crops':    '🌾',
+        'Other':          '🌱',
+      } %}
+
+      <div class="lc-stack" role="list" aria-label="Your listings">
+
+        {% for l in listings_display %}
+        <article class="lc lc--{{ l.status }}" role="listitem" aria-label="{{ l.crop }} listing">
+
+          {# Thumbnail — real photo or emoji icon #}
+          <div class="lc-thumb" aria-hidden="true">
+            {% if l.photo_url %}
+              <img src="{{ url_for('static', filename=l.photo_url) }}"
+                   alt="{{ l.crop }}"
+                   class="lc-thumb-img">
+            {% else %}
+              <span class="lc-thumb-icon">{{ crop_icons.get(l.crop, '🌱') }}</span>
+            {% endif %}
+          </div>
+
+          {# Main body #}
+          <div class="lc-body">
+
+            <div class="lc-row-top">
+              <span class="lc-crop">{{ l.crop }}</span>
+              <div class="lc-tag-group">
+                {% if l.status == 'active' %}
+                  <span class="tag tag-active">Active</span>
+                {% elif l.status == 'draft' %}
+                  <span class="tag tag-draft">Draft</span>
+                {% elif l.status == 'sold' %}
+                  <span class="tag tag-sold">Sold</span>
+                {% else %}
+                  <span class="tag tag-draft">{{ l.status | title }}</span>
+                {% endif %}
+                {% if l.has_forecast %}
+                  <span class="score-pill score-pill-forecast">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                         aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Forecast
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if l.description %}
+              <p class="lc-desc">{{ l.description }}</p>
+            {% endif %}
+
+            <div class="lc-meta-row">
+              <span class="lc-meta-chip">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                {{ l.farm_name }}
+              </span>
+              <span class="lc-meta-dot" aria-hidden="true"></span>
+              <span class="lc-meta-chip">{{ l.quantity }}</span>
+              <span class="lc-meta-dot" aria-hidden="true"></span>
+              <span class="lc-meta-chip">{{ l.created }}</span>
+            </div>
+
+            <div class="lc-score-row">
+              <span class="score-pill score-pill-quality lc-q-{{ l.q_css }}">
+                Q&thinsp;{{ l.q_live if l.q_live else '—' }}
+              </span>
+              <span class="score-pill score-pill-trust">
+                T&thinsp;{{ l.trust }}
+              </span>
+              {% if l.inquiry_count > 0 %}
+                <span class="lc-inq-badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  {{ l.inquiry_count }}
+                  {{ 'enquiry' if l.inquiry_count == 1 else 'enquiries' }}
+                </span>
+              {% endif %}
+            </div>
+
+          </div>
+
+          {# Right column — price + edit button #}
+          <div class="lc-right">
+            <div class="lc-price">{{ l.price }}</div>
+            {% if l.status in ['active', 'draft'] %}
+              <a href="{{ url_for('farmer.edit_listing', lid=l.id) }}" class="lc-edit-btn">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit listing
+              </a>
+            {% elif l.status == 'sold' %}
+              <span class="lc-sold-note">Completed</span>
+            {% endif %}
+          </div>
+
+        </article>
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <p class="empty-title">
+            {% if current_tab == 'all' %}No listings yet{% else %}No {{ current_tab }} listings{% endif %}
+          </p>
+          <p class="empty-sub">
+            {% if current_tab == 'all' %}
+              Create your first listing to appear on the FarmLink marketplace.
+              Your IoT quality score attaches automatically at publish time.
+            {% else %}
+              No listings in this category right now.
+            {% endif %}
+          </p>
+          {% if current_tab in ['all', 'draft', 'active'] %}
+            <a href="{{ url_for('farmer.new_listing') }}" class="btn-addfarm"
+               style="display:inline-flex;margin-top:4px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Create listing
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+    {% endif %}
+
+  </main>
+</div>
+
+<style>
+/* ── Listing card stack ──────────────────────────────────── */
+.lc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Individual card ─────────────────────────────────────── */
+.lc {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--white);
+  border: var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 16px 18px 16px 15px; /* left padding reduced to show accent border cleanly */
+  position: relative;
+  transition: box-shadow 0.15s, transform 0.12s;
+}
+
+.lc:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+/* Status accent — left border */
+.lc--active  { border-left-color: var(--green-mid); }
+.lc--draft   { border-left-color: var(--amber-mid); }
+.lc--sold    { border-left-color: var(--blue-mid); opacity: 0.72; }
+
+/* ── Thumbnail ───────────────────────────────────────────── */
+.lc-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  background: var(--gray-bg);
+  border: var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lc-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lc-thumb-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* ── Card body ───────────────────────────────────────────── */
+.lc-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lc-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lc-crop {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.01em;
+}
+
+.lc-tag-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.lc-desc {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 480px;
+  margin: 0;
+}
+
+.lc-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lc-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.lc-meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--gray-light);
+  flex-shrink: 0;
+}
+
+.lc-score-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* Quality score colour overrides per CSS class set by route */
+.lc-q-q-good { background: var(--green-bg) !important; color: var(--green-dark) !important; border-color: var(--green-light) !important; }
+.lc-q-q-fair { background: var(--amber-bg) !important; color: var(--amber-dark) !important; border-color: var(--amber-light) !important; }
+.lc-q-q-poor { background: #FCEBEB !important; color: #A32D2D !important; border-color: #F09595 !important; }
+.lc-q-q-none { background: var(--gray-bg) !important; color: var(--gray-mid) !important; border-color: var(--gray-light) !important; }
+
+.lc-inq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+
+/* ── Right column ────────────────────────────────────────── */
+.lc-right {
+  flex-shrink: 0;
+  min-width: 140px;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.lc-price {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.lc-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-dark);
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 5px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.lc-edit-btn:hover {
+  background: var(--gray-bg);
+  border-color: var(--gray-mid);
+  text-decoration: none;
+}
+
+.lc-sold-note {
+  font-size: 12px;
+  color: var(--gray-mid);
+  font-style: italic;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .lc { flex-wrap: wrap; gap: 12px; }
+  .lc-right {
+    width: 100%;
+    min-width: unset;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    border-top: var(--border);
+    padding-top: 10px;
+  }
+  .lc-thumb { width: 48px; height: 48px; }
+  .lc-thumb-icon { font-size: 22px; }
+  .lc-desc { max-width: 100%; }
+}
+</style>
+
+<script>
+  document.querySelectorAll('.flash').forEach(function(el) {
+    setTimeout(function() {
+      el.classList.add('out');
+      setTimeout(function() { el.remove(); }, 200);
+    }, 5000);
+  });
+</script>
+</body>
+</html>
