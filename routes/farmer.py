@@ -201,21 +201,9 @@ def forecast_detail(forecast_id):
 @login_required
 @farmer_required
 def trust_score():
-    trust = _compute_trust(current_user.id)
-
-    recent_ratings = db.session.execute(
-        text("SELECT * FROM ratings WHERE farmer_id = :uid ORDER BY created_at DESC LIMIT 10"),
-        {'uid': current_user.id}
-    ).fetchall()
-
-    all_ratings = db.session.execute(
-        text("SELECT score FROM ratings WHERE farmer_id = :uid"),
-        {'uid': current_user.id}
-        
-    ).fetchall()
-    dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-    for r in all_ratings:
-        dist[r.score] = dist.get(r.score, 0) + 1
+    """
+    Trust score breakdown: completion rate, on-time delivery,
+    buyer ratings, profile completeness. Four progress bars.
 
     TODO Sprint 7: Pull from TrustScoreEngine.
     """
