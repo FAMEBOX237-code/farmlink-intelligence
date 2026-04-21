@@ -753,6 +753,7 @@ def trust_score():
     all_ratings = db.session.execute(
         text("SELECT score FROM ratings WHERE farmer_id = :uid"),
         {'uid': current_user.id}
+        
     ).fetchall()
     dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
     for r in all_ratings:
