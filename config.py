@@ -26,13 +26,20 @@ class Config:
     # ── Core security ─────────────────────────────────────────
     # Must be a long random string in production.
     # Generate one with: python -c "import secrets; print(secrets.token_hex(32))"
-    SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-in-production')
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    if not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY is not set. Add it to your .env file.\n"
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
 
     # ── Database ──────────────────────────────────────────────
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL',
-        'mysql+pymysql://root:farmlink123@localhost/farmlink'
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    if not SQLALCHEMY_DATABASE_URI:
+        raise RuntimeError(
+            "DATABASE_URL is not set. Add it to your .env file.\n"
+            "Format: mysql+pymysql://USERNAME:PASSWORD@localhost/farmlink"
+        )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_recycle': 280,        # recycle connections before MySQL's 8-hour timeout

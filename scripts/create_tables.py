@@ -51,7 +51,11 @@ def create_database_if_missing():
     import pymysql
     from urllib.parse import urlparse
 
-    db_url = os.getenv('DATABASE_URL', 'mysql+pymysql://root:farmlink123@localhost/farmlink')
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        print("  ERROR: DATABASE_URL is not set in your .env file.")
+        print("  Cannot create database. Add DATABASE_URL to .env and try again.")
+        sys.exit(1)
 
     # Parse the URL to extract components
     parsed   = urlparse(db_url.replace('mysql+pymysql://', 'mysql://'))

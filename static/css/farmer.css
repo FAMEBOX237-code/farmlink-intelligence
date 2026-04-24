@@ -23,7 +23,7 @@
    10  Score ring
    11  Forecast card
    12  Alerts feed
-   13  Listings card
+   13  Listings card (dashboard widget)
    14  Tags / pills
    15  Empty states
    16  Flash messages
@@ -34,16 +34,23 @@
    21  Delete zone
    22  Breadcrumb + inner page header
    23  Accessibility
-   24  Responsive
+   24  Responsive (core portal)
+   ────────────────────────────────────────────────────────────
+   25  Farms page (farms.html)
+   26  Listings page (listings.html)
+   27  New / Edit listing form
+   28  Farmer profile (WF16–WF18)
+   29  Notifications page (WF15)
+   30  Responsive (profile + notifications)
    ============================================================ */
 
 
-/* ── 01  Portal shell ─────────────────────────────────────── */
-/*
+/* ══════════════════════════════════════════════════════════════
+   01  PORTAL SHELL
    Fixed 56px topbar.
    Fixed 240px dark-green sidebar.
    Scrollable main fills all remaining width — NO max-width cap.
-*/
+   ══════════════════════════════════════════════════════════════ */
 
 .portal-body {
   font-family: var(--font-sans);
@@ -62,13 +69,16 @@
 .portal-main {
   flex: 1;
   min-width: 0;
-  margin-left: 240px;
+  margin-left: 240px;               /* sidebar width */
   padding: 32px 36px 64px;
-  padding-top: calc(56px + 32px);
+  padding-top: calc(56px + 32px);   /* topbar height + spacing */
 }
 
 
-/* ── 02  Topbar ───────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   02  TOPBAR
+   Fixed at the top of the viewport, above sidebar (z-index 500).
+   ══════════════════════════════════════════════════════════════ */
 
 .topbar {
   position: fixed;
@@ -83,6 +93,7 @@
   z-index: 500;
 }
 
+/* Left cluster: logo + portal tag */
 .topbar-left {
   display: flex;
   align-items: center;
@@ -114,12 +125,14 @@
   letter-spacing: -0.015em;
 }
 
+/* Thin vertical rule between logo and portal badge */
 .topbar-vr {
   width: 1px;
   height: 16px;
   background: var(--gray-light);
 }
 
+/* "Farmer Portal" pill badge */
 .topbar-portal-tag {
   display: inline-flex;
   align-items: center;
@@ -133,12 +146,14 @@
   letter-spacing: 0.01em;
 }
 
+/* Right cluster: notifications + avatar + logout */
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* Bell icon button */
 .topbar-notif {
   position: relative;
   width: 34px;
@@ -153,6 +168,7 @@
 }
 .topbar-notif:hover { background: var(--gray-bg); color: var(--black); }
 
+/* Red unread count bubble on the bell */
 .notif-badge {
   position: absolute;
   top: 4px; right: 4px;
@@ -170,6 +186,7 @@
   border: 1.5px solid var(--white);
 }
 
+/* User avatar circle (initials or photo) */
 .topbar-avatar {
   width: 32px;
   height: 32px;
@@ -194,6 +211,7 @@
   text-overflow: ellipsis;
 }
 
+/* Logout / sign-out button */
 .topbar-logout {
   display: inline-flex;
   align-items: center;
@@ -213,169 +231,24 @@
 .topbar-logout:hover { background: var(--gray-bg); border-color: var(--gray-mid); }
 
 
-/* ── 03  Sidebar ──────────────────────────────────────────── */
-/*
-   Deep green background (--green-dark: #27500A).
-   Exactly matches the auth panel from login/register pages,
-   creating visual continuity: login → portal.
-*/
-
-.sidebar {
-  position: fixed;
-  top: 0; left: 0;
-  width: 240px;
-  height: 100vh;
-  background: var(--green-dark);
-  display: flex;
-  flex-direction: column;
-  z-index: 400;
-  overflow-y: auto;
-}
-
-/* Top strip: logo — aligns with topbar height */
-.sidebar-top {
-  height: 56px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  border-bottom: 0.5px solid rgba(255,255,255,0.07);
-  flex-shrink: 0;
-}
-
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  text-decoration: none;
-}
-
-.sidebar-logo-mark {
-  width: 26px;
-  height: 26px;
-  background: rgba(192,221,151,0.12);
-  border: 0.5px solid rgba(192,221,151,0.18);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sidebar-logo-name {
-  font-size: 13px;
-  font-weight: var(--fw-medium);
-  color: rgba(255,255,255,0.9);
-  letter-spacing: -0.01em;
-}
-
-/* Farmer identity */
-.sidebar-identity {
-  padding: 16px 20px 14px;
-  border-bottom: 0.5px solid rgba(255,255,255,0.07);
-  flex-shrink: 0;
-}
-
-.sidebar-identity-name {
-  font-size: 13px;
-  font-weight: var(--fw-medium);
-  color: var(--white);
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sidebar-identity-role {
-  font-size: 11px;
-  color: var(--green-light);
-  opacity: 0.65;
-}
-
-/* Nav */
-.sidebar-nav {
-  flex: 1;
-  padding: 10px 0;
-}
-
-.sidebar-section-label {
-  font-size: 9px;
-  font-weight: var(--fw-medium);
-  color: rgba(255,255,255,0.28);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 12px 20px 5px;
-}
-
-.sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 20px;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  color: rgba(255,255,255,0.58);
-  text-decoration: none;
-  border-right: 2px solid transparent;
-  border-left: none; border-top: none; border-bottom: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-
-.sidebar-link:hover {
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.9);
-}
-
-.sidebar-link.is-active {
-  background: rgba(192,221,151,0.1);
-  color: var(--green-light);
-  font-weight: var(--fw-medium);
-  border-right-color: var(--green-light);
-}
-
-.sidebar-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.45;
-  transition: opacity 0.1s;
-}
-
-.sidebar-link:hover .sidebar-icon    { opacity: 0.75; }
-.sidebar-link.is-active .sidebar-icon { opacity: 1; }
-
-.sidebar-divider {
-  height: 0.5px;
-  background: rgba(255,255,255,0.07);
-  margin: 6px 20px;
-}
-
-/* Footer */
-.sidebar-footer {
-  padding-bottom: 12px;
-  flex-shrink: 0;
-}
-
-.sidebar-link.is-logout:hover {
-  background: rgba(163,45,45,0.15);
-  color: #F09595;
-}
-.sidebar-link.is-logout:hover .sidebar-icon { opacity: 1; }
+/* ══════════════════════════════════════════════════════════════
+   03  SIDEBAR
+   → Moved to partials.css (sidebar is a partial template).
+      All .sidebar-*, .sidebar-link, .sidebar-icon etc. rules
+      now live in partials.css §01 and §02.
+   ══════════════════════════════════════════════════════════════ */
 
 
-/* ── 04  Page header ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   04  PAGE HEADER + FARM SELECTOR
+   Greeting text, connection status dot, and farm switcher.
+   ══════════════════════════════════════════════════════════════ */
 
 .page-hd {
   margin-bottom: 28px;
 }
 
+/* e.g. "Good morning, Jean-Paul" */
 .page-greeting {
   font-size: 24px;
   font-weight: var(--fw-medium);
@@ -385,6 +258,7 @@
   margin-bottom: 6px;
 }
 
+/* Row beneath greeting: dot + sensor status text + timestamp */
 .page-status-line {
   display: flex;
   align-items: center;
@@ -395,6 +269,7 @@
   margin-bottom: 16px;
 }
 
+/* Coloured presence dot */
 .status-dot {
   width: 7px;
   height: 7px;
@@ -403,18 +278,17 @@
   display: inline-block;
 }
 
-.status-dot.online {
-  background: var(--teal-mid);
-  animation: pulse-dot 2.5s ease-in-out infinite;
-}
+.status-dot.online  { background: var(--teal-mid); animation: pulse-dot 2.5s ease-in-out infinite; }
 .status-dot.offline { background: #A32D2D; }
 .status-dot.warning { background: var(--amber-mid); }
 
+/* Pulsing glow animation for the online dot */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(15,110,86,0.4); }
   50%       { opacity: 0.65; box-shadow: 0 0 0 5px rgba(15,110,86,0); }
 }
 
+/* Farm switcher row */
 .farm-selector {
   display: flex;
   align-items: center;
@@ -422,6 +296,7 @@
   flex-wrap: wrap;
 }
 
+/* Native <select> styled to match the design system */
 .farm-select {
   font-family: var(--font-sans);
   font-size: 13px;
@@ -432,6 +307,7 @@
   padding: 8px 32px 8px 12px;
   appearance: none;
   -webkit-appearance: none;
+  /* Custom chevron icon injected as inline SVG */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235F5E5A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
@@ -445,6 +321,7 @@
   outline: none;
 }
 
+/* "+ Add farm" shortcut button next to the selector */
 .btn-addfarm {
   display: inline-flex;
   align-items: center;
@@ -464,7 +341,10 @@
 .btn-addfarm:hover { background: var(--green-bg); border-color: var(--green-mid); }
 
 
-/* ── 05  Status banners ───────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   05  STATUS BANNERS
+   Full-width contextual banners (offline sensor, danger, info).
+   ══════════════════════════════════════════════════════════════ */
 
 .banner {
   display: flex;
@@ -478,12 +358,17 @@
   gap: 12px;
 }
 .banner a { color: inherit; font-size: 12px; text-decoration: underline; flex-shrink: 0; }
+
 .bn-offline { background: var(--amber-bg);  color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
-.bn-danger  { background: #FCEBEB; color: #A32D2D; border: 0.5px solid #F09595; }
+.bn-danger  { background: #FCEBEB;          color: #A32D2D;           border: 0.5px solid #F09595; }
 .bn-info    { background: var(--blue-bg);   color: var(--blue-mid);   border: 0.5px solid var(--blue-light); }
 
 
-/* ── 06  KPI metric tiles ─────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   06  KPI METRIC TILES
+   4-up grid of stat tiles at the top of the dashboard.
+   Collapses to 2-up at 1200px (see §24 responsive).
+   ══════════════════════════════════════════════════════════════ */
 
 .kpi-row {
   display: grid;
@@ -501,6 +386,7 @@
   overflow: hidden;
 }
 
+/* Coloured left-edge accent stripe */
 .kpi::before {
   content: '';
   position: absolute;
@@ -514,6 +400,7 @@
 .kpi.kp-blue::before   { background: var(--blue-mid); }
 .kpi.kp-amber::before  { background: var(--amber-mid); }
 
+/* Icon badge inside tile */
 .kpi-icon {
   width: 32px;
   height: 32px;
@@ -528,6 +415,7 @@
 .kpi.kp-blue  .kpi-icon  { background: var(--blue-bg);   color: var(--blue-mid); }
 .kpi.kp-amber .kpi-icon  { background: var(--amber-bg);  color: var(--amber-mid); }
 
+/* Small uppercase label above the number */
 .kpi-label {
   font-size: 11px;
   color: var(--gray-mid);
@@ -536,6 +424,7 @@
   margin-bottom: 8px;
 }
 
+/* Large number / score */
 .kpi-value {
   font-size: 30px;
   font-weight: var(--fw-medium);
@@ -544,16 +433,22 @@
   letter-spacing: -0.025em;
   margin-bottom: 4px;
 }
+
+/* Colour modifiers for the value */
 .kpi-value.kv-green  { color: var(--green-mid); }
 .kpi-value.kv-teal   { color: var(--teal-mid); }
 .kpi-value.kv-amber  { color: var(--amber-mid); }
 .kpi-value.kv-danger { color: #A32D2D; }
 .kpi-value.kv-muted  { font-size: 20px; font-weight: var(--fw-regular); color: var(--gray-mid); }
 
+/* Secondary sub-label below the value */
 .kpi-sub { font-size: 11px; color: var(--gray-mid); }
 
 
-/* ── 07  Card base ────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   07  CARD BASE
+   White bordered container used across all portal sections.
+   ══════════════════════════════════════════════════════════════ */
 
 .card {
   background: var(--white);
@@ -562,6 +457,7 @@
   padding: 20px;
 }
 
+/* Card header row: title (left) + link (right) */
 .card-hd {
   display: flex;
   align-items: flex-start;
@@ -582,6 +478,7 @@
   margin-top: 2px;
 }
 
+/* "View all →" style link in card header */
 .card-link {
   font-size: 11px;
   font-weight: var(--fw-medium);
@@ -594,8 +491,12 @@
 .card-link:hover { color: var(--teal-dark); }
 
 
-/* ── 08  Grid rows ────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   08  GRID ROWS
+   Utility grid helpers for dashboard content areas.
+   ══════════════════════════════════════════════════════════════ */
 
+/* Two equal columns — dashboard body rows */
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -603,8 +504,19 @@
   margin-bottom: 12px;
 }
 
+/* Three equal columns — wider content areas */
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 
-/* ── 09  Sensor readings ──────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════
+   09  SENSOR READINGS
+   Rows of labelled sensor values with mini progress bars.
+   ══════════════════════════════════════════════════════════════ */
 
 .sr-row {
   display: flex;
@@ -635,6 +547,7 @@
   text-align: right;
 }
 
+/* Thin progress track */
 .sr-bar {
   width: 64px;
   height: 3px;
@@ -644,6 +557,7 @@
   flex-shrink: 0;
 }
 
+/* Coloured fill — default green, warn amber, danger red */
 .sr-bar-fill {
   height: 100%;
   background: var(--green-mid);
@@ -654,15 +568,17 @@
 .sr-bar-fill.b-warn   { background: var(--amber-mid); }
 .sr-bar-fill.b-danger { background: #A32D2D; }
 
+/* Precipitation status pill */
 .rain-pill {
   font-size: 10px;
   font-weight: var(--fw-medium);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
 }
-.rain-pill.raining { background: var(--blue-bg); color: var(--blue-mid); border: 0.5px solid var(--blue-light); }
-.rain-pill.dry     { background: var(--gray-bg); color: var(--gray-mid); border: var(--border); }
+.rain-pill.raining { background: var(--blue-bg);  color: var(--blue-mid);  border: 0.5px solid var(--blue-light); }
+.rain-pill.dry     { background: var(--gray-bg);  color: var(--gray-mid);  border: var(--border); }
 
+/* Offline sensor warning shown at bottom of sensor card */
 .offline-note {
   display: flex;
   align-items: center;
@@ -675,7 +591,10 @@
 }
 
 
-/* ── 10  Score ring ───────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   10  SCORE RING
+   SVG circle progress ring for the Crop Quality Score card.
+   ══════════════════════════════════════════════════════════════ */
 
 .ring-wrap {
   display: flex;
@@ -689,6 +608,7 @@
   height: 92px;
 }
 
+/* Ring rotated so fill starts at 12 o'clock */
 .ring svg {
   display: block;
   transform: rotate(-90deg);
@@ -705,6 +625,7 @@
 .ring-fill.r-warn   { stroke: var(--amber-mid); }
 .ring-fill.r-danger { stroke: #A32D2D; }
 
+/* Centred score number overlaid on the SVG */
 .ring-center {
   position: absolute;
   inset: 0;
@@ -717,6 +638,7 @@
 .ring-num   { font-size: 22px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; }
 .ring-denom { font-size: 10px; color: var(--gray-mid); margin-top: 1px; }
 
+/* Quality breakdown rows beneath the ring */
 .q-row {
   display: flex;
   align-items: center;
@@ -728,6 +650,7 @@
 .q-row:last-of-type { border-bottom: none; }
 .q-key { color: var(--gray-mid); }
 
+/* Coloured grade pill (good / fair / poor) */
 .q-pill {
   font-size: 10px;
   font-weight: var(--fw-medium);
@@ -736,8 +659,9 @@
 }
 .q-pill.good { background: var(--green-bg);  color: var(--green-dark); border: 0.5px solid var(--green-light); }
 .q-pill.fair { background: var(--amber-bg);  color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
-.q-pill.poor { background: #FCEBEB; color: #A32D2D; border: 0.5px solid #F09595; }
+.q-pill.poor { background: #FCEBEB;          color: #A32D2D;           border: 0.5px solid #F09595; }
 
+/* Placeholder for a future trend sparkline */
 .trend-slot {
   margin-top: 12px;
   height: 44px;
@@ -753,8 +677,16 @@
 }
 
 
-/* ── 11  Forecast card ────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   11  FORECAST CARD
+   Displays the next harvest forecast with a key/value grid.
+   NOTE: These classes (.fc-tag, .fc-grid, .fc-key, .fc-val,
+   .fc-empty) are ONLY for the forecast dashboard widget.
+   Farm card classes in §25 share the .fc- prefix but are
+   disambiguated by context (nested inside .farm-card).
+   ══════════════════════════════════════════════════════════════ */
 
+/* Status pill at top of the forecast card */
 .fc-tag {
   display: inline-flex;
   align-items: center;
@@ -768,6 +700,7 @@
 .fc-tag.ft-active  { background: var(--amber-bg); color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
 .fc-tag.ft-pending { background: var(--gray-bg);  color: var(--gray-mid);   border: var(--border); }
 
+/* 2-column key/value grid inside the forecast card */
 .fc-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -780,6 +713,7 @@
 .fc-key { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-mid); margin-bottom: 3px; }
 .fc-val { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); }
 
+/* Empty / no-forecast state */
 .fc-empty {
   text-align: center;
   padding: 20px 0;
@@ -790,7 +724,10 @@
 .fc-empty small { display: block; margin-top: 4px; font-size: 11px; color: var(--gray-light); }
 
 
-/* ── 12  Alerts feed ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   12  ALERTS FEED
+   Vertical list of time-stamped alert messages with colour dots.
+   ══════════════════════════════════════════════════════════════ */
 
 .al-row {
   display: flex;
@@ -801,6 +738,7 @@
 }
 .al-row:last-child { border-bottom: none; }
 
+/* Severity dot */
 .al-dot {
   width: 7px;
   height: 7px;
@@ -820,7 +758,11 @@
 .al-empty { text-align: center; padding: 20px 0; font-size: 12px; color: var(--gray-mid); }
 
 
-/* ── 13  Listings card ────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   13  LISTINGS CARD (DASHBOARD WIDGET)
+   Compact crop listing rows on the dashboard — not the full
+   listings page (which is in §26).
+   ══════════════════════════════════════════════════════════════ */
 
 .ls-row {
   display: flex;
@@ -835,12 +777,13 @@
 .ls-row:last-of-type { border-bottom: none; }
 .ls-row:hover { background: var(--gray-bg); }
 
-.ls-crop { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); }
-.ls-meta { font-size: 11px; color: var(--gray-mid); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ls-crop  { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); }
+.ls-meta  { font-size: 11px; color: var(--gray-mid); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ls-right { text-align: right; flex-shrink: 0; }
 .ls-price { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); display: block; }
 .ls-status { margin-top: 2px; }
 
+/* Dashed "+ New listing" row button at the bottom of the widget */
 .btn-newlisting {
   display: flex;
   align-items: center;
@@ -862,13 +805,19 @@
 }
 .btn-newlisting:hover { background: var(--green-bg); color: var(--green-mid); border-color: var(--green-mid); }
 
-.ls-empty { text-align: center; padding: 24px 8px 8px; }
+/* Widget empty state */
+.ls-empty       { text-align: center; padding: 24px 8px 8px; }
 .ls-empty-title { font-size: 13px; font-weight: var(--fw-medium); color: var(--gray-dark); margin-bottom: 4px; }
 .ls-empty-sub   { font-size: 12px; color: var(--gray-mid); }
 
 
-/* ── 14  Tags / pills ─────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   14  TAGS / PILLS
+   Inline status badges reused across cards and listing rows.
+   Additional tags (.tag-sold, .tag-delisted) live in §26.
+   ══════════════════════════════════════════════════════════════ */
 
+/* Base tag shape */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -877,15 +826,21 @@
   padding: 2px 7px;
   border-radius: var(--radius-pill);
 }
+
+/* Semantic variants */
 .tag-active   { background: var(--green-bg); color: var(--green-dark); border: 0.5px solid var(--green-light); }
 .tag-forecast { background: var(--amber-bg); color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
 .tag-draft    { background: var(--gray-bg);  color: var(--gray-mid);   border: var(--border); }
 
 
-/* ── 15  Empty states ─────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   15  EMPTY STATES
+   Centred icon + heading + body text shown when lists are empty.
+   ══════════════════════════════════════════════════════════════ */
 
 .empty-state { text-align: center; padding: 36px 16px; }
 
+/* Circular icon container */
 .empty-icon {
   width: 44px;
   height: 44px;
@@ -902,11 +857,15 @@
 .empty-sub   { font-size: 13px; color: var(--gray-mid); line-height: 1.6; max-width: 320px; margin: 0 auto 20px; }
 
 
-/* ── 16  Flash messages ───────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   16  FLASH MESSAGES
+   Auto-dismissing toasts anchored below the topbar, centred.
+   ══════════════════════════════════════════════════════════════ */
 
+/* Stack container — pointer-events none so clicks pass through */
 .flash-stack {
   position: fixed;
-  top: 66px;
+  top: 66px;                         /* 56px topbar + 10px gap */
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
@@ -918,6 +877,7 @@
   pointer-events: none;
 }
 
+/* Individual flash message */
 .flash {
   padding: 11px 15px;
   border-radius: var(--radius-md);
@@ -931,11 +891,13 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Semantic colour variants */
 .flash-success { background: var(--green-bg);  border: 0.5px solid var(--green-light); color: var(--green-dark); }
-.flash-error   { background: #FCEBEB; border: 0.5px solid #F09595; color: #A32D2D; }
+.flash-error   { background: #FCEBEB;          border: 0.5px solid #F09595;            color: #A32D2D; }
 .flash-info    { background: var(--blue-bg);   border: 0.5px solid var(--blue-light);  color: var(--blue-mid); }
 .flash-warning { background: var(--amber-bg);  border: 0.5px solid var(--amber-light); color: var(--amber-dark); }
 
+/* JS adds .out before removing the element from the DOM */
 .flash.out {
   opacity: 0;
   transform: translateY(-8px);
@@ -943,7 +905,10 @@
 }
 
 
-/* ── 17  Form card ────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   17  FORM CARD (ADD / EDIT FARM)
+   Sectioned card for multi-section forms (name, location, etc.).
+   ══════════════════════════════════════════════════════════════ */
 
 .form-card {
   background: var(--white);
@@ -953,12 +918,14 @@
   margin-bottom: 12px;
 }
 
+/* Each logical section inside the form card */
 .form-section {
   padding: 24px 28px;
   border-bottom: var(--border);
 }
 .form-section:last-child { border-bottom: none; }
 
+/* Section header row: numbered circle + title */
 .form-sec-hd {
   display: flex;
   align-items: center;
@@ -966,6 +933,7 @@
   margin-bottom: 20px;
 }
 
+/* Numbered circle indicator */
 .form-sec-num {
   width: 22px;
   height: 22px;
@@ -980,23 +948,30 @@
   flex-shrink: 0;
 }
 
+/* Section not yet reached */
 .form-sec-num.pending {
   background: var(--gray-light);
   color: var(--gray-mid);
 }
 
-.form-sec-num.done {
+/* Section completed — uses teal checkmark colour.
+   Supports both .done (legacy) and .is-done (new convention). */
+.form-sec-num.done,
+.form-sec-num.is-done {
   background: var(--teal-mid);
+  font-size: 10px;
 }
 
 .form-sec-title { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); }
 
+/* Two-column field layout inside a section */
 .form-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
+/* Sticky footer bar with Save / Cancel */
 .form-actions {
   display: flex;
   align-items: center;
@@ -1015,6 +990,7 @@
   gap: 10px;
 }
 
+/* Multiline text field — extends the field-* system from public.css */
 .field-textarea {
   width: 100%;
   padding: 11px 14px;
@@ -1037,7 +1013,10 @@
 }
 
 
-/* ── 18  Step wizard ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   18  STEP WIZARD
+   Horizontal progress indicator for multi-step forms.
+   ══════════════════════════════════════════════════════════════ */
 
 .wizard {
   display: flex;
@@ -1045,6 +1024,7 @@
   margin-bottom: 28px;
 }
 
+/* Each step = bubble + label, connected by a line */
 .wz-step {
   display: flex;
   align-items: center;
@@ -1053,6 +1033,7 @@
 }
 .wz-step:last-child { flex: 0; }
 
+/* Numbered bubble */
 .wz-bubble {
   width: 28px;
   height: 28px;
@@ -1069,6 +1050,7 @@
 .wz-bubble.is-done    { background: var(--teal-mid);  color: var(--white); }
 .wz-bubble.is-pending { background: var(--white); color: var(--gray-mid); border: 1.5px solid var(--gray-light); }
 
+/* Step label */
 .wz-label {
   font-size: 12px;
   font-weight: var(--fw-medium);
@@ -1079,6 +1061,7 @@
 .wz-label.is-done    { color: var(--teal-mid); }
 .wz-label.is-pending { color: var(--gray-mid); }
 
+/* Connecting line between steps */
 .wz-line {
   flex: 1;
   height: 1px;
@@ -1088,11 +1071,11 @@
 }
 .wz-line.is-done { background: var(--teal-mid); }
 
-/* Wizard step panels — only the active one is visible */
+/* Content panels — only the active panel is shown */
 .wz-panel { display: none; }
 .wz-panel.is-active { display: block; }
 
-/* Step navigation buttons */
+/* Bottom navigation row: ← Back | Next → */
 .wz-nav {
   display: flex;
   align-items: center;
@@ -1109,7 +1092,10 @@
 }
 
 
-/* ── 19  Sensor setup steps ───────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   19  SENSOR SETUP STEPS
+   Checklist-style walkthrough for pairing a sensor node.
+   ══════════════════════════════════════════════════════════════ */
 
 .sensor-steps { display: flex; flex-direction: column; }
 
@@ -1122,6 +1108,7 @@
 }
 .sensor-step:last-child { border-bottom: none; }
 
+/* Numbered step circle */
 .ss-num {
   width: 28px; height: 28px;
   border-radius: 50%;
@@ -1136,10 +1123,11 @@
 }
 .ss-num.done { background: var(--teal-bg); color: var(--teal-mid); }
 
-.ss-body { flex: 1; }
+.ss-body  { flex: 1; }
 .ss-title { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
 .ss-desc  { font-size: 12px; color: var(--gray-mid); line-height: 1.55; }
 
+/* Node ID input row */
 .node-row {
   display: flex;
   align-items: center;
@@ -1154,6 +1142,7 @@
   font-family: 'Courier New', monospace;
 }
 
+/* Connection status beneath the node input */
 .node-status {
   display: flex;
   align-items: center;
@@ -1165,6 +1154,7 @@
 .node-status.ns-ok      { color: var(--teal-mid); }
 .node-status.ns-error   { color: #A32D2D; }
 
+/* Live readings preview box that appears after successful pairing */
 .reading-preview {
   background: var(--teal-bg);
   border: 0.5px solid var(--teal-light);
@@ -1180,7 +1170,7 @@
   width: 8px; height: 8px;
   background: var(--teal-mid);
   border-radius: 50%;
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 2s ease-in-out infinite; /* uses keyframe from §04 */
   flex-shrink: 0;
 }
 .rp-label { font-size: 12px; color: var(--teal-dark); font-weight: var(--fw-medium); }
@@ -1188,12 +1178,12 @@
 .rpv      { font-size: 11px; color: var(--teal-dark); }
 
 
-/* ── 20  Location picker ──────────────────────────────────── */
-/*
-   Primary: region + town dropdowns (already in Farm details)
-   Secondary: optional GPS refinement, collapsed by default.
+/* ══════════════════════════════════════════════════════════════
+   20  LOCATION PICKER
+   Primary: region + town dropdowns (inside Farm Details section).
+   Secondary: optional GPS refinement panel, collapsed by default.
    Farmers never see raw coordinate fields by default.
-*/
+   ══════════════════════════════════════════════════════════════ */
 
 .location-card {
   background: var(--gray-bg);
@@ -1203,6 +1193,7 @@
   margin-bottom: var(--space-lg);
 }
 
+/* Header row: label + region display */
 .location-card-row {
   display: flex;
   align-items: center;
@@ -1222,6 +1213,7 @@
   margin-top: 2px;
 }
 
+/* Selected region shown in green */
 .location-region-display {
   display: flex;
   align-items: center;
@@ -1231,6 +1223,7 @@
   font-weight: var(--fw-medium);
 }
 
+/* Toggle button to expand the GPS refinement panel */
 .btn-gps-toggle {
   display: inline-flex;
   align-items: center;
@@ -1248,14 +1241,16 @@
 }
 .btn-gps-toggle:hover { color: var(--black); border-color: var(--gray-mid); background: var(--white); }
 
+/* Collapsible GPS panel — open by JS adding .is-open */
 .gps-panel {
   border-top: var(--border);
-  padding: 14px 14px;
+  padding: 14px;
   background: var(--white);
   display: none;
 }
 .gps-panel.is-open { display: block; }
 
+/* Info box inside the GPS panel */
 .gps-info-msg {
   display: flex;
   align-items: flex-start;
@@ -1271,8 +1266,13 @@
 }
 
 
-/* ── 21  Delete zone ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   21  DELETE ZONE
+   Red-bordered danger area at the bottom of farm edit pages.
+   Also includes .delist-zone variant used on the profile page.
+   ══════════════════════════════════════════════════════════════ */
 
+/* Farm delete zone */
 .delete-zone {
   display: flex;
   align-items: center;
@@ -1284,10 +1284,11 @@
   padding: 20px 24px;
   margin-top: 28px;
 }
-.dz-info { flex: 1; }
+.dz-info  { flex: 1; }
 .dz-title { font-size: 13px; font-weight: var(--fw-medium); color: #A32D2D; margin-bottom: 3px; }
 .dz-desc  { font-size: 12px; color: var(--gray-mid); line-height: 1.5; }
 
+/* Primary danger button (used in delete-zone and elsewhere) */
 .btn-danger {
   display: inline-flex;
   align-items: center;
@@ -1307,8 +1308,52 @@
 }
 .btn-danger:hover { background: #791F1F; border-color: #791F1F; }
 
+/* Account deletion / delist variant used on profile settings tab */
+.delist-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--white);
+  border: 0.5px solid #F09595;
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-top: 28px;
+}
+.delist-title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: #A32D2D;
+  margin: 0;
+}
+.delist-desc {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.5;
+  margin: 0;
+}
+.delist-btn {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  background: #A32D2D;
+  border: 1px solid #A32D2D;
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  align-self: flex-start;
+}
+.delist-btn:hover { background: #791F1F; border-color: #791F1F; }
 
-/* ── 22  Breadcrumb + inner page header ───────────────────── */
+
+/* ══════════════════════════════════════════════════════════════
+   22  BREADCRUMB + INNER PAGE HEADER
+   Sub-page navigation trail and heading used on detail pages.
+   ══════════════════════════════════════════════════════════════ */
 
 .breadcrumb {
   display: flex;
@@ -1318,18 +1363,22 @@
   color: var(--gray-mid);
   margin-bottom: 20px;
 }
-.breadcrumb a { color: var(--gray-mid); text-decoration: none; transition: color 0.12s; }
-.breadcrumb a:hover { color: var(--green-mid); }
-.breadcrumb-sep { color: var(--gray-light); }
-.breadcrumb-cur { color: var(--black); font-weight: var(--fw-medium); }
+.breadcrumb a          { color: var(--gray-mid); text-decoration: none; transition: color 0.12s; }
+.breadcrumb a:hover    { color: var(--green-mid); }
+.breadcrumb-sep        { color: var(--gray-light); }
+.breadcrumb-cur        { color: var(--black); font-weight: var(--fw-medium); }
 
-.inner-hd { margin-bottom: 24px; }
+/* Page title + subtitle block beneath breadcrumb */
+.inner-hd       { margin-bottom: 24px; }
 .inner-title    { font-size: 20px; font-weight: var(--fw-medium); color: var(--black); letter-spacing: -0.02em; margin-bottom: 3px; }
 .inner-subtitle { font-size: 13px; color: var(--gray-mid); }
 
 
-/* ── 23  Accessibility ────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   23  ACCESSIBILITY
+   ══════════════════════════════════════════════════════════════ */
 
+/* Visually hidden but accessible to screen readers */
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
@@ -1340,6 +1389,7 @@
   border: 0;
 }
 
+/* Keyboard focus ring — applied globally */
 :focus-visible {
   outline: 2px solid var(--green-mid);
   outline-offset: 2px;
@@ -1347,37 +1397,44 @@
 }
 
 
-/* ── 24  Responsive ───────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   24  RESPONSIVE — CORE PORTAL
+   ══════════════════════════════════════════════════════════════ */
 
+/* KPI tiles: 4-up → 2-up */
 @media (max-width: 1200px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* 2-col grids and form fields → single column */
 @media (max-width: 900px) {
-  .grid-2, .form-2col { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .form-2col { grid-template-columns: 1fr; }
 }
 
+/* Mobile layout — sidebar is hidden via .sb-hidden (transform) in partials.css,
+   NOT display:none, so the toggle slide animation works correctly. */
 @media (max-width: 768px) {
-  .sidebar     { display: none; }
-  .portal-main { margin-left: 0; padding: 20px 16px 48px; padding-top: calc(56px + 20px); }
-  .topbar-username { display: none; }
-  .topbar-brand    { display: none; }
-  .kpi-row { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .delete-zone { flex-direction: column; align-items: flex-start; }
+  .portal-main      { margin-left: 0; padding: 20px 16px 48px; padding-top: calc(56px + 20px); }
+  .topbar-username  { display: none; }
+  .topbar-brand     { display: none; }
+  .kpi-row          { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .delete-zone      { flex-direction: column; align-items: flex-start; }
 }
 
+/* Farm selector stacks vertically on very small screens */
 @media (max-width: 480px) {
-  .kpi-row { grid-template-columns: 1fr 1fr; }
-  .farm-selector { flex-direction: column; align-items: stretch; }
-  .farm-select   { min-width: unset; width: 100%; }
+  .kpi-row           { grid-template-columns: 1fr 1fr; }
+  .farm-selector     { flex-direction: column; align-items: stretch; }
+  .farm-select       { min-width: unset; width: 100%; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FARMS PAGE — farms.html specific components
-   Added as an extension block — zero conflicts with existing
-   ═══════════════════════════════════════════════════════════ */
 
-/* ── Page header row ── */
+/* ══════════════════════════════════════════════════════════════
+   25  FARMS PAGE (farms.html)
+   Grid of farm cards with sensor status, readings, and actions.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Page header row: title + "Add farm" button */
 .farms-page-hd {
   display: flex;
   align-items: flex-start;
@@ -1387,7 +1444,7 @@
   flex-wrap: wrap;
 }
 
-/* ── Summary strip ── */
+/* Summary strip: total farms / active / offline counts */
 .farms-summary-strip {
   display: flex;
   align-items: center;
@@ -1399,10 +1456,7 @@
   gap: 0;
 }
 
-.fss-item {
-  flex: 1;
-  text-align: center;
-}
+.fss-item { flex: 1; text-align: center; }
 
 .fss-value {
   font-size: 26px;
@@ -1428,14 +1482,14 @@
   flex-shrink: 0;
 }
 
-/* ── Farm cards grid ── */
+/* 2-column responsive grid of farm cards */
 .farm-cards-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
 }
 
-/* ── Farm card base ── */
+/* ── Farm card ── */
 .farm-card {
   background: var(--white);
   border: var(--border);
@@ -1451,13 +1505,13 @@
   transform: translateY(-2px);
 }
 
-/* State borders */
+/* Coloured top border shows sensor connectivity */
 .farm-card--online  { border-top: 3px solid var(--teal-mid); }
 .farm-card--warning { border-top: 3px solid var(--amber-mid); }
 .farm-card--offline { border-top: 3px solid #A32D2D; }
 .farm-card--no-data { border-top: 3px solid var(--gray-light); }
 
-/* ── Card header ── */
+/* Farm card header: name/location + sensor status pill */
 .fc-header {
   display: flex;
   align-items: flex-start;
@@ -1482,7 +1536,7 @@
   color: var(--gray-mid);
 }
 
-/* Sensor status indicator */
+/* Sensor status pill (online / warning / offline / no-data) */
 .fc-sensor-status {
   display: flex;
   align-items: center;
@@ -1495,11 +1549,13 @@
   border: 0.5px solid;
 }
 
+/* Pill colours set via :has() on the child dot class */
 .fc-sensor-status:has(.fc-dot-online)  { background: var(--teal-bg);   border-color: var(--teal-light);  color: var(--teal-mid); }
 .fc-sensor-status:has(.fc-dot-warning) { background: var(--amber-bg);  border-color: var(--amber-light); color: var(--amber-mid); }
-.fc-sensor-status:has(.fc-dot-offline) { background: #FCEBEB; border-color: #F09595; color: #A32D2D; }
+.fc-sensor-status:has(.fc-dot-offline) { background: #FCEBEB;          border-color: #F09595;            color: #A32D2D; }
 .fc-sensor-status:has(.fc-dot-nodata)  { background: var(--gray-bg);   border-color: var(--gray-light);  color: var(--gray-mid); }
 
+/* Animated status dot inside the pill */
 .fc-status-dot {
   width: 6px;
   height: 6px;
@@ -1511,9 +1567,9 @@
 .fc-dot-offline { background: #A32D2D; }
 .fc-dot-nodata  { background: var(--gray-mid); }
 
-.fc-status-label { /* inherits color from parent */ }
+.fc-status-label { /* inherits colour from parent pill */ }
 
-/* ── Alert strips ── */
+/* Full-width alert strips (appear between header and stats) */
 .fc-offline-strip {
   display: flex;
   align-items: center;
@@ -1540,7 +1596,7 @@
   color: var(--amber-mid);
 }
 
-/* ── Stat cells row ── */
+/* Key stats row: hectares / listings / quality score */
 .fc-stats {
   display: flex;
   align-items: center;
@@ -1550,10 +1606,7 @@
   gap: 0;
 }
 
-.fc-stat {
-  flex: 1;
-  text-align: center;
-}
+.fc-stat { flex: 1; text-align: center; }
 
 .fc-stat-value {
   font-size: 18px;
@@ -1581,7 +1634,7 @@
   flex-shrink: 0;
 }
 
-/* ── Mini sensor readings row ── */
+/* Mini sensor readings row (emoji + value + label) */
 .fc-readings {
   display: flex;
   align-items: center;
@@ -1605,23 +1658,11 @@
 }
 .fc-reading-cell:hover { background: var(--gray-bg); }
 
-.fc-reading-emoji {
-  font-size: 16px;
-  line-height: 1;
-}
+.fc-reading-emoji { font-size: 16px; line-height: 1; }
+.fc-reading-val   { font-size: 12px; font-weight: var(--fw-medium); color: var(--black); }
+.fc-reading-name  { font-size: 10px; color: var(--gray-mid); letter-spacing: 0.02em; }
 
-.fc-reading-val {
-  font-size: 12px;
-  font-weight: var(--fw-medium);
-  color: var(--black);
-}
-
-.fc-reading-name {
-  font-size: 10px;
-  color: var(--gray-mid);
-  letter-spacing: 0.02em;
-}
-
+/* Timestamp of the last reading */
 .fc-reading-time {
   padding: 0 20px 10px;
   font-size: 11px;
@@ -1637,7 +1678,7 @@
   font-style: italic;
 }
 
-/* ── Crop + node tags ── */
+/* Crop + node ID tag row */
 .fc-crop-row {
   display: flex;
   align-items: center;
@@ -1646,6 +1687,7 @@
   flex-wrap: wrap;
 }
 
+/* Green pill: crop name */
 .fc-crop-tag {
   display: inline-flex;
   align-items: center;
@@ -1658,6 +1700,7 @@
   border: 0.5px solid var(--green-light);
 }
 
+/* Teal monospace pill: sensor node ID */
 .fc-node-tag {
   display: inline-flex;
   align-items: center;
@@ -1672,7 +1715,7 @@
   letter-spacing: 0.04em;
 }
 
-/* ── Card actions footer ── */
+/* Card footer: Edit + List buttons, grey background */
 .fc-actions {
   display: flex;
   align-items: center;
@@ -1701,6 +1744,7 @@
 }
 .fc-btn-edit:hover { background: var(--white); border-color: var(--gray-mid); color: var(--black); text-decoration: none; }
 
+/* "List produce" button — right-aligned */
 .fc-btn-list {
   display: inline-flex;
   align-items: center;
@@ -1720,7 +1764,7 @@
 }
 .fc-btn-list:hover { background: var(--green-bg); color: var(--green-dark); text-decoration: none; }
 
-/* ── Add farm card (dashed) ── */
+/* Dashed "Add farm" placeholder card */
 .farm-card-add {
   background: var(--white);
   border: 0.5px dashed var(--gray-light);
@@ -1742,6 +1786,7 @@
   text-decoration: none;
 }
 
+/* Icon inside the add-farm placeholder */
 .fca-icon {
   width: 44px;
   height: 44px;
@@ -1763,16 +1808,18 @@
 }
 .farm-card-add:hover .fca-label { color: var(--green-dark); }
 
-/* ── Responsive farms grid ── */
+/* Responsive: stack farm cards to single column on narrow screens */
 @media (max-width: 900px) {
   .farm-cards-grid { grid-template-columns: 1fr; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LISTINGS PAGE (listings.html)
-   ═══════════════════════════════════════════════════════════ */
 
-/* Page header */
+/* ══════════════════════════════════════════════════════════════
+   26  LISTINGS PAGE (listings.html)
+   Full-page listing management with tabs and a listing table.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Page header row */
 .listings-page-hd {
   display: flex;
   align-items: flex-start;
@@ -1782,7 +1829,7 @@
   flex-wrap: wrap;
 }
 
-/* Summary strip */
+/* Summary strip: active / sold / total value counts */
 .listing-summary-strip {
   display: flex;
   align-items: center;
@@ -1803,10 +1850,10 @@
 }
 .lss-value-green { color: var(--green-mid); }
 .lss-value-amber { color: var(--amber-mid); }
-.lss-label { font-size: 11px; color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.06em; }
+.lss-label   { font-size: 11px; color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.06em; }
 .lss-divider { width: 1px; height: 40px; background: var(--gray-light); flex-shrink: 0; }
 
-/* Tab bar */
+/* Tab bar (Active / Sold / Delisted) */
 .listing-tabs {
   display: flex;
   align-items: center;
@@ -1827,11 +1874,10 @@
   margin-bottom: -0.5px;
   transition: color 0.12s, border-color 0.12s;
 }
-.listing-tab:hover { color: var(--gray-dark); text-decoration: none; }
-.listing-tab--active {
-  color: var(--green-mid);
-  border-bottom-color: var(--green-mid);
-}
+.listing-tab:hover       { color: var(--gray-dark); text-decoration: none; }
+.listing-tab--active     { color: var(--green-mid); border-bottom-color: var(--green-mid); }
+
+/* Item count badge inside tab */
 .listing-tab-count {
   display: inline-flex;
   align-items: center;
@@ -1850,12 +1896,14 @@
   color: var(--green-mid);
 }
 
-/* Listing table */
+/* Vertical stack of listing items */
 .listing-table {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
+/* Individual listing row */
 .listing-item {
   display: flex;
   align-items: center;
@@ -1866,9 +1914,10 @@
   padding: 14px 16px;
   transition: box-shadow 0.12s;
 }
-.listing-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-.listing-item--sold { opacity: 0.65; }
+.listing-item:hover          { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.listing-item--sold          { opacity: 0.65; }
 
+/* Crop photo thumbnail (emoji or image) */
 .li-photo {
   width: 42px; height: 42px;
   background: var(--gray-bg);
@@ -1878,23 +1927,21 @@
   font-size: 20px;
   flex-shrink: 0;
 }
-.li-info { flex: 1; min-width: 0; }
-.li-crop { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
-.li-meta {
-  font-size: 12px; color: var(--gray-mid);
-  display: flex; align-items: center; gap: 6px; margin-bottom: 5px;
-}
-.li-sep { color: var(--gray-light); }
+
+/* Listing info block */
+.li-info   { flex: 1; min-width: 0; }
+.li-crop   { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
+.li-meta   { font-size: 12px; color: var(--gray-mid); display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.li-sep    { color: var(--gray-light); }
 .li-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
-.li-right { text-align: right; flex-shrink: 0; min-width: 120px; }
-.li-price {
-  font-size: 14px; font-weight: var(--fw-medium);
-  color: var(--black); margin-bottom: 4px;
-}
+/* Right column: price + status + action */
+.li-right      { text-align: right; flex-shrink: 0; min-width: 120px; }
+.li-price      { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 4px; }
 .li-status-row { margin-bottom: 6px; }
-.li-actions { display: flex; justify-content: flex-end; }
+.li-actions    { display: flex; justify-content: flex-end; }
 
+/* Edit button on listing row */
 .li-btn-edit {
   display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--font-sans); font-size: 12px; font-weight: var(--fw-medium);
@@ -1905,19 +1952,18 @@
 }
 .li-btn-edit:hover { background: var(--gray-bg); border-color: var(--gray-mid); text-decoration: none; }
 
-.li-btn-view {
-  font-size: 12px; color: var(--gray-mid);
-  font-style: italic;
-}
+/* "Buyer view" micro-link */
+.li-btn-view { font-size: 12px; color: var(--gray-mid); font-style: italic; }
 
-/* Tag additions */
-.tag-sold     { background: var(--blue-bg);   color: var(--blue-mid);   border: 0.5px solid var(--blue-light); }
-.tag-delisted { background: var(--gray-bg);   color: var(--gray-mid);   border: var(--border); }
+/* Tag variants added by listings page (base .tag is in §14) */
+.tag-sold     { background: var(--blue-bg);  color: var(--blue-mid);  border: 0.5px solid var(--blue-light); }
+.tag-delisted { background: var(--gray-bg);  color: var(--gray-mid);  border: var(--border); }
 
 
-/* ═══════════════════════════════════════════════════════════
-   NEW LISTING / EDIT LISTING — two-column layout
-   ═══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   27  NEW / EDIT LISTING FORM
+   Two-column layout: main form (left) + sticky aside (right).
+   ══════════════════════════════════════════════════════════════ */
 
 .listing-form-layout {
   display: grid;
@@ -1928,7 +1974,7 @@
 
 .listing-form-main { min-width: 0; }
 
-/* Aside column */
+/* Sticky aside — top offset accounts for fixed topbar */
 .listing-form-aside {
   display: flex;
   flex-direction: column;
@@ -1937,6 +1983,7 @@
   top: calc(var(--topbar-h, 56px) + 24px);
 }
 
+/* Card used only in the aside column */
 .aside-card {
   background: var(--white);
   border: var(--border);
@@ -1944,9 +1991,8 @@
   overflow: hidden;
 }
 
-.aside-card--preview {
-  border-color: var(--green-light);
-}
+/* Green-tinted border for the buyer preview card */
+.aside-card--preview { border-color: var(--green-light); }
 
 .aside-card-hd {
   padding: 14px 16px;
@@ -1956,7 +2002,7 @@
 .aside-card-title { font-size: 12px; font-weight: var(--fw-medium); color: var(--black); }
 .aside-card-sub   { font-size: 11px; color: var(--gray-mid); margin-top: 2px; }
 
-/* Auto-attach rows */
+/* Auto-attached data rows (quality, forecast, node ID) */
 .auto-attach-row {
   padding: 12px 16px;
   border-bottom: 0.5px solid var(--gray-bg);
@@ -1968,40 +2014,34 @@
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--gray-mid); margin-bottom: 4px;
 }
-.aar-value {
-  font-size: 22px; font-weight: var(--fw-medium);
-  color: var(--black); line-height: 1; letter-spacing: -0.02em;
-}
-.aar-denom   { font-size: 12px; font-weight: var(--fw-regular); color: var(--gray-mid); }
-.aar-note    { font-size: 11px; color: var(--gray-mid); margin-top: 4px; line-height: 1.4; }
-.aar-placeholder { font-size: 14px; color: var(--gray-mid); font-weight: var(--fw-regular); }
-.aar-value-amber { color: var(--amber-mid); }
-.aar-value-muted { font-size: 14px; color: var(--gray-mid); font-weight: var(--fw-regular); }
-
-.aar-forecast { background: var(--amber-bg); }
+.aar-value         { font-size: 22px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; letter-spacing: -0.02em; }
+.aar-denom         { font-size: 12px; font-weight: var(--fw-regular); color: var(--gray-mid); }
+.aar-note          { font-size: 11px; color: var(--gray-mid); margin-top: 4px; line-height: 1.4; }
+.aar-placeholder   { font-size: 14px; color: var(--gray-mid); font-weight: var(--fw-regular); }
+.aar-value-amber   { color: var(--amber-mid); }
+.aar-value-muted   { font-size: 14px; color: var(--gray-mid); font-weight: var(--fw-regular); }
+.aar-forecast         { background: var(--amber-bg); }
 .aar-forecast--pending { background: var(--gray-bg); }
 
-/* Buyer preview card */
-.preview-listing-card {
-  padding: 14px 16px;
-}
-.plc-crop  { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
-.plc-meta  { font-size: 12px; color: var(--gray-mid); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
-.plc-sep   { color: var(--gray-light); }
+/* Live buyer preview of the listing as it will appear */
+.preview-listing-card { padding: 14px 16px; }
+.plc-crop   { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
+.plc-meta   { font-size: 12px; color: var(--gray-mid); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+.plc-sep    { color: var(--gray-light); }
 .plc-scores { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
-.plc-price { font-size: 15px; font-weight: var(--fw-medium); color: var(--black); }
+.plc-price  { font-size: 15px; font-weight: var(--fw-medium); color: var(--black); }
 
-/* Score pills */
+/* Score pills in the buyer preview */
 .score-pill {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: var(--fw-medium);
   padding: 2px 7px; border-radius: var(--radius-pill);
 }
-.score-pill-quality { background: var(--green-bg);  color: var(--green-dark); border: 0.5px solid var(--green-light); }
-.score-pill-trust   { background: var(--teal-bg);   color: var(--teal-dark);  border: 0.5px solid var(--teal-light); }
-.score-pill-forecast{ background: var(--amber-bg);  color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
+.score-pill-quality  { background: var(--green-bg);  color: var(--green-dark); border: 0.5px solid var(--green-light); }
+.score-pill-trust    { background: var(--teal-bg);   color: var(--teal-dark);  border: 0.5px solid var(--teal-light); }
+.score-pill-forecast { background: var(--amber-bg);  color: var(--amber-dark); border: 0.5px solid var(--amber-light); }
 
-/* Field readonly display */
+/* Read-only field display (e.g. auto-populated farm name) */
 .field-readonly-display {
   padding: 10px 14px;
   background: var(--gray-bg);
@@ -2015,6 +2055,8 @@
   font-size: 11px; font-weight: var(--fw-regular);
   color: var(--gray-mid); margin-top: 2px;
 }
+
+/* Warning shown when a field is disabled due to missing prerequisite */
 .field-disabled-msg {
   padding: 10px 14px;
   background: var(--amber-bg);
@@ -2022,18 +2064,14 @@
   border-radius: var(--radius-md);
   font-size: 13px; color: var(--amber-mid);
 }
+
+/* Optional label suffix (e.g. "optional") */
 .field-label-optional {
   font-size: 11px; font-weight: var(--fw-regular);
   color: var(--gray-mid); margin-left: 4px;
 }
 
-/* form-sec-num done state */
-.form-sec-num.is-done {
-  background: var(--teal-mid);
-  font-size: 10px;
-}
-
-/* Status live dot */
+/* Animated dot for "live" status labels */
 .status-live-dot {
   display: inline-block;
   width: 7px; height: 7px;
@@ -2043,12 +2081,786 @@
   margin-right: 2px;
 }
 
-/* Responsive */
+/* Small secondary action buttons (profile, registered, public pages) */
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-dark);
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 5px 11px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+}
+.btn-sm:hover { background: var(--gray-bg); border-color: var(--gray-mid); }
+
+/* Green primary variant of btn-sm */
+.btn-sm-primary {
+  color: var(--green-mid);
+  border-color: var(--green-light);
+  background: var(--green-bg);
+}
+.btn-sm-primary:hover { background: var(--green-light); border-color: var(--green-mid); color: var(--green-dark); }
+
+/* Responsive: listing form goes single column */
 @media (max-width: 900px) {
   .listing-form-layout { grid-template-columns: 1fr; }
   .listing-form-aside  { position: static; }
 }
 @media (max-width: 640px) {
   .listing-summary-strip { padding: 12px 16px; }
-  .listing-tab { padding: 8px 10px; font-size: 12px; }
+  .listing-tab           { padding: 8px 10px; font-size: 12px; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   28  FARMER PROFILE (WF16 own · WF17 registered · WF18 public)
+   All classes prefixed .prof- to avoid collisions.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Layout variants ── */
+
+/* Own / registered view: no sidebar, max-width centred */
+.prof-standalone-layout {
+  display: flex;
+  min-height: calc(100vh - 56px);
+  background: var(--gray-bg);
+  margin-top: 56px;
+}
+.prof-standalone-main {
+  flex: 1;
+  padding: 36px 40px 64px;
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Public view: full-page, no sidebar */
+.prof-public-layout { background: var(--gray-bg); min-height: 100vh; }
+.prof-public-main   { max-width: 860px; margin: 0 auto; padding: 36px 40px 64px; }
+
+
+/* ── Cover + avatar hero ── */
+
+.prof-cover-wrap {
+  position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+/* Earthy green gradient cover banner */
+.prof-cover {
+  height: 140px;
+  background: linear-gradient(135deg,
+    var(--green-dark) 0%,
+    #3B6D11 40%,
+    #0F6E56 70%,
+    #085041 100%);
+  position: relative;
+}
+
+/* Subtle diagonal line texture overlay */
+.prof-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255,255,255,0.015) 0px,
+    rgba(255,255,255,0.015) 1px,
+    transparent 1px,
+    transparent 18px
+  );
+}
+
+/* "Edit cover" button overlaid on the banner */
+.prof-cover-edit {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.28);
+  border: 0.5px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  z-index: 2;
+}
+.prof-cover-edit:hover { background: rgba(0,0,0,0.44); }
+
+/* Avatar positioned to straddle the cover bottom edge */
+.prof-avatar-wrap {
+  position: relative;
+  margin: -48px 0 0 32px;
+  display: inline-block;
+  z-index: 3;
+}
+
+/* Large circular avatar */
+.prof-avatar-lg {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  border: 4px solid var(--white);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.prof-avatar-lg img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* Small pencil button overlaid on the avatar (own view only) */
+.prof-avatar-edit-btn {
+  position: absolute;
+  bottom: 2px; right: 2px;
+  width: 26px; height: 26px;
+  background: var(--white);
+  border: 1px solid var(--gray-light);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  color: var(--gray-dark);
+}
+.prof-avatar-edit-btn:hover { background: var(--gray-bg); border-color: var(--gray-mid); }
+
+/* Hidden file input triggered by the avatar edit button */
+.prof-photo-input { display: none; }
+
+/* White card wrapping cover + info below it */
+.prof-hero-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+  overflow: hidden;
+}
+
+/* Name / meta + action buttons row */
+.prof-hero-info {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 28px 20px;
+  gap: var(--space-lg);
+}
+
+.prof-hero-text { flex: 1; min-width: 0; padding-top: 8px; }
+
+.prof-hero-name {
+  font-size: 20px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.prof-hero-meta {
+  font-size: 13px;
+  color: var(--gray-mid);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+/* Row of coloured badge pills under the name */
+.prof-badge-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+
+.prof-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid var(--gray-light);
+  background: var(--gray-bg);
+  color: var(--gray-mid);
+}
+.prof-badge-green  { background: var(--green-bg);  border-color: var(--green-light);  color: var(--green-dark); }
+.prof-badge-teal   { background: var(--teal-bg);   border-color: var(--teal-light);   color: var(--teal-dark); }
+.prof-badge-amber  { background: var(--amber-bg);  border-color: var(--amber-light);  color: var(--amber-mid); }
+.prof-badge-blue   { background: var(--blue-bg);   border-color: var(--blue-light);   color: var(--blue-mid); }
+
+/* Action buttons cluster (top-right of hero) */
+.prof-hero-actions {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: flex-start;
+  padding-top: 56px;     /* aligns with avatar bottom */
+  flex-shrink: 0;
+}
+
+/* Stats strip: farms / listings / trust / member since */
+.prof-stats-strip {
+  display: flex;
+  gap: 0;
+  padding: 14px 28px;
+  border-top: 0.5px solid var(--gray-bg);
+  background: var(--gray-xbg);
+}
+.prof-stat {
+  flex: 1;
+  text-align: center;
+  padding: 0 12px;
+  border-right: 0.5px solid var(--gray-light);
+}
+.prof-stat:last-child { border-right: none; }
+.prof-stat-val {
+  font-size: 20px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.prof-stat-val-green { color: var(--green-mid); }
+.prof-stat-val-teal  { color: var(--teal-mid); }
+.prof-stat-val-amber { color: var(--amber-mid); }
+.prof-stat-label {
+  font-size: 10px;
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 2px;
+}
+
+/* ── Visibility banners ── */
+.prof-vis-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 0.5px solid;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: var(--space-lg);
+}
+.prof-vis-banner svg { flex-shrink: 0; margin-top: 1px; }
+.prof-vis-own        { background: var(--green-bg);  border-color: var(--green-light); color: var(--green-dark); }
+.prof-vis-registered { background: var(--blue-bg);   border-color: var(--blue-light);  color: var(--blue-mid); }
+.prof-vis-public     { background: var(--amber-bg);  border-color: var(--amber-light); color: var(--amber-mid); }
+.prof-vis-link       { color: inherit; font-weight: var(--fw-medium); text-decoration: underline; }
+
+/* ── Profile tab navigation ── */
+.prof-tabs {
+  display: flex;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+  overflow-x: auto;
+  padding: 4px;
+  gap: 2px;
+}
+.prof-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  border: none;
+}
+.prof-tab:hover    { background: var(--gray-bg); color: var(--gray-dark); }
+.prof-tab.is-active {
+  background: var(--green-bg);
+  color: var(--green-dark);
+  font-weight: var(--fw-medium);
+}
+.prof-tab-count {
+  font-size: 10px;
+  background: var(--gray-bg);
+  color: var(--gray-mid);
+  border-radius: var(--radius-pill);
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+}
+.prof-tab.is-active .prof-tab-count {
+  background: var(--green-light);
+  color: var(--green-dark);
+}
+
+/* ── Trust score display ── */
+.prof-trust-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  padding: var(--space-md) 0 var(--space-lg);
+}
+.prof-trust-ring  { display: flex; align-items: baseline; gap: 3px; flex-shrink: 0; }
+.prof-trust-num   { font-size: 40px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; letter-spacing: -0.03em; }
+.prof-trust-denom { font-size: 16px; color: var(--gray-mid); }
+.prof-trust-desc  { font-size: 12px; color: var(--gray-mid); line-height: 1.6; margin: 0; padding-top: 6px; }
+
+/* Trust score breakdown bar rows */
+.prof-trust-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 0;
+  border-top: 0.5px solid var(--gray-bg);
+}
+.prof-trust-label {
+  font-size: 12px;
+  color: var(--gray-dark);
+  min-width: 180px;
+  flex-shrink: 0;
+}
+.prof-trust-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.prof-trust-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-mid), var(--teal-mid));
+  border-radius: var(--radius-pill);
+  transition: width 1s cubic-bezier(0.4,0,0.2,1);
+}
+.prof-trust-val { font-size: 11px; color: var(--gray-mid); min-width: 70px; text-align: right; flex-shrink: 0; }
+
+/* ── Redacted row (hidden from public view) ── */
+.prof-redacted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  margin-bottom: var(--space-sm);
+  font-style: italic;
+}
+.prof-redacted svg { flex-shrink: 0; opacity: 0.6; }
+
+/* ── Farm cards on profile ── */
+.prof-farm-card    { padding: var(--space-lg) !important; margin-bottom: var(--space-sm); }
+.prof-farm-hd      { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.prof-farm-name    { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
+.prof-farm-meta    { font-size: 12px; color: var(--gray-mid); }
+.prof-farm-quality { font-size: 12px; color: var(--gray-mid); margin-bottom: 10px; }
+
+.prof-farm-status-wrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.prof-farm-status-text { font-size: 11px; color: var(--gray-mid); }
+.prof-farm-actions     { display: flex; gap: var(--space-xs); }
+
+.prof-farm-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 0.5px solid var(--gray-bg); gap: var(--space-sm); }
+.prof-farm-row:last-child { border-bottom: none; }
+
+/* Dashed "Add farm" button inside profile */
+.prof-add-farm-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--green-mid);
+  border: 0.5px dashed var(--green-light);
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  background: var(--green-xbg);
+  margin-top: var(--space-sm);
+  text-decoration: none;
+  transition: background 0.12s;
+  width: 100%;
+  justify-content: center;
+}
+.prof-add-farm-btn:hover { background: var(--green-bg); }
+
+/* ── Listing rows on profile ── */
+.prof-listing-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 0.5px solid var(--gray-bg); gap: var(--space-sm); }
+.prof-listing-row:last-child { border-bottom: none; }
+.prof-listing-info  { flex: 1; min-width: 0; }
+.prof-listing-crop  { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 2px; }
+.prof-listing-meta  { font-size: 11px; color: var(--gray-mid); display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.prof-listing-right { display: flex; align-items: center; gap: var(--space-xs); flex-shrink: 0; }
+
+/* ── Transactions (earnings tab) ── */
+.prof-txn-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--gray-bg); gap: var(--space-md); }
+.prof-txn-row:last-child { border-bottom: none; }
+.prof-txn-info   { flex: 1; }
+.prof-txn-label  { font-size: 12px; color: var(--black); margin-bottom: 1px; }
+.prof-txn-date   { font-size: 11px; color: var(--gray-mid); }
+.prof-txn-amount { font-size: 13px; font-weight: var(--fw-medium); color: var(--green-mid); flex-shrink: 0; }
+.prof-txn-late   { font-size: 10px; color: var(--amber-mid); margin-left: 4px; }
+
+/* ── Notification toggles (settings tab) ── */
+.prof-notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--gray-bg);
+  gap: var(--space-lg);
+}
+.prof-notif-row:last-of-type { border-bottom: none; }
+.prof-notif-label                     { display: flex; flex-direction: column; gap: 2px; }
+.prof-notif-label span:first-child    { font-size: 13px; color: var(--black); }
+.prof-notif-desc                      { font-size: 11px; color: var(--gray-mid); }
+
+/* Custom CSS toggle switch */
+.prof-toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; cursor: pointer; }
+.prof-toggle input { opacity: 0; width: 0; height: 0; }
+.prof-toggle-track {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--gray-light);
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+.prof-toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--white);
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+.prof-toggle input:checked + .prof-toggle-track              { background: var(--green-mid); }
+.prof-toggle input:checked + .prof-toggle-track::after       { transform: translateX(16px); }
+
+/* ── CTA box (public / registered views) ── */
+.prof-cta-box {
+  background: var(--green-bg);
+  border: 0.5px solid var(--green-light);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  text-align: center;
+  margin-top: var(--space-lg);
+}
+.prof-cta-title   { font-size: 15px; font-weight: var(--fw-medium); color: var(--green-dark); margin-bottom: 8px; }
+.prof-cta-desc    { font-size: 12px; color: var(--gray-mid); line-height: 1.6; margin: 0 auto var(--space-lg); max-width: 420px; }
+.prof-cta-actions { display: flex; gap: var(--space-sm); justify-content: center; flex-wrap: wrap; }
+
+/* ── Public profile footer ── */
+.prof-public-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xl) 0 var(--space-2xl);
+  font-size: 11px;
+  color: var(--gray-mid);
+  border-top: 0.5px solid var(--gray-light);
+  margin-top: var(--space-2xl);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.prof-public-footer-links   { display: flex; gap: var(--space-md); }
+.prof-public-footer-links a { color: var(--gray-mid); font-size: 11px; }
+
+/* ── Photo upload zone (modal / settings) ── */
+.prof-photo-upload-zone {
+  border: 1.5px dashed var(--green-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  background: var(--green-bg);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  margin-bottom: var(--space-sm);
+}
+.prof-photo-upload-zone:hover { background: var(--green-xbg); border-color: var(--green-mid); }
+.prof-photo-upload-label      { font-size: 13px; font-weight: var(--fw-medium); color: var(--green-mid); margin-bottom: 4px; }
+.prof-photo-upload-hint       { font-size: 11px; color: var(--gray-mid); }
+
+
+/* ══════════════════════════════════════════════════════════════
+   29  NOTIFICATIONS PAGE (WF15)
+   Tabbed list of all notification types with unread states.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Page header row: title + "Mark all read" button */
+.notif-page-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: var(--space-sm);
+}
+.notif-mark-all {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--blue-mid);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: color 0.1s;
+}
+.notif-mark-all:hover { color: var(--green-mid); }
+
+/* Summary pills above the tabs */
+.notif-summary-strip {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  flex-wrap: wrap;
+}
+.notif-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid;
+  font-weight: var(--fw-medium);
+}
+.nsp-unread  { background: var(--green-bg);  border-color: var(--green-light);  color: var(--green-dark); }
+.nsp-harvest { background: var(--teal-bg);   border-color: var(--teal-light);   color: var(--teal-dark); }
+.nsp-sensor  { background: var(--amber-bg);  border-color: var(--amber-light);  color: var(--amber-mid); }
+.nsp-buyer   { background: var(--blue-bg);   border-color: var(--blue-light);   color: var(--blue-mid); }
+
+/* Tab bar (All / Harvest / Sensor / Buyer / etc.) */
+.notif-tabs {
+  display: flex;
+  border-bottom: 0.5px solid var(--gray-light);
+  margin-bottom: var(--space-lg);
+  overflow-x: auto;
+  gap: 0;
+  background: var(--white);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 0 4px;
+  border: var(--border);
+  border-bottom: none;
+}
+.notif-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  padding: 11px 14px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+  background: none;
+  border-top: none; border-left: none; border-right: none;
+}
+.notif-tab:hover    { color: var(--gray-dark); }
+.notif-tab.is-active {
+  color: var(--green-mid);
+  border-bottom-color: var(--green-mid);
+}
+
+/* Unread count bubble inside tab */
+.notif-tab-badge {
+  font-size: 10px;
+  background: var(--danger-bg, #FCEBEB);
+  color: var(--danger-mid, #A32D2D);
+  border-radius: var(--radius-pill);
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+  font-weight: var(--fw-medium);
+}
+.notif-tab.is-active .notif-tab-badge { background: var(--green-bg); color: var(--green-dark); }
+
+/* Notifications list container (rounded bottom, matching tab top) */
+.notif-list {
+  background: var(--white);
+  border: var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Individual notification item */
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 0.5px solid var(--gray-bg);
+  transition: background 0.1s;
+  position: relative;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover      { background: var(--gray-xbg); }
+
+/* Unread state: left green stripe + subtle tint */
+.notif-item.is-unread {
+  background: #FAFDF7;
+  border-left: 3px solid var(--green-mid);
+}
+.notif-item.is-unread:hover { background: var(--green-xbg); }
+
+/* Small coloured dot (type indicator) */
+.notif-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.notif-dot-green  { background: var(--green-mid); }
+.notif-dot-amber  { background: var(--amber-mid); box-shadow: 0 0 0 3px var(--amber-bg); }
+.notif-dot-blue   { background: var(--blue-mid); }
+.notif-dot-teal   { background: var(--teal-mid); }
+.notif-dot-grey   { background: var(--gray-light); }
+.notif-dot-danger { background: #A32D2D; box-shadow: 0 0 0 3px #FCEBEB; }
+
+/* Notification type icon badge */
+.notif-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.notif-icon-harvest { background: var(--green-bg);  color: var(--green-mid); }
+.notif-icon-sensor  { background: var(--amber-bg);  color: var(--amber-mid); }
+.notif-icon-buyer   { background: var(--blue-bg);   color: var(--blue-mid); }
+.notif-icon-trust   { background: var(--teal-bg);   color: var(--teal-mid); }
+.notif-icon-listing { background: var(--green-bg);  color: var(--teal-mid); }
+.notif-icon-txn     { background: var(--teal-bg);   color: var(--teal-dark); }
+.notif-icon-system  { background: var(--gray-bg);   color: var(--gray-mid); }
+.notif-icon-danger  { background: #FCEBEB;          color: #A32D2D; }
+
+/* Notification body text */
+.notif-body { flex: 1; min-width: 0; }
+
+.notif-title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.notif-item.is-unread .notif-title { color: var(--green-dark); }
+
+.notif-text {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.6;
+  margin-bottom: 7px;
+}
+
+.notif-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--gray-mid);
+  flex-wrap: wrap;
+}
+.notif-time   { color: var(--gray-mid); }
+.notif-action {
+  color: var(--green-mid);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  transition: color 0.1s;
+}
+.notif-action:hover { color: var(--green-dark); text-decoration: underline; }
+
+/* Green pip in top-right corner of unread items */
+.notif-unread-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green-mid);
+  position: absolute;
+  top: 18px; right: 18px;
+  flex-shrink: 0;
+}
+
+/* Empty state for an empty notification list */
+.notif-empty { padding: 48px 20px; text-align: center; }
+.notif-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--gray-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  color: var(--gray-mid);
+}
+.notif-empty-title { font-size: 14px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 5px; }
+.notif-empty-sub   { font-size: 12px; color: var(--gray-mid); }
+
+
+/* ══════════════════════════════════════════════════════════════
+   30  RESPONSIVE — PROFILE + NOTIFICATIONS
+   Separate from the core portal breakpoints (§24) to keep
+   page-specific overrides grouped with their components.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Profile hero stacks on medium screens */
+@media (max-width: 860px) {
+  .prof-hero-info    { flex-direction: column; }
+  .prof-hero-actions { padding-top: 0; }
+  .prof-stats-strip  { flex-wrap: wrap; }
+  .prof-stat {
+    min-width: 45%;
+    border-right: none;
+    border-bottom: 0.5px solid var(--gray-light);
+    padding: 10px 0;
+  }
+}
+
+/* Small-screen profile and notification tweaks */
+@media (max-width: 640px) {
+  .prof-standalone-main,
+  .prof-public-main   { padding: var(--space-lg); }
+  .prof-tabs          { padding: 2px; }
+  .prof-tab           { padding: 6px 10px; font-size: 11px; }
+  .prof-trust-label   { min-width: 0; width: 100%; }
+  .prof-trust-hero    { flex-direction: column; }
+  .prof-listing-right { flex-wrap: wrap; justify-content: flex-end; }
+  .prof-avatar-lg     { width: 80px; height: 80px; font-size: 26px; }
+  .prof-avatar-wrap   { margin: -40px 0 0 20px; }
+  .prof-hero-info     { padding: 8px 20px 16px; }
+  .prof-stats-strip   { padding: 10px 20px; }
+  .notif-item         { padding: 12px 16px; }
+  .notif-icon         { width: 30px; height: 30px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE SYSTEM
+   → Moved to partials.css (sidebar is a partial template).
+      All .sb-toggle, .sb-bars, .sb-backdrop, .sb-btn-wrap rules
+      now live in partials.css §02.
+   ══════════════════════════════════════════════════════════════ */

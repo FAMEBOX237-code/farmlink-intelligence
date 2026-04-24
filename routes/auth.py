@@ -28,6 +28,8 @@
 #   This is the correct behaviour. Page views must never be limited.
 # ============================================================
 
+import re
+
 from flask import (
     Blueprint, render_template, request,
     redirect, url_for, flash, current_app
@@ -41,6 +43,38 @@ from models.models import User
 
 
 auth_bp = Blueprint('auth', __name__, url_prefix='')
+
+
+# ── Email validation ──────────────────────────────────────────
+# Enforces real RFC-compliant email structure:
+#   • Local part must start with a letter or digit
+#   • Domain labels must start AND end with a letter or digit
+#     (no leading/trailing hyphens — rejects "-1.com", "-domain.com")
+#   • TLD must be letters only, at least 2 characters (no ".1", ".-")
+#   • Max total length of 254 characters (SMTP standard)
+#
+# Examples that now correctly FAIL:
+#   mark-1@-1.com     ← domain label starts with hyphen
+#   user@@domain.com  ← double @
+#   user@domain.c     ← TLD too short
+#   user@.domain.com  ← domain starts with dot
+#
+# Examples that correctly PASS:
+#   user@gmail.com
+#   first.last+tag@mail.example.co.uk
+#   farmer_1@agri-domain.org
+_EMAIL_RE = re.compile(
+    r'^[a-zA-Z0-9][a-zA-Z0-9._%+\-]{0,62}'   # local part: starts with alphanum
+    r'@'
+    r'(?:[a-zA-Z0-9]'                           # each domain label: starts with alphanum
+    r'(?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?'     # label body (no trailing hyphen)
+    r'\.)+'                                      # dot separating labels
+    r'[a-zA-Z]{2,}$'                             # TLD: letters only, 2+ chars
+)
+
+def is_valid_email(email: str) -> bool:
+    """Return True only if email passes structural validation."""
+    return bool(email) and len(email) <= 254 and bool(_EMAIL_RE.match(email))
 
 
 # ── Role-based redirect ───────────────────────────────────────
@@ -169,8 +203,8 @@ def register():
         if not first_name or not last_name:
             errors.append('Please enter your first and last name.')
 
-        if not email or '@' not in email or '.' not in email.split('@')[-1]:
-            errors.append('Please enter a valid email address.')
+        if not is_valid_email(email):
+            errors.append('Please enter a valid email address (e.g. name@domain.com).')
 
         if role not in ('farmer', 'buyer'):
             errors.append('Please select your role — Farmer or Buyer.')
@@ -222,7 +256,11 @@ def register():
         db.session.commit()
 
         current_app.logger.info(f'New account registered: {email} [{role}]')
-        flash('Account created successfully. You can now log in.', 'success')
+        # Do NOT flash a success message here.
+        # login.html already has a static success box (#fb-success) that
+        # the JS reveals when it detects ?registered=1 in the URL.
+        # Flashing AND using ?registered=1 causes two success messages
+        # to appear simultaneously — one from Flask's session, one from JS.
         return redirect(url_for('auth.login') + '?registered=1')
 
     return render_template(
@@ -396,8 +434,8 @@ def reset_password():
         else:
             email = request.form.get('email', '').strip().lower()
 
-            if not email or '@' not in email:
-                flash('Please enter a valid email address.', 'error')
+            if not is_valid_email(email):
+                flash('Please enter a valid email address (e.g. name@domain.com).', 'error')
                 return render_template('public/reset_password.html')
 
             user = User.query.filter_by(email=email).first()

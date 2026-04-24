@@ -1,0 +1,312 @@
+/* ============================================================
+   partials.css — FarmLink Intelligence
+   Styles for all reusable partial templates.
+
+   Loads after public.css and alongside farmer.css.
+   Contains ONLY styles that belong to partial templates
+   (sidebar, topbar widgets, etc.) so that layout and
+   component files stay clean and focused.
+   ============================================================
+
+   CONTENTS
+   01  Sidebar (dark green — matches auth panel)
+   02  Sidebar toggle system (mobile hamburger + backdrop)
+   ============================================================ */
+
+
+/* ══════════════════════════════════════════════════════════════
+   01  SIDEBAR  (partial: partials/sidebar_farmer.html)
+   Deep green background (--green-dark: #27500A).
+   Matches the auth panel from login/register for visual continuity.
+   Fixed at left, full height, 240 px wide.
+   z-index 400 — below topbar (500) but above main content.
+   ══════════════════════════════════════════════════════════════ */
+
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 240px;
+  height: 100vh;
+  background: var(--green-dark);
+  display: flex;
+  flex-direction: column;
+  z-index: 400;
+  overflow-y: auto;
+  /* Smooth slide for mobile toggle */
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Logo strip — same height as topbar so they align */
+.sidebar-top {
+  height: 56px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  border-bottom: 0.5px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+}
+
+.sidebar-logo-mark {
+  width: 26px;
+  height: 26px;
+  background: rgba(192,221,151,0.12);
+  border: 0.5px solid rgba(192,221,151,0.18);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-name {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: rgba(255,255,255,0.9);
+  letter-spacing: -0.01em;
+}
+
+/* Farmer identity block (name + role) */
+.sidebar-identity {
+  padding: 16px 20px 14px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.sidebar-identity-name {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-identity-role {
+  font-size: 11px;
+  color: var(--green-light);
+  opacity: 0.65;
+}
+
+/* Navigation links */
+.sidebar-nav {
+  flex: 1;
+  padding: 10px 0;
+}
+
+/* Section grouping label, e.g. "PORTAL" */
+.sidebar-section-label {
+  font-size: 9px;
+  font-weight: var(--fw-medium);
+  color: rgba(255,255,255,0.28);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 12px 20px 5px;
+}
+
+/* Individual nav item — works as <a> or <button> */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 20px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: rgba(255,255,255,0.58);
+  text-decoration: none;
+  border-right: 2px solid transparent;
+  border-left: none; border-top: none; border-bottom: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.sidebar-link:hover {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+}
+
+/* Active page indicator — right border + tinted bg */
+.sidebar-link.is-active {
+  background: rgba(192,221,151,0.1);
+  color: var(--green-light);
+  font-weight: var(--fw-medium);
+  border-right-color: var(--green-light);
+}
+
+/* SVG icon inside each nav link */
+.sidebar-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  transition: opacity 0.1s;
+}
+
+.sidebar-link:hover .sidebar-icon     { opacity: 0.75; }
+.sidebar-link.is-active .sidebar-icon { opacity: 1; }
+
+/* Thin separator between nav groups */
+.sidebar-divider {
+  height: 0.5px;
+  background: rgba(255,255,255,0.07);
+  margin: 6px 20px;
+}
+
+/* Footer (profile + logout links at the bottom) */
+.sidebar-footer {
+  padding-bottom: 12px;
+  flex-shrink: 0;
+}
+
+/* Logout special hover — danger red tint */
+.sidebar-link.is-logout:hover {
+  background: rgba(163,45,45,0.15);
+  color: #F09595;
+}
+.sidebar-link.is-logout:hover .sidebar-icon { opacity: 1; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   02  SIDEBAR TOGGLE SYSTEM  (partial: partials/sidebar_farmer.html)
+   ──────────────────────────────────────────────────────────────
+   BEHAVIOUR
+   • Wide screen (>768px):
+     - Sidebar is always visible; toggle button is hidden via CSS.
+     - User never needs to think about it.
+
+   • Small screen (≤768px):
+     - Sidebar slides off-screen automatically on load.
+     - A hamburger toggle button is injected into the topbar by the
+       sidebar partial's inline <script>, AFTER .topbar-vr, so the
+       topbar-left order becomes:
+       [Logo] [divider] [toggle btn] [portal tag]
+     - Tapping the toggle slides the sidebar IN over the content,
+       with a dark semi-transparent backdrop behind it.
+     - Tapping the backdrop, pressing Escape, or navigating closes
+       the sidebar again.
+     - Sidebar always starts closed on mobile (no persistence).
+
+   CLASSES TOGGLED ON .sidebar BY JS
+   .sb-hidden → sidebar is off-screen (transform: translateX(-100%))
+   .sb-open   → sidebar is overlaying content (transform: translateX(0))
+
+   NO CHANGES required in any other template file.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Hidden state — slides fully off-screen to the left */
+.sidebar.sb-hidden {
+  transform: translateX(-100%);
+}
+
+/* Open state — back on screen, overlays content on mobile */
+.sidebar.sb-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* ── Backdrop (mobile only — dims content when sidebar is open) ── */
+.sb-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 390;   /* below sidebar (400) but above everything else */
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  appearance: none;
+}
+
+@media (max-width: 768px) {
+  .sb-backdrop {
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.24s ease;
+  }
+  .sb-backdrop.sb-backdrop-visible {
+    visibility: visible;
+    opacity: 1;
+  }
+}
+
+/* ── Toggle button wrapper injected after .topbar-vr ── */
+.sb-btn-wrap {
+  display: none;        /* hidden on wide screens */
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .sb-btn-wrap { display: flex; }
+}
+
+/* ── The toggle button itself ── */
+.sb-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: 0.5px solid var(--gray-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--gray-dark);
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sb-toggle:hover {
+  background: var(--gray-bg);
+  border-color: var(--gray-mid);
+}
+
+.sb-toggle:focus-visible {
+  outline: 2px solid var(--green-mid);
+  outline-offset: 2px;
+}
+
+/* ── Three-bar hamburger icon ── */
+.sb-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5px;
+  pointer-events: none;
+}
+
+.sb-bars span {
+  display: block;
+  width: 15px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.18s ease, opacity 0.18s ease, width 0.18s ease;
+}
+
+/* Animate bars → X when sidebar is open */
+.sb-toggle[aria-expanded="true"] .sb-bars span:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+.sb-toggle[aria-expanded="true"] .sb-bars span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.sb-toggle[aria-expanded="true"] .sb-bars span:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
