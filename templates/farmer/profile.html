@@ -1,0 +1,720 @@
+
+{# ============================================================
+   templates/farmer/profile.html — FarmLink Intelligence
+   WF16 — Farmer Own Profile (Private / Full Access View)
+
+   CSS:    public.css → farmer.css → profile_photo.css (inline)
+   Route:  GET/POST /farmer/profile
+   Access: Farmer only
+
+   Context: farmer, farms_data, listings_display, earnings,
+            trust_ctx, regions, crops, form_errors, form_data,
+            active_tab, active_page, unread_notifs, active_forecast
+
+   CHANGES FROM ORIGINAL:
+   - Cover photo section completely removed
+   - Profile photo enlarged (140px) and redesigned as focal point
+   - Topbar avatar now shows real photo when uploaded
+   - "View public profile" links removed everywhere
+   - Photo upload form preserved and connected to topbar
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Profile · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+</head>
+<body class="portal-body">
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ farmer.full_name }}</span>
+
+    {# ── TOPBAR AVATAR: shows real photo when uploaded ── #}
+    {% if farmer.profile_photo_url %}
+      <div class="topbar-avatar-photo" id="topbar-avatar"
+           title="{{ farmer.full_name }}" aria-hidden="true">
+        <img src="{{ url_for('static', filename=farmer.profile_photo_url) }}"
+             alt="{{ farmer.full_name }}" id="topbar-avatar-img">
+      </div>
+    {% else %}
+      <div class="topbar-avatar" id="topbar-avatar"
+           title="{{ farmer.full_name }}" aria-hidden="true">
+        <span id="topbar-avatar-initials">{{ farmer.full_name[:2].upper() }}</span>
+      </div>
+    {% endif %}
+
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{# ════ FLASH ═════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{# ════ LAYOUT ════════════════════════════════════════════════ #}
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    
+
+    {# ════ PROFILE HERO CARD ════════════════════════════════ #}
+    <div class="prof-hero-card">
+
+      {# ── Large profile photo — the focal point ── #}
+      <div class="prof-photo-section">
+        <div class="prof-photo-ring">
+
+          {# The large circle — shows photo or initials #}
+          <div class="prof-photo-circle" id="avatar-display">
+            {% if farmer.profile_photo_url %}
+              <img src="{{ url_for('static', filename=farmer.profile_photo_url) }}"
+                   alt="{{ farmer.full_name }}" id="avatar-img">
+            {% else %}
+              <span id="avatar-initials">{{ farmer.full_name[:2].upper() }}</span>
+            {% endif %}
+          </div>
+
+          {# Camera icon — triggers the hidden file input #}
+          <label class="prof-photo-edit-btn" for="photo-upload-input"
+                 title="Change profile photo" aria-label="Change profile photo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </label>
+
+          {# Hidden form — auto-submits when a file is chosen #}
+          <form method="POST" action="{{ url_for('farmer.profile') }}?tab=info"
+                enctype="multipart/form-data" id="photo-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_photo">
+            <input type="file" id="photo-upload-input" name="profile_photo"
+                   class="prof-photo-input" accept="image/jpeg,image/png,image/webp"
+                   aria-label="Upload profile photo">
+          </form>
+        </div>
+
+        {# Hint text below photo — guides the farmer #}
+        <div class="prof-photo-hint">
+          <strong>{{ farmer.full_name }}</strong>
+          Click the camera icon to upload your photo<br>
+          JPG, PNG or WEBP · max 5 MB
+        </div>
+      </div>
+
+      {# ── Hero info row ── #}
+      <div class="prof-hero-info">
+        <div class="prof-hero-text">
+          <div class="prof-hero-meta">
+            {{ farmer.email }}
+            {% if farmer.phone %} · {{ farmer.phone }}{% endif %}
+            {% if farmer.region %} · {{ farmer.region }}{% endif %}
+          </div>
+          <div class="prof-badge-row">
+            {% if farmer.is_verified %}
+              <span class="prof-badge prof-badge-green">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Verified farmer
+              </span>
+            {% else %}
+              <span class="prof-badge prof-badge-amber">Pending verification</span>
+            {% endif %}
+            <span class="prof-badge">Member since {{ farmer.created_at.strftime('%b %Y') }}</span>
+            {% if farmer.primary_crop %}
+              <span class="prof-badge">{{ farmer.primary_crop }}</span>
+            {% endif %}
+            {% if trust_ctx and trust_ctx.score_display %}
+              <span class="prof-badge prof-badge-teal">Trust {{ trust_ctx.score_display }} / 5.0</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="prof-hero-actions">
+          <a href="{{ url_for('farmer.profile') }}?tab=settings" class="btn-secondary" style="font-size:12px">
+            Settings
+          </a>
+        </div>
+      </div>
+
+      {# ── Stats strip ── #}
+      <div class="prof-stats-strip">
+        <div class="prof-stat">
+          <div class="prof-stat-val prof-stat-val-green">
+            {% if trust_ctx and trust_ctx.score_display %}{{ trust_ctx.score_display }}{% else %}—{% endif %}
+          </div>
+          <div class="prof-stat-label">Trust score</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ farms_data | length }}</div>
+          <div class="prof-stat-label">Farms</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ listings_display | length }}</div>
+          <div class="prof-stat-label">Listings</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ earnings.total_transactions }}</div>
+          <div class="prof-stat-label">Transactions</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val prof-stat-val-teal" style="font-size:15px">
+            {% if earnings.total_earned %}XAF {{ '{:,.0f}'.format(earnings.total_earned | float) }}{% else %}—{% endif %}
+          </div>
+          <div class="prof-stat-label">Total earned</div>
+        </div>
+      </div>
+    </div>
+
+    {# ════ TAB NAV ══════════════════════════════════════════ #}
+    <nav class="prof-tabs" role="tablist" aria-label="Profile sections">
+      <a href="{{ url_for('farmer.profile') }}?tab=info"
+         class="prof-tab {% if active_tab == 'info' %}is-active{% endif %}"
+         role="tab">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Personal info
+      </a>
+      <a href="{{ url_for('farmer.profile') }}?tab=farms"
+         class="prof-tab {% if active_tab == 'farms' %}is-active{% endif %}"
+         role="tab">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        My farms
+        <span class="prof-tab-count">{{ farms_data | length }}</span>
+      </a>
+      <a href="{{ url_for('farmer.profile') }}?tab=listings"
+         class="prof-tab {% if active_tab == 'listings' %}is-active{% endif %}"
+         role="tab">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        Listings
+        <span class="prof-tab-count">{{ listings_display | length }}</span>
+      </a>
+      <a href="{{ url_for('farmer.profile') }}?tab=earnings"
+         class="prof-tab {% if active_tab == 'earnings' %}is-active{% endif %}"
+         role="tab">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="12" y1="1" x2="12" y2="23"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        Earnings
+      </a>
+      <a href="{{ url_for('farmer.profile') }}?tab=settings"
+         class="prof-tab {% if active_tab == 'settings' %}is-active{% endif %}"
+         role="tab">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </a>
+    </nav>
+
+    {# ════ TAB: PERSONAL INFO ═══════════════════════════════ #}
+    {% if active_tab == 'info' %}
+
+      <section class="card" aria-label="Personal information">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Personal information</div>
+            <div class="card-sub">Changes are saved to your account immediately</div>
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('farmer.profile') }}?tab=info" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="update_info">
+
+          <div class="form-two-col">
+            <div class="field">
+              <label class="field-label" for="first_name">First name <span class="field-label-required">*</span></label>
+              <input type="text" id="first_name" name="first_name"
+                     class="field-input {% if form_errors and form_errors.first_name %}error{% endif %}"
+                     value="{{ form_data.first_name if form_data else farmer.full_name.split()[0] }}"
+                     maxlength="50" autocomplete="given-name">
+              {% if form_errors and form_errors.first_name %}
+                <span class="field-hint error">{{ form_errors.first_name }}</span>
+              {% endif %}
+            </div>
+            <div class="field">
+              <label class="field-label" for="last_name">Last name <span class="field-label-required">*</span></label>
+              <input type="text" id="last_name" name="last_name"
+                     class="field-input {% if form_errors and form_errors.last_name %}error{% endif %}"
+                     value="{{ form_data.last_name if form_data else (farmer.full_name.split(' ', 1)[1] if ' ' in farmer.full_name else '') }}"
+                     maxlength="50" autocomplete="family-name">
+              {% if form_errors and form_errors.last_name %}
+                <span class="field-hint error">{{ form_errors.last_name }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="email">Email address <span class="field-label-required">*</span></label>
+            <input type="email" id="email" name="email"
+                   class="field-input {% if form_errors and form_errors.email %}error{% endif %}"
+                   value="{{ form_data.email if form_data else farmer.email }}"
+                   autocomplete="email">
+            {% if form_errors and form_errors.email %}
+              <span class="field-hint error">{{ form_errors.email }}</span>
+            {% endif %}
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="phone">Phone number <span class="field-label-optional">(optional)</span></label>
+            <input type="tel" id="phone" name="phone"
+                   class="field-input"
+                   value="{{ form_data.phone if form_data else (farmer.phone or '') }}"
+                   placeholder="+237 6XX XXX XXX" autocomplete="tel">
+            <span class="field-hint">Shared with buyers only when you accept a contact request</span>
+          </div>
+
+          <div class="form-two-col">
+            <div class="field">
+              <label class="field-label" for="region">Region</label>
+              {% set cur_region = form_data.region if form_data else (farmer.region or '') %}
+              <select id="region" name="region" class="field-input">
+                <option value="">Select region…</option>
+                {% for r in regions %}
+                  <option value="{{ r }}" {% if r == cur_region %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="primary_crop">Primary crop</label>
+              {% set cur_crop = form_data.primary_crop if form_data else (farmer.primary_crop or '') %}
+              <select id="primary_crop" name="primary_crop" class="field-input">
+                <option value="">Select crop…</option>
+                {% for c in crops %}
+                  <option value="{{ c }}" {% if c == cur_crop %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-btn-row">
+            <a href="{{ url_for('farmer.profile') }}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">Save changes</button>
+          </div>
+        </form>
+      </section>
+
+      {# Trust score card #}
+      <section class="card" aria-label="Trust score breakdown">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Trust score</div>
+            <div class="card-sub">Computed automatically from your transaction history</div>
+          </div>
+          <a href="{{ url_for('farmer.trust_score') }}" class="card-link">Full page ↗</a>
+        </div>
+        {% if trust_ctx and trust_ctx.score_display %}
+          <div class="prof-trust-hero">
+            <div class="prof-trust-ring">
+              <span class="prof-trust-num">{{ trust_ctx.score_display }}</span>
+              <span class="prof-trust-denom">/ 5.0</span>
+            </div>
+            <p class="prof-trust-desc">
+              Based on {{ trust_ctx.transaction_count or 0 }} completed transactions.
+              Updates after every delivery or buyer rating.
+            </p>
+          </div>
+          {% for row in trust_ctx.bar_rows %}
+            <div class="prof-trust-row">
+              <span class="prof-trust-label">{{ row.label }}</span>
+              <div class="prof-trust-bar-wrap" role="meter"
+                   aria-valuenow="{{ row.pct }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="prof-trust-bar" style="width:{{ row.pct }}%"></div>
+              </div>
+              <span class="prof-trust-val">{{ row.display }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="empty-sub" style="padding:18px 0;text-align:center">
+            Trust score appears after your first completed transaction.
+          </p>
+        {% endif %}
+      </section>
+
+    {# ════ TAB: FARMS ════════════════════════════════════════ #}
+    {% elif active_tab == 'farms' %}
+
+      <section aria-label="My farms">
+        {% if farms_data %}
+          {% for fd in farms_data %}
+            <div class="card prof-farm-card">
+              <div class="prof-farm-hd">
+                <div>
+                  <div class="prof-farm-name">{{ fd.farm.name }}</div>
+                  <div class="prof-farm-meta">
+                    {{ fd.farm.region }}{% if fd.farm.town %}, {{ fd.farm.town }}{% endif %}
+                    · {{ fd.farm.crop_type }}
+                    {% if fd.size_display %} · {{ fd.size_display }}{% endif %}
+                    {% if fd.farm.sensor_node_id %} · {{ fd.farm.sensor_node_id }}{% endif %}
+                  </div>
+                </div>
+                <div class="prof-farm-status-wrap">
+                  <span class="status-dot {{ fd.sensor_status }}" aria-hidden="true"></span>
+                  <span class="prof-farm-status-text">Sensor {{ fd.sensor_status | replace('-', ' ') }}</span>
+                </div>
+              </div>
+              <div class="prof-farm-quality">
+                Quality score: <strong class="{{ fd.quality_css }}">{{ fd.quality_score }}</strong> / 100
+              </div>
+              <div class="prof-farm-actions">
+                <a href="{{ url_for('farmer.edit_farm', farm_id=fd.farm.id) }}" class="btn-sm">Edit farm</a>
+                <a href="{{ url_for('farmer.dashboard') }}?farm_id={{ fd.farm.id }}" class="btn-sm btn-sm-primary">View dashboard ↗</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="card">
+            <div class="empty-state">
+              <p class="empty-title">No farms yet</p>
+              <p class="empty-sub">Add your first farm to connect an IoT sensor node.</p>
+            </div>
+          </div>
+        {% endif %}
+        <a href="{{ url_for('farmer.add_farm') }}" class="prof-add-farm-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Add another farm
+        </a>
+      </section>
+
+    {# ════ TAB: LISTINGS ════════════════════════════════════ #}
+    {% elif active_tab == 'listings' %}
+
+      <section class="card" aria-label="My listings">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">All listings</div>
+            <div class="card-sub">Draft listings are visible here only — never shown publicly</div>
+          </div>
+          <a href="{{ url_for('farmer.new_listing') }}" class="btn-primary" style="font-size:12px">+ New listing</a>
+        </div>
+        {% if listings_display %}
+          {% for l in listings_display %}
+            <div class="prof-listing-row">
+              <div class="prof-listing-info">
+                <div class="prof-listing-crop">{{ l.crop }} — {{ l.quantity }}</div>
+                <div class="prof-listing-meta">
+                  {{ l.farm_name }} · {{ l.price }}
+                  {% if l.q_live %} · Quality {{ l.q_live }}{% endif %}
+                </div>
+              </div>
+              <div class="prof-listing-right">
+                {% if l.status == 'active' %}
+                  <span class="tag tag-active">Active</span>
+                {% elif l.status == 'draft' %}
+                  <span class="tag tag-draft">Draft</span>
+                {% elif l.status == 'sold' %}
+                  <span class="tag tag-sold">Sold</span>
+                {% else %}
+                  <span class="tag">{{ l.status | title }}</span>
+                {% endif %}
+                <a href="{{ url_for('farmer.edit_listing', lid=l.id) }}" class="btn-sm">Edit</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <p class="empty-title">No listings yet</p>
+            <p class="empty-sub">Create your first produce listing to reach buyers.</p>
+          </div>
+        {% endif %}
+      </section>
+
+    {# ════ TAB: EARNINGS ════════════════════════════════════ #}
+    {% elif active_tab == 'earnings' %}
+
+      <div class="kpi-row">
+        <div class="kpi kp-green">
+          <div class="kpi-label">Transactions</div>
+          <div class="kpi-value">{{ earnings.total_transactions }}</div>
+          <div class="kpi-sub">completed</div>
+        </div>
+        <div class="kpi kp-teal">
+          <div class="kpi-label">Total earned</div>
+          <div class="kpi-value" style="font-size:17px">
+            {% if earnings.total_earned %}XAF {{ '{:,.0f}'.format(earnings.total_earned | float) }}{% else %}—{% endif %}
+          </div>
+          <div class="kpi-sub">lifetime</div>
+        </div>
+        <div class="kpi kp-amber">
+          <div class="kpi-label">This month</div>
+          <div class="kpi-value" style="font-size:17px">
+            {% if earnings.this_month %}XAF {{ '{:,.0f}'.format(earnings.this_month | float) }}{% else %}—{% endif %}
+          </div>
+          <div class="kpi-sub">current month</div>
+        </div>
+      </div>
+
+      <section class="card" aria-label="Recent transactions">
+        <div class="card-hd">
+          <div class="card-title">Recent transactions</div>
+          <div class="card-sub">Private — visible only to you</div>
+        </div>
+        {% if earnings.recent_transactions %}
+          {% for t in earnings.recent_transactions %}
+            <div class="prof-txn-row">
+              <div class="prof-txn-info">
+                <div class="prof-txn-label">{{ t.crop }} {{ t.quantity_kg }} kg · Buyer {{ t.buyer_initials }}</div>
+                <div class="prof-txn-date">{{ t.date }}</div>
+              </div>
+              <div class="prof-txn-amount">
+                XAF {{ '{:,.0f}'.format(t.amount | float) }}
+                {% if t.is_late %}<span class="prof-txn-late"> · late delivery</span>{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <p class="empty-title">No transactions yet</p>
+            <p class="empty-sub">Completed sales will appear here.</p>
+          </div>
+        {% endif %}
+      </section>
+
+    {# ════ TAB: SETTINGS ════════════════════════════════════ #}
+    {% elif active_tab == 'settings' %}
+
+      <section class="card" aria-label="Change password">
+        <div class="card-hd">
+          <div class="card-title">Change password</div>
+          <div class="card-sub">Choose a password at least 8 characters long</div>
+        </div>
+        <form method="POST" action="{{ url_for('farmer.profile') }}?tab=settings" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="change_password">
+          <div class="field">
+            <label class="field-label" for="current_password">Current password <span class="field-label-required">*</span></label>
+            <input type="password" id="current_password" name="current_password"
+                   class="field-input {% if form_errors and form_errors.current_password %}error{% endif %}"
+                   autocomplete="current-password">
+            {% if form_errors and form_errors.current_password %}
+              <span class="field-hint error">{{ form_errors.current_password }}</span>
+            {% endif %}
+          </div>
+          <div class="form-two-col">
+            <div class="field">
+              <label class="field-label" for="new_password">New password <span class="field-label-required">*</span></label>
+              <input type="password" id="new_password" name="new_password"
+                     class="field-input {% if form_errors and form_errors.new_password %}error{% endif %}"
+                     autocomplete="new-password" placeholder="Min. 8 characters">
+              {% if form_errors and form_errors.new_password %}
+                <span class="field-hint error">{{ form_errors.new_password }}</span>
+              {% endif %}
+            </div>
+            <div class="field">
+              <label class="field-label" for="confirm_password">Confirm new password <span class="field-label-required">*</span></label>
+              <input type="password" id="confirm_password" name="confirm_password"
+                     class="field-input {% if form_errors and form_errors.confirm_password %}error{% endif %}"
+                     autocomplete="new-password" placeholder="Repeat password">
+              {% if form_errors and form_errors.confirm_password %}
+                <span class="field-hint error">{{ form_errors.confirm_password }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="form-btn-row">
+            <a href="{{ url_for('farmer.profile') }}?tab=settings" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">Update password</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-label="Notification preferences">
+        <div class="card-hd">
+          <div class="card-title">Notification preferences</div>
+        </div>
+        <form method="POST" action="{{ url_for('farmer.profile') }}?tab=settings" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="update_notifs">
+          <div class="prof-notif-row">
+            <div class="prof-notif-label">
+              <span>Harvest forecast alerts</span>
+              <span class="prof-notif-desc">Notify when your harvest forecast is ready</span>
+            </div>
+            <label class="prof-toggle" aria-label="Harvest forecast alerts">
+              <input type="checkbox" name="notif_harvest" checked>
+              <span class="prof-toggle-track"></span>
+            </label>
+          </div>
+          <div class="prof-notif-row">
+            <div class="prof-notif-label">
+              <span>Sensor offline alerts</span>
+              <span class="prof-notif-desc">Notify when your sensor node goes offline</span>
+            </div>
+            <label class="prof-toggle" aria-label="Sensor offline alerts">
+              <input type="checkbox" name="notif_sensor" checked>
+              <span class="prof-toggle-track"></span>
+            </label>
+          </div>
+          <div class="prof-notif-row">
+            <div class="prof-notif-label">
+              <span>Buyer enquiry notifications</span>
+              <span class="prof-notif-desc">Notify when a buyer contacts you</span>
+            </div>
+            <label class="prof-toggle" aria-label="Buyer enquiries">
+              <input type="checkbox" name="notif_enquiry" checked>
+              <span class="prof-toggle-track"></span>
+            </label>
+          </div>
+          <div class="prof-notif-row">
+            <div class="prof-notif-label">
+              <span>Quality score change alerts</span>
+              <span class="prof-notif-desc">Notify on significant quality score changes</span>
+            </div>
+            <label class="prof-toggle" aria-label="Quality score alerts">
+              <input type="checkbox" name="notif_quality">
+              <span class="prof-toggle-track"></span>
+            </label>
+          </div>
+          <div class="form-btn-row">
+            <a href="{{ url_for('farmer.profile') }}?tab=settings" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">Save preferences</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="delist-zone" role="region" aria-label="Danger zone">
+        <h3 class="delist-title">Delete account</h3>
+        <p class="delist-desc">
+          Permanently deletes your account, all farms, sensor history, listings, and transaction records.
+          This action cannot be undone.
+        </p>
+        <form method="POST" action="{{ url_for('farmer.profile') }}?tab=settings"
+              onsubmit="return confirm('Are you absolutely sure you want to delete your account? This cannot be undone.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="delete_account">
+          <button type="submit" class="delist-btn">Delete my account</button>
+        </form>
+      </div>
+
+    {% endif %}
+
+  </main>
+</div>
+
+<script>
+  // ── Flash auto-dismiss ─────────────────────────────────────
+  document.querySelectorAll('.flash').forEach(function(el) {
+    setTimeout(function() {
+      el.classList.add('out');
+      setTimeout(function() { el.remove(); }, 200);
+    }, 5000);
+  });
+
+  // ── Trust bar animation ────────────────────────────────────
+  document.querySelectorAll('.prof-trust-bar').forEach(function(bar) {
+    var target = bar.style.width;
+    bar.style.width = '0%';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { bar.style.width = target; });
+    });
+  });
+
+  // ── Live photo preview + topbar sync ──────────────────────
+  // When the farmer picks a new photo, show it immediately
+  // in both the large circle AND the topbar avatar — before
+  // the form even submits. This gives instant visual feedback.
+  document.getElementById('photo-upload-input')
+    .addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+
+      var reader = new FileReader();
+      reader.onload = function(evt) {
+        var dataUrl = evt.target.result;
+
+        // ── Update large profile circle ──
+        var circle = document.getElementById('avatar-display');
+        circle.innerHTML = '<img src="' + dataUrl + '" alt="Profile photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+
+        // ── Update topbar avatar ──
+        var topbar = document.getElementById('topbar-avatar');
+        if (topbar) {
+          // Replace whatever is there (initials div or photo div)
+          // with a photo div
+          topbar.className = 'topbar-avatar-photo';
+          topbar.innerHTML = '<img src="' + dataUrl + '" alt="Profile photo" id="topbar-avatar-img">';
+        }
+      };
+      reader.readAsDataURL(file);
+
+      // Auto-submit the form after preview renders
+      setTimeout(function() {
+        document.getElementById('photo-form').submit();
+      }, 150);
+    });
+</script>
+</body>
+</html>

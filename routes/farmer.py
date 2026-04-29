@@ -755,6 +755,18 @@ def notifications():
     return render_template('farmer/notifications.html',
                            active_page='notifications', **_sidebar(current_user))
 
+        # Action URL
+        action_url = None
+        action_label = 'View'
+        if n.forecast_id:
+            action_url   = url_for('farmer.forecast_detail', forecast_id=n.forecast_id)
+            action_label = 'View forecast'
+        elif n.listing_id:
+            action_url   = url_for('farmer.edit_listing', lid=n.listing_id)
+            action_label = 'View listing'
+        elif n.type == 'sensor_offline':
+            action_url   = url_for('farmer.farms')
+            action_label = 'View farm'
 
 @farmer_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
