@@ -16,7 +16,7 @@
 #   500 — Internal server error
 # ============================================================
 
-from flask import Blueprint, render_template, abort
+from flask import Blueprint, render_template, abort, url_for, request, redirect
 
 public_bp = Blueprint('public', __name__, url_prefix='')
 
@@ -47,6 +47,46 @@ def forbidden_direct():
     """
     abort(403)
 
+
+
+# ══════════════════════════════════════════════════════════════
+# FARMER PROFILE — PUBLIC VIEW (WF18)
+# No login required. Shows only: name, region, verified badge,
+# trust score number (no breakdown), farm regions only.
+# CTA to register/login to see more.
+# ══════════════════════════════════════════════════════════════
+
+@public_bp.route('/farmer/<int:farmer_id>')
+def farmer_profile_public(farmer_id):
+    from models.models import User as UserModel, Farm, ProduceListing
+    from flask_login import current_user
+
+    subject = UserModel.query.filter_by(id=farmer_id, role='farmer').first()
+    if not subject:
+        from flask import abort
+        abort(404)
+
+    # Redirect logged-in users to the richer registered view
+    if current_user.is_authenticated:
+        return redirect(url_for('farmer.farmer_profile_registered', farmer_id=farmer_id))
+
+    farm_list   = Farm.query.filter_by(owner_id=farmer_id).all()
+    farm_regions = list(dict.fromkeys(f.region for f in farm_list if f.region))
+    farm_count  = len(farm_list)
+
+    ts_val = float(subject.trust_score) if subject.trust_score else 0.0
+    ts_display = f'{ts_val:.1f}' if ts_val > 0 else None
+
+    listing_count = ProduceListing.query.filter_by(
+        farmer_id=farmer_id, status='active').count()
+
+    return render_template('farmer/profile_public.html',
+        subject_farmer=subject,
+        farm_count=farm_count,
+        farm_regions=farm_regions,
+        trust_score_display=ts_display,
+        active_listing_count=listing_count,
+    )
 
 # ── Error handlers ────────────────────────────────────────────
 # These are global — they catch errors from every blueprint,

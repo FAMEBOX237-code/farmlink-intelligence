@@ -128,3 +128,147 @@
   </div>
 
 </aside>
+
+{# ══════════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE — appended to sidebar partial
+   Injects: backdrop div + toggle button (after .topbar-vr) + JS
+   Zero changes needed in any other template.
+   ══════════════════════════════════════════════════════════════ #}
+
+{# Backdrop — only active/visible on mobile when sidebar is open #}
+<button class="sb-backdrop" id="sb-backdrop" aria-label="Close navigation" tabindex="-1"></button>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Elements ─────────────────────────────────────────────── */
+  var sidebar  = document.querySelector('.sidebar');
+  var backdrop = document.getElementById('sb-backdrop');
+
+  if (!sidebar || !backdrop) return;
+
+  /* ── Build the toggle button ──────────────────────────────── */
+  var wrap = document.createElement('div');
+  wrap.className = 'sb-btn-wrap';
+
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'sb-toggle';
+  btn.setAttribute('aria-label', 'Toggle navigation menu');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.setAttribute('aria-controls', 'farmer-sidebar');
+  btn.innerHTML =
+    '<span class="sb-bars" aria-hidden="true">' +
+      '<span></span><span></span><span></span>' +
+    '</span>';
+
+  wrap.appendChild(btn);
+
+  /* ── Inject button AFTER .topbar-vr ──────────────────────────
+     Topbar-left order: [logo] [.topbar-vr] [portal-tag]
+     We insert wrap after .topbar-vr so result is:
+     [logo] [.topbar-vr] [toggle-btn] [portal-tag]           */
+  function injectButton() {
+    var vr = document.querySelector('.topbar-vr');
+    if (vr && vr.parentNode) {
+      vr.parentNode.insertBefore(wrap, vr.nextSibling);
+    }
+  }
+
+  /* ── Open sidebar ─────────────────────────────────────────── */
+  function openSidebar() {
+    sidebar.classList.remove('sb-hidden');
+    sidebar.classList.add('sb-open');
+    backdrop.classList.add('sb-backdrop-visible');
+    btn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+
+  /* ── Close sidebar ────────────────────────────────────────── */
+  function closeSidebar() {
+    sidebar.classList.add('sb-hidden');
+    sidebar.classList.remove('sb-open');
+    backdrop.classList.remove('sb-backdrop-visible');
+    btn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  /* ── Is mobile? ───────────────────────────────────────────── */
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+
+  /* ── Apply correct initial state ─────────────────────────────
+     Wide screen  → sidebar always visible, toggle hidden via CSS.
+     Small screen → sidebar hidden on load, toggle button visible. */
+  function applyInitialState() {
+    if (isMobile()) {
+      /* Start hidden on mobile — user must tap toggle to open */
+      sidebar.classList.add('sb-hidden');
+      sidebar.classList.remove('sb-open');
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      /* Wide screen — ensure no leftover mobile classes */
+      sidebar.classList.remove('sb-hidden', 'sb-open');
+      backdrop.classList.remove('sb-backdrop-visible');
+      document.body.style.overflow = '';
+    }
+  }
+
+  /* ── Toggle ───────────────────────────────────────────────── */
+  function toggle() {
+    if (sidebar.classList.contains('sb-hidden')) {
+      openSidebar();
+    } else {
+      closeSidebar();
+    }
+  }
+
+  /* ── Handle resize — reset state when crossing breakpoint ─── */
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (!isMobile()) {
+        /* Back on wide screen — remove all mobile state */
+        sidebar.classList.remove('sb-hidden', 'sb-open');
+        backdrop.classList.remove('sb-backdrop-visible');
+        document.body.style.overflow = '';
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        /* Resized down to mobile — hide sidebar if it was open wide */
+        if (!sidebar.classList.contains('sb-hidden') &&
+            !sidebar.classList.contains('sb-open')) {
+          sidebar.classList.add('sb-hidden');
+        }
+      }
+    }, 80);
+  });
+
+  /* ── Events ───────────────────────────────────────────────── */
+  btn.addEventListener('click', toggle);
+
+  backdrop.addEventListener('click', function () {
+    if (!sidebar.classList.contains('sb-hidden')) closeSidebar();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && sidebar.classList.contains('sb-open')) {
+      closeSidebar();
+    }
+  });
+
+  /* ── Run ──────────────────────────────────────────────────── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      injectButton();
+      applyInitialState();
+    });
+  } else {
+    injectButton();
+    applyInitialState();
+  }
+
+}());
+</script>
