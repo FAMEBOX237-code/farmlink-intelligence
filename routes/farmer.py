@@ -748,17 +748,454 @@ def trust_score():
 # NOTIFICATIONS & PROFILE (stubs)
 # ══════════════════════════════════════════════════════════════
 
-@farmer_bp.route('/notifications')
+@farmer_bp.route('/notifications', methods=['GET', 'POST'])
 @login_required
 @farmer_required
 def notifications():
-    return render_template('farmer/notifications.html',
-                           active_page='notifications', **_sidebar(current_user))
+    tab = request.args.get('tab', 'all')
 
+    # ── Fetch all notifications for this farmer ───────────────
+    all_notifs = (Notification.query
+                  .filter_by(recipient_id=current_user.id)
+                  .order_by(Notification.sent_at.desc())
+                  .all())
+
+    # ── Tab filter mapping ────────────────────────────────────
+    FARM_TYPES   = {'harvest_alert', 'sensor_offline', 'quality_change'}
+    BUYER_TYPES  = {'buyer_enquiry'}
+    SYSTEM_TYPES = {'account_verified', 'account_suspended', 'listing_published',
+                    'transaction_completed', 'system'}
+
+    if tab == 'unread':
+        filtered = [n for n in all_notifs if not n.is_read]
+    elif tab == 'farm':
+        filtered = [n for n in all_notifs if n.type in FARM_TYPES]
+    elif tab == 'buyer':
+        filtered = [n for n in all_notifs if n.type in BUYER_TYPES]
+    elif tab == 'system':
+        filtered = [n for n in all_notifs if n.type in SYSTEM_TYPES]
+    else:
+        filtered = all_notifs
+
+    # ── Notification icon + dot class mapping ─────────────────
+    ICON_MAP = {
+        'harvest_alert':         'notif-icon-harvest',
+        'sensor_offline':        'notif-icon-sensor',
+        'quality_change':        'notif-icon-trust',
+        'buyer_enquiry':         'notif-icon-buyer',
+        'listing_published':     'notif-icon-listing',
+        'transaction_completed': 'notif-icon-txn',
+        'account_verified':      'notif-icon-trust',
+        'account_suspended':     'notif-icon-danger',
+        'system':                'notif-icon-system',
+    }
+
+    # ── Build display list ────────────────────────────────────
+    notifications_display = []
+    for n in filtered:
+        # Compute human-readable time
+        secs = (datetime.utcnow() - n.sent_at).total_seconds() if n.sent_at else 0
+        if secs < 60:       t = 'Just now'
+        elif secs < 3600:   m = int(secs // 60);  t = f'{m} minute{"s" if m != 1 else ""} ago'
+        elif secs < 86400:  h = int(secs // 3600); t = f'{h} hour{"s" if h != 1 else ""} ago'
+        elif secs < 172800: t = f'Yesterday, {n.sent_at.strftime("%H:%M")}'
+        elif secs < 604800: t = f'{int(secs // 86400)} days ago'
+        else:               t = n.sent_at.strftime('%b %d, %Y')
+
+        # Action URL
+        action_url = None
+        action_label = 'View'
+        if n.forecast_id:
+            action_url   = url_for('farmer.forecast_detail', forecast_id=n.forecast_id)
+            action_label = 'View forecast'
+        elif n.listing_id:
+            action_url   = url_for('farmer.edit_listing', lid=n.listing_id)
+            action_label = 'View listing'
+        elif n.type == 'sensor_offline':
+            action_url   = url_for('farmer.farms')
+            action_label = 'View farm'
+
+        notifications_display.append({
+            'id':           n.id,
+            'type':         n.type,
+            'icon_class':   ICON_MAP.get(n.type, 'notif-icon-system'),
+            'title':        n.title,
+            'message':      n.message,
+            'time_display': t,
+            'action_url':   action_url,
+            'action_label': action_label,
+            'is_unread':    not n.is_read,
+        })
+
+    # ── Tab counts ────────────────────────────────────────────
+    tab_counts = {
+        'all':    len(all_notifs),
+        'unread': sum(1 for n in all_notifs if not n.is_read),
+        'farm':   sum(1 for n in all_notifs if n.type in FARM_TYPES),
+        'buyer':  sum(1 for n in all_notifs if n.type in BUYER_TYPES),
+        'system': sum(1 for n in all_notifs if n.type in SYSTEM_TYPES),
+    }
+
+    # ── POST — mark read ──────────────────────────────────────
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        if action == 'mark_all_read':
+            Notification.query.filter_by(
+                recipient_id=current_user.id, is_read=False
+            ).update({'is_read': True})
+            db.session.commit()
+            flash('All notifications marked as read.', 'success')
+        elif action == 'mark_read':
+            nid = request.form.get('notif_id', type=int)
+            if nid:
+                n = Notification.query.filter_by(
+                    id=nid, recipient_id=current_user.id).first()
+                if n:
+                    n.is_read = True
+                    db.session.commit()
+        return redirect(url_for('farmer.notifications') + f'?tab={tab}')
+
+    return render_template('farmer/notifications.html',
+        notifications_display=notifications_display,
+        current_tab=tab,
+        tab_counts=tab_counts,
+        active_page='notifications',
+        **_sidebar(current_user),
+    )
+
+
+
+
+
+# ══════════════════════════════════════════════════════════════
+# FARMER PROFILE — OWN VIEW (WF16)
+# Private. Only the logged-in farmer sees this.
+# Handles: GET (tab display) + POST (update_info, change_password,
+#          update_notifs, delete_account)
+# ══════════════════════════════════════════════════════════════
+ 
+# ══════════════════════════════════════════════════════════════
+# FARMER PROFILE — OWN VIEW (WF16)
+# Private. Only the logged-in farmer sees this.
+# Handles: GET (tab display) + POST (update_photo, update_info,
+#          change_password, update_notifs, delete_account)
+# ══════════════════════════════════════════════════════════════
 
 @farmer_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 @farmer_required
 def profile():
+    f   = current_user
+    ctx = _sidebar(f)
+    tab = request.args.get('tab', 'info')
+
+    # ── Build farms_data ──────────────────────────────────────
+    farm_list = Farm.query.filter_by(owner_id=f.id).order_by(Farm.created_at).all()
+    farms_data = []
+    for farm in farm_list:
+        lr = (SensorReading.query.filter_by(farm_id=farm.id)
+              .order_by(SensorReading.timestamp.desc()).first())
+        ss = sensor_status(lr) if lr else 'no-data'
+        qs = farm.current_quality_score or 0
+        if qs >= 70:   q_css = 'fcv-green'
+        elif qs >= 40: q_css = 'fcv-amber'
+        elif qs > 0:   q_css = 'fcv-danger'
+        else:          q_css = ''
+        farms_data.append({
+            'farm':          farm,
+            'sensor_status': ss,
+            'quality_score': str(qs) if qs else '—',
+            'quality_css':   q_css,
+            'size_display':  f'{round(float(farm.size_hectares), 1)} ha' if farm.size_hectares else '—',
+        })
+
+    # ── Build listings_display ────────────────────────────────
+    raw_listings = (ProduceListing.query.filter_by(farmer_id=f.id)
+                    .order_by(ProduceListing.created_at.desc()).all())
+    farm_ids = list({l.farm_id for l in raw_listings if l.farm_id})
+    farm_map = {}
+    if farm_ids:
+        farm_rows = Farm.query.filter(Farm.id.in_(farm_ids)).all()
+        farm_map  = {fm.id: fm.name for fm in farm_rows}
+    listings_display = [{
+        'id':        l.id,
+        'crop':      l.crop_type,
+        'quantity':  f'{round(float(l.quantity_kg))} kg',
+        'price':     f'XAF\u00a0{float(l.price_per_kg):,.0f}/kg',
+        'status':    l.status,
+        'q_live':    l.quality_score_live or 0,
+        'farm_name': farm_map.get(l.farm_id, '—'),
+    } for l in raw_listings]
+
+    # ── Build earnings ────────────────────────────────────────
+    now         = datetime.utcnow()
+    month_start = datetime(now.year, now.month, 1)
+    completed_txns = (Transaction.query
+                      .filter_by(farmer_id=f.id, status='completed')
+                      .order_by(Transaction.completed_at.desc()).all())
+    total_earned = sum(float(t.total_amount) for t in completed_txns if t.total_amount)
+    this_month   = sum(
+        float(t.total_amount) for t in completed_txns
+        if t.total_amount and t.completed_at and t.completed_at >= month_start
+    )
+    recent_txns = []
+    for t in completed_txns[:5]:
+        listing = ProduceListing.query.get(t.listing_id) if t.listing_id else None
+        recent_txns.append({
+            'crop':           listing.crop_type if listing else '—',
+            'quantity_kg':    round(float(t.quantity_kg)) if t.quantity_kg else '—',
+            'buyer_initials': f'B-{t.buyer_id}',
+            'date':           t.completed_at.strftime('%d %b %Y') if t.completed_at else '—',
+            'amount':         float(t.total_amount) if t.total_amount else 0,
+            'amount_css':     '',
+            'is_late':        t.is_on_time is False,
+        })
+    earnings = {
+        'total_transactions':  len(completed_txns),
+        'total_earned':        total_earned,
+        'this_month':          this_month,
+        'recent_transactions': recent_txns,
+    }
+
+    # ── Build trust_ctx ───────────────────────────────────────
+    ts              = float(f.trust_score) if f.trust_score else 0.0
+    total_txn_count = len(completed_txns)
+    on_time_count   = sum(1 for t in completed_txns if t.is_on_time is True)
+    completion_pct  = round(len(completed_txns) / max(1, total_txn_count) * 100)
+    delivery_pct    = round(on_time_count / max(1, total_txn_count) * 100)
+
+    all_ratings = Rating.query.filter_by(farmer_id=f.id).all()
+    avg_rating  = (sum(r.score for r in all_ratings) / len(all_ratings)) if all_ratings else 0
+    rating_pct  = round(avg_rating / 5 * 100) if avg_rating else 0
+
+    profile_pct = 100 if (f.full_name and f.email and f.phone and f.region and f.primary_crop) else (
+        80 if (f.full_name and f.email and f.region) else 50
+    )
+
+    trust_ctx = {
+        'score_display':     f'{ts:.1f}' if ts > 0 else None,
+        'transaction_count': total_txn_count,
+        'bar_rows': [
+            {'label': 'Transaction completion', 'pct': completion_pct,
+             'display': f'{completion_pct}% × 40%'},
+            {'label': 'On-time delivery',       'pct': delivery_pct,
+             'display': f'{delivery_pct}% × 30%'},
+            {'label': 'Buyer ratings (1–5 ★)',  'pct': rating_pct,
+             'display': f'{avg_rating:.1f}/5 × 20%'},
+            {'label': 'Profile completeness',   'pct': profile_pct,
+             'display': f'{profile_pct}% × 10%'},
+        ],
+    }
+
+    # ── POST handlers ─────────────────────────────────────────
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+
+        # ── update_photo ───────────────────────────────────────
+        # Triggered when the farmer clicks the camera icon and
+        # selects an image. The form auto-submits via onchange.
+        if action == 'update_photo':
+            photo_file = request.files.get('profile_photo')
+
+            if not photo_file or not photo_file.filename:
+                flash('No file selected. Please choose an image.', 'error')
+                return redirect(url_for('farmer.profile') + '?tab=info')
+
+            allowed = {'jpg', 'jpeg', 'png', 'webp'}
+            ext = photo_file.filename.rsplit('.', 1)[-1].lower() if '.' in photo_file.filename else ''
+            if ext not in allowed:
+                flash('Only JPG, PNG, or WEBP images are allowed.', 'error')
+                return redirect(url_for('farmer.profile') + '?tab=info')
+
+            # Save new photo to static/uploads/
+            photo_url = _save_photo(photo_file)
+            if not photo_url:
+                flash('Could not save the image. Please try again.', 'error')
+                return redirect(url_for('farmer.profile') + '?tab=info')
+
+            # Delete the old photo file from disk to save space
+            if f.profile_photo_url:
+                old_path = os.path.join(
+                    current_app.config.get(
+                        'UPLOAD_FOLDER',
+                        os.path.join(current_app.root_path, 'static', 'uploads')
+                    ),
+                    os.path.basename(f.profile_photo_url)
+                )
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
+            f.profile_photo_url = photo_url
+            db.session.commit()
+            flash('Profile photo updated successfully.', 'success')
+            return redirect(url_for('farmer.profile') + '?tab=info')
+
+        # ── update_info ────────────────────────────────────────
+        elif action == 'update_info':
+            errors = {}
+            first  = request.form.get('first_name', '').strip()
+            last   = request.form.get('last_name',  '').strip()
+            email  = request.form.get('email',      '').strip()
+            phone  = request.form.get('phone',      '').strip() or None
+            region = request.form.get('region',     '').strip()
+            crop   = request.form.get('primary_crop', '').strip()
+
+            if not first: errors['first_name'] = 'First name is required.'
+            if not last:  errors['last_name']  = 'Last name is required.'
+            if not email: errors['email']      = 'Email address is required.'
+            elif email != f.email:
+                from models.models import User as UserModel
+                clash = UserModel.query.filter_by(email=email).first()
+                if clash and clash.id != f.id:
+                    errors['email'] = 'That email is already in use.'
+
+            if errors:
+                return render_template('farmer/profile.html',
+                    farmer=f, farms_data=farms_data,
+                    listings_display=listings_display, earnings=earnings,
+                    trust_ctx=trust_ctx, regions=_REGIONS, crops=_CROPS,
+                    form_errors=errors, form_data=request.form,
+                    active_tab='info', active_page='profile', **ctx)
+
+            f.full_name    = f'{first} {last}'
+            f.email        = email
+            f.phone        = phone
+            f.region       = region if region in _REGIONS else f.region
+            f.primary_crop = crop
+            db.session.commit()
+            flash('Profile updated successfully.', 'success')
+            return redirect(url_for('farmer.profile') + '?tab=info')
+
+        # ── change_password ────────────────────────────────────
+        elif action == 'change_password':
+            errors  = {}
+            cur_pw  = request.form.get('current_password', '')
+            new_pw  = request.form.get('new_password',     '')
+            conf_pw = request.form.get('confirm_password', '')
+
+            if not check_password_hash(f.password_hash, cur_pw):
+                errors['current_password'] = 'Current password is incorrect.'
+            if len(new_pw) < 8:
+                errors['new_password'] = 'New password must be at least 8 characters.'
+            if new_pw != conf_pw:
+                errors['confirm_password'] = 'Passwords do not match.'
+
+            if errors:
+                return render_template('farmer/profile.html',
+                    farmer=f, farms_data=farms_data,
+                    listings_display=listings_display, earnings=earnings,
+                    trust_ctx=trust_ctx, regions=_REGIONS, crops=_CROPS,
+                    form_errors=errors, form_data=request.form,
+                    active_tab='settings', active_page='profile', **ctx)
+
+            f.password_hash = generate_password_hash(new_pw)
+            db.session.commit()
+            flash('Password updated successfully.', 'success')
+            return redirect(url_for('farmer.profile') + '?tab=settings')
+
+        # ── update_notifs (stub — stores nothing yet) ──────────
+        elif action == 'update_notifs':
+            flash('Notification preferences saved.', 'success')
+            return redirect(url_for('farmer.profile') + '?tab=settings')
+
+        # ── delete_account ─────────────────────────────────────
+        elif action == 'delete_account':
+            db.session.delete(f)
+            db.session.commit()
+            logout_user()
+            flash('Your account has been permanently deleted.', 'success')
+            return redirect(url_for('public.landing'))
+
     return render_template('farmer/profile.html',
-                           active_page='profile', **_sidebar(current_user))
+        farmer=f,
+        farms_data=farms_data,
+        listings_display=listings_display,
+        earnings=earnings,
+        trust_ctx=trust_ctx,
+        regions=_REGIONS,
+        crops=_CROPS,
+        form_errors=None,
+        form_data=None,
+        active_tab=tab,
+        active_page='profile',
+        **ctx,
+    )
+ 
+ 
+# ══════════════════════════════════════════════════════════════
+# FARMER PROFILE — REGISTERED VIEW (WF17)
+# Logged-in user viewing another farmer's profile.
+# Shows trust breakdown + farm names + active listings.
+# Hides: contact details, drafts, earnings, sensor data.
+# ══════════════════════════════════════════════════════════════
+ 
+@farmer_bp.route('/<int:farmer_id>/profile')
+@login_required
+def farmer_profile_registered(farmer_id):
+    from models.models import User as UserModel, Transaction as Txn, Rating as Rat
+    subject = UserModel.query.filter_by(id=farmer_id, role='farmer').first()
+    if not subject:
+        flash('Farmer not found.', 'error')
+        return redirect(url_for('buyer.marketplace'))
+ 
+    # Redirect farmer viewing their own profile
+    if current_user.id == farmer_id:
+        return redirect(url_for('farmer.profile'))
+ 
+    farm_list = Farm.query.filter_by(owner_id=farmer_id).order_by(Farm.created_at).all()
+    farms_data = [{
+        'farm':         farm,
+        'size_display': f'{round(float(farm.size_hectares), 1)} ha' if farm.size_hectares else None,
+    } for farm in farm_list]
+ 
+    raw_listings = (ProduceListing.query
+                    .filter_by(farmer_id=farmer_id, status='active')
+                    .order_by(ProduceListing.created_at.desc()).all())
+    ts_val = float(subject.trust_score) if subject.trust_score else 0.0
+    active_listings = [{
+        'id':           l.id,
+        'crop':         l.crop_type,
+        'quantity':     f'{round(float(l.quantity_kg))} kg',
+        'price':        f'XAF\u00a0{float(l.price_per_kg):,.0f}/kg',
+        'q_live':       l.quality_score_live or 0,
+        'has_forecast': bool(l.forecast_id),
+    } for l in raw_listings]
+ 
+    # Trust context
+    completed_txns = Txn.query.filter_by(farmer_id=farmer_id, status='completed').all()
+    on_time  = sum(1 for t in completed_txns if t.is_on_time is True)
+    comp_pct = round(len(completed_txns) / max(1, len(completed_txns)) * 100) if completed_txns else 0
+    del_pct  = round(on_time / max(1, len(completed_txns)) * 100) if completed_txns else 0
+    all_r    = Rat.query.filter_by(farmer_id=farmer_id).all()
+    avg_r    = (sum(r.score for r in all_r) / len(all_r)) if all_r else 0
+    rat_pct  = round(avg_r / 5 * 100)
+    prof_pct = 100 if (subject.full_name and subject.email and subject.phone
+                       and subject.region and subject.primary_crop) else 70
+ 
+    trust_ctx = {
+        'score_display':     f'{ts_val:.1f}' if ts_val > 0 else None,
+        'transaction_count': len(completed_txns),
+        'bar_rows': [
+            {'label': 'Transaction completion', 'pct': comp_pct, 'display': f'{comp_pct}%'},
+            {'label': 'On-time delivery',       'pct': del_pct,  'display': f'{del_pct}%'},
+            {'label': 'Buyer ratings (1–5 ★)',  'pct': rat_pct,  'display': f'{avg_r:.1f} / 5'},
+            {'label': 'Profile completeness',   'pct': prof_pct, 'display': f'{prof_pct}%'},
+        ],
+    }
+ 
+    un = Notification.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+    active_fc = (HarvestForecast.query
+                 .join(Farm, Farm.id == HarvestForecast.farm_id)
+                 .filter(Farm.owner_id == current_user.id, HarvestForecast.is_active == True)
+                 .order_by(HarvestForecast.created_at.desc()).first()
+                 if current_user.role == 'farmer' else None)
+ 
+    return render_template('farmer/profile_registered.html',
+        subject_farmer=subject,
+        farms_data=farms_data,
+        active_listings=active_listings,
+        trust_ctx=trust_ctx,
+        active_page='',
+        unread_notifs=un,
+        active_forecast=active_fc,
+    )
