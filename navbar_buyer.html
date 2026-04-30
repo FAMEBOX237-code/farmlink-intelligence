@@ -1,0 +1,493 @@
+{# ============================================================
+   templates/partials/navbar_buyer.html — FarmLink Intelligence
+
+   Buyer portal topbar. Included by every buyer page that
+   renders the portal layout (logged-in buyer only).
+
+   INCLUDE:
+     {% include 'partials/navbar_buyer.html' %}
+
+   REQUIRES in template context:
+     current_user   — Flask-Login proxy (always available)
+     unread_notifs  int — unread notification count (0 = none)
+
+   CSS:
+     buyer.css — all .topbar-* classes live there.
+   ============================================================ #}
+
+<header class="topbar" role="banner">
+
+  {# ── Left: logo + portal tag ────────────────────────────── #}
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo"
+       aria-label="FarmLink Intelligence home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Buyer Portal</span>
+  </div>
+
+  {# ── Right: search + notifications + user + logout ───────── #}
+  <div class="topbar-right">
+
+    {# ── Global search with live dropdown ──────────────────── #}
+    <form class="topbar-search" method="GET"
+          action="{{ url_for('public.search') }}"
+          role="search" aria-label="Search FarmLink"
+          id="buyer-nav-search-form">
+      <div class="topbar-search-wrap" id="buyer-nav-search-container">
+        <span class="topbar-search-icon" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          type="search"
+          name="q"
+          id="buyer-nav-search-input"
+          class="topbar-search-input"
+          placeholder="Search produce, farmers&#x2026;"
+          value="{{ request.args.get('q', '') }}"
+          autocomplete="off"
+          aria-label="Search FarmLink"
+          aria-expanded="false"
+          aria-autocomplete="list"
+          aria-controls="buyer-nav-search-dropdown"
+        >
+        {# Live results dropdown — populated by JS #}
+        <div class="pns-dropdown" id="buyer-nav-search-dropdown"
+             role="listbox" aria-label="Search suggestions" hidden></div>
+      </div>
+    </form>
+
+    {# ── Notifications bell ─────────────────────────────────── #}
+    <a href="{{ url_for('buyer.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+
+    {# ── User name + avatar ─────────────────────────────────── #}
+    <span class="topbar-username">{{ current_user.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true">
+      {{ current_user.full_name[:2].upper() }}
+    </div>
+
+    {# ── Logout ─────────────────────────────────────────────── #}
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+
+  </div>
+</header>
+
+{# ══════════════════════════════════════════════════════════
+   Dropdown CSS — scoped to .pns-* (shared with public navbar)
+   ══════════════════════════════════════════════════════════ #}
+<style>
+/* Global search bar in navbar */
+.topbar-search {
+  flex: 1;
+  max-width: 220px;
+  margin: 0 8px;
+}
+
+.topbar-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.topbar-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gray-mid);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.topbar-search-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 32px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--black);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  outline: none;
+  transition: background 0.12s, border-color 0.15s, box-shadow 0.15s, width 0.2s;
+  box-sizing: border-box;
+}
+
+.topbar-search-input:focus {
+  background: var(--white);
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 3px rgba(104, 163, 37, 0.12);
+  width: 260px;
+}
+
+/* ── Live search dropdown ───────────────────────────────── */
+.pns-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 300px;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  z-index: 600;
+  overflow: hidden;
+}
+
+.pns-dropdown:not([hidden]) {
+  display: block;
+}
+
+.pns-section-label {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 10px 14px 4px;
+}
+
+.pns-section-label:not(:first-child) {
+  border-top: var(--border);
+  margin-top: 4px;
+}
+
+.pns-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pns-item:hover,
+.pns-item.is-focused {
+  background: var(--gray-bg);
+}
+
+.pns-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.pns-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pns-thumb-listing { background: var(--green-bg); color: var(--green-mid); }
+.pns-thumb-farmer  { background: var(--green-mid); color: var(--white); border-radius: 50%; font-size: 11px; font-weight: var(--fw-medium); }
+.pns-thumb-buyer   { background: var(--teal-mid);  color: var(--white); border-radius: 50%; font-size: 11px; font-weight: var(--fw-medium); }
+
+.pns-info { flex: 1; min-width: 0; }
+
+.pns-name {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pns-meta {
+  font-size: 11px;
+  color: var(--gray-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pns-badge {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.pns-badge-high   { background: var(--green-bg); color: var(--green-mid); }
+.pns-badge-medium { background: var(--amber-bg, #FFF8E6); color: var(--amber-mid, #B86D00); }
+.pns-badge-low    { background: var(--red-bg,   #FFF0EF); color: var(--red-mid,   #B91C1C); }
+.pns-badge-trust  { background: var(--teal-bg);  color: var(--teal-mid); }
+
+.pns-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-top: var(--border);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--green-mid);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+
+.pns-footer:hover { background: var(--gray-bg); }
+
+.pns-empty {
+  padding: 20px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.pns-loading {
+  padding: 16px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.pub-nav-link {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.pub-nav-link:hover {
+  background: var(--gray-bg);
+  color: var(--black);
+}
+
+.pub-nav-link.is-active {
+  color: var(--green-mid);
+  background: var(--green-bg);
+  font-weight: var(--fw-medium);
+}
+</style>
+
+{# ══════════════════════════════════════════════════════════
+   Live search dropdown JS
+   Identical behaviour to the public navbar dropdown.
+   Uses different element IDs so both can coexist on pages
+   that render both navbars (e.g. marketplace public view).
+   ══════════════════════════════════════════════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  var searchInput    = document.getElementById('buyer-nav-search-input');
+  var searchDropdown = document.getElementById('buyer-nav-search-dropdown');
+
+  if (!searchInput || !searchDropdown) return;
+
+  var debounceTimer = null;
+  var currentQuery  = '';
+  var focusedIndex  = -1;
+  var dropdownItems = [];
+
+  /* Debounced fetch — fires 280ms after last keystroke */
+  function onInput() {
+    var q = searchInput.value.trim();
+    clearTimeout(debounceTimer);
+    if (q.length < 2) { closeDropdown(); return; }
+    currentQuery = q;
+    debounceTimer = setTimeout(function () { fetchResults(q); }, 280);
+  }
+
+  function fetchResults(q) {
+    showLoading();
+    fetch('/search/quick?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (q === currentQuery) renderDropdown(data, q);
+      })
+      .catch(function () { closeDropdown(); });
+  }
+
+  function showLoading() {
+    searchDropdown.innerHTML = '<div class="pns-loading">Searching\u2026</div>';
+    searchDropdown.hidden = false;
+    searchInput.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDropdown() {
+    searchDropdown.hidden = true;
+    searchInput.setAttribute('aria-expanded', 'false');
+    focusedIndex  = -1;
+    dropdownItems = [];
+  }
+
+  function renderDropdown(data, q) {
+    var html  = '';
+    var total = (data.listings || []).length +
+                (data.farmers  || []).length +
+                (data.buyers   || []).length;
+
+    if (total === 0) {
+      html = '<div class="pns-empty">No results for &ldquo;' +
+             escHtml(q) + '&rdquo;</div>';
+    } else {
+
+      /* Listings */
+      if (data.listings && data.listings.length) {
+        html += '<div class="pns-section-label">Produce</div>';
+        data.listings.forEach(function (lst) {
+          var qCss  = lst.q >= 75 ? 'high' : (lst.q >= 50 ? 'medium' : 'low');
+          var thumb = lst.photo
+            ? '<img src="/static/' + escHtml(lst.photo) + '" alt="">'
+            : '🌿';
+          html += '<a href="/listings/' + lst.id + '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-listing">' + thumb + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(lst.crop) + '</div>' +
+              '<div class="pns-meta">' + escHtml(lst.farm) + ' · ' + escHtml(lst.region) + '</div>' +
+            '</div>' +
+            (lst.q > 0 ? '<span class="pns-badge pns-badge-' + qCss + '">Q ' + lst.q + '</span>' : '') +
+            '</a>';
+        });
+      }
+
+      /* Farmers */
+      if (data.farmers && data.farmers.length) {
+        html += '<div class="pns-section-label">Farmers</div>';
+        data.farmers.forEach(function (f) {
+          var av = f.photo
+            ? '<img src="/static/' + escHtml(f.photo) + '" alt="">'
+            : escHtml(f.initials);
+          html += '<a href="/farmer/' + f.id + '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-farmer">' + av + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(f.name) +
+                (f.verified ? ' <span style="color:var(--teal-mid);font-size:10px">\u2713</span>' : '') +
+              '</div>' +
+              '<div class="pns-meta">' + escHtml(f.region) + ' · Farmer</div>' +
+            '</div>' +
+            (f.trust ? '<span class="pns-badge pns-badge-trust">\u2605 ' + escHtml(String(f.trust)) + '</span>' : '') +
+            '</a>';
+        });
+      }
+
+      /* Buyers */
+      if (data.buyers && data.buyers.length) {
+        html += '<div class="pns-section-label">Buyers</div>';
+        data.buyers.forEach(function (b) {
+          var av = b.photo
+            ? '<img src="/static/' + escHtml(b.photo) + '" alt="">'
+            : escHtml(b.initials);
+          html += '<a href="/buyer/' + b.id + '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-buyer">' + av + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(b.name) + '</div>' +
+              '<div class="pns-meta">' + escHtml(b.region) + ' · Buyer</div>' +
+            '</div></a>';
+        });
+      }
+
+      /* See all results footer */
+      html += '<a href="/search?q=' + encodeURIComponent(q) +
+        '" class="pns-footer">See all results for &ldquo;' +
+        escHtml(q) + '&rdquo; \u2192</a>';
+    }
+
+    searchDropdown.innerHTML = html;
+    searchDropdown.hidden = false;
+    searchInput.setAttribute('aria-expanded', 'true');
+    dropdownItems = Array.from(searchDropdown.querySelectorAll('.pns-item'));
+    focusedIndex  = -1;
+  }
+
+  /* Keyboard navigation */
+  searchInput.addEventListener('keydown', function (e) {
+    if (searchDropdown.hidden) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedIndex = Math.min(focusedIndex + 1, dropdownItems.length - 1);
+      updateFocus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedIndex = Math.max(focusedIndex - 1, -1);
+      updateFocus();
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault();
+      var link = dropdownItems[focusedIndex];
+      if (link && link.href) window.location.href = link.href;
+    }
+  });
+
+  function updateFocus() {
+    dropdownItems.forEach(function (el, i) {
+      el.classList.toggle('is-focused', i === focusedIndex);
+    });
+  }
+
+  /* Close on outside click */
+  document.addEventListener('click', function (e) {
+    var container = document.getElementById('buyer-nav-search-container');
+    if (container && !container.contains(e.target)) closeDropdown();
+  });
+
+  searchInput.addEventListener('input', onInput);
+
+  /* Re-open on focus if input already has a value */
+  searchInput.addEventListener('focus', function () {
+    if (searchInput.value.trim().length >= 2) onInput();
+  });
+
+  /* XSS-safe HTML escaping */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+}());
+</script>
