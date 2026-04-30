@@ -1,0 +1,860 @@
+{# ============================================================
+   templates/buyer/profile.html — FarmLink Intelligence
+   WF23 — Buyer Profile (Own View)
+
+   Login required. Buyer only.
+   CSS:   public.css → partials.css → buyer.css
+   Route: GET|POST /buyer/profile
+
+   Tabs:
+     info      — edit name, email, phone, region + photo
+     security  — change password
+     danger    — delete account
+
+   Context:
+     active_tab     str        — 'info'|'security'|'danger'
+     regions        list[str]  — Cameroon regions
+     form_errors    dict|None  — validation errors
+     form_data      ImmutableMultiDict|None — repopulate on error
+     total_alerts   int        — buyer's total alert count
+     member_since   str        — e.g. 'March 2025'
+     unread_notifs  int
+     active_alerts  int
+     active_page    str        — 'profile'
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Profile · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buyer.css') }}">
+</head>
+<body class="portal-body">
+
+{# ── Topbar ──────────────────────────────────────────────────── #}
+{% include 'partials/navbar_buyer.html' %}
+
+{# Flash messages #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_buyer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header ─────────────────────────────────────────── #}
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <h1 class="page-title">My Profile</h1>
+          <p class="page-subtitle">
+            Manage your account information, security settings,
+            and preferences.
+          </p>
+        </div>
+      </div>
+    </div>
+
+
+    {# ════════════════════════════════════════════════════════════
+       PROFILE LAYOUT — left id card + right tab content
+       ════════════════════════════════════════════════════════════ #}
+    <div class="profile-layout">
+
+      {# ══ LEFT — Identity card ═══════════════════════════════ #}
+      <aside class="profile-id-card" aria-label="Profile summary">
+
+        {# ── Large photo block ───────────────────────────── #}
+        <div class="pr-photo-block">
+          <form method="POST"
+                action="{{ url_for('buyer.profile') }}?tab=info"
+                enctype="multipart/form-data"
+                id="photo-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_photo">
+            <input type="hidden" name="current_tab" value="info">
+            <input type="file" id="photo-input" name="profile_photo"
+                   accept="image/jpeg,image/png,image/webp"
+                   class="pr-photo-file-input"
+                   aria-label="Upload profile photo"
+                   onchange="document.getElementById('photo-form').submit()">
+            {# Large avatar display #}
+            <div class="pr-photo-circle">
+              {% if current_user.profile_photo_url %}
+                <img src="{{ url_for('static', filename=current_user.profile_photo_url) }}"
+                     alt="{{ current_user.full_name }}'s profile photo"
+                     class="pr-photo-img">
+              {% else %}
+                <span class="pr-photo-initials">{{ current_user.full_name[:2].upper() }}</span>
+              {% endif %}
+            </div>
+            {# Action buttons below photo #}
+            <div class="pr-photo-actions">
+              <label for="photo-input" class="btn-buyer-secondary pr-upload-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                {% if current_user.profile_photo_url %}Change photo{% else %}Upload photo{% endif %}
+              </label>
+              {% if current_user.profile_photo_url %}
+                <button type="submit" name="action" value="remove_photo"
+                        class="btn-ghost pr-remove-btn"
+                        onclick="return confirm('Remove your profile photo?')">
+                  Remove
+                </button>
+              {% endif %}
+            </div>
+            <p class="pr-photo-hint">JPG, PNG or WEBP &middot; Max 5MB</p>
+          </form>
+        </div>
+
+        {# Name + role #}
+        <div class="profile-name">{{ current_user.full_name }}</div>
+
+        <div class="profile-role-pill">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          Buyer
+        </div>
+
+        {# Account details mini list #}
+        <div class="pr-id-details">
+          {% if current_user.region %}
+            <div class="pr-id-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>{{ current_user.region }}</span>
+            </div>
+          {% endif %}
+          {% if current_user.phone %}
+            <div class="pr-id-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 1.28h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.92a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.92 16.92z"/>
+              </svg>
+              <span>{{ current_user.phone }}</span>
+            </div>
+          {% endif %}
+          <div class="pr-id-row">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>Member since {{ member_since }}</span>
+          </div>
+          {% if current_user.is_verified %}
+            <div class="pr-id-row pr-id-verified">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>Verified account</span>
+            </div>
+          {% endif %}
+        </div>
+
+        {# Quick stats #}
+        <div class="profile-stat-row">
+          <div class="profile-stat">
+            <div class="profile-stat-value">{{ total_alerts }}</div>
+            <div class="profile-stat-label">Alerts</div>
+          </div>
+          <div class="pr-stat-divider" aria-hidden="true"></div>
+          <div class="profile-stat">
+            <div class="profile-stat-value">{{ active_alerts }}</div>
+            <div class="profile-stat-label">Active</div>
+          </div>
+          <div class="pr-stat-divider" aria-hidden="true"></div>
+          <div class="profile-stat">
+            <div class="profile-stat-value">{{ unread_notifs }}</div>
+            <div class="profile-stat-label">Unread</div>
+          </div>
+        </div>
+
+        {# Quick nav links #}
+        <div class="pr-id-nav">
+          <a href="{{ url_for('buyer.marketplace') }}" class="pr-id-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            Browse marketplace
+          </a>
+          <a href="{{ url_for('buyer.alerts') }}" class="pr-id-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Harvest alerts
+          </a>
+        </div>
+
+      </aside>{# /profile-id-card #}
+
+
+      {# ══ RIGHT — Tab content ════════════════════════════════ #}
+      <div class="pr-right">
+
+        {# Tab bar #}
+        <nav class="profile-tabs" aria-label="Profile sections" role="tablist">
+          <a href="{{ url_for('buyer.profile', tab='info') }}"
+             class="profile-tab{% if active_tab == 'info' %} is-active{% endif %}"
+             role="tab"
+             aria-selected="{{ 'true' if active_tab == 'info' else 'false' }}">
+            Profile info
+          </a>
+          <a href="{{ url_for('buyer.profile', tab='security') }}"
+             class="profile-tab{% if active_tab == 'security' %} is-active{% endif %}"
+             role="tab"
+             aria-selected="{{ 'true' if active_tab == 'security' else 'false' }}">
+            Security
+          </a>
+          <a href="{{ url_for('buyer.profile', tab='danger') }}"
+             class="profile-tab{% if active_tab == 'danger' %} is-active{% endif %}"
+             role="tab"
+             aria-selected="{{ 'true' if active_tab == 'danger' else 'false' }}">
+            Danger zone
+          </a>
+        </nav>
+
+
+        {# ════════════════════════════════════════════════════
+           TAB: INFO — edit personal details
+           ════════════════════════════════════════════════════ #}
+        {% if active_tab == 'info' %}
+
+          <div class="profile-form-card" role="tabpanel" aria-label="Profile information">
+            <div class="profile-form-title">Personal information</div>
+
+            <form method="POST"
+                  action="{{ url_for('buyer.profile') }}?tab=info"
+                  novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="update_info">
+              <input type="hidden" name="current_tab" value="info">
+
+              {# Resolve name into first + last for the form #}
+              {% set name_parts = (form_data.first_name if form_data else current_user.full_name.split()[0] if current_user.full_name.split() else '') %}
+              {% set last_parts  = (form_data.last_name  if form_data else current_user.full_name.split()[-1] if current_user.full_name.split()|length > 1 else '') %}
+
+              <div class="form-row">
+                {# First name #}
+                <div class="form-field">
+                  <label class="form-label" for="pr-first">First name</label>
+                  <input type="text" id="pr-first" name="first_name"
+                         class="form-input {% if form_errors and form_errors.first_name %}is-error{% endif %}"
+                         value="{{ form_data.first_name if form_data else current_user.full_name.split()[0] if current_user.full_name.split() else '' }}"
+                         required autocomplete="given-name">
+                  {% if form_errors and form_errors.first_name %}
+                    <span class="form-error" role="alert">{{ form_errors.first_name }}</span>
+                  {% endif %}
+                </div>
+
+                {# Last name #}
+                <div class="form-field">
+                  <label class="form-label" for="pr-last">Last name</label>
+                  <input type="text" id="pr-last" name="last_name"
+                         class="form-input {% if form_errors and form_errors.last_name %}is-error{% endif %}"
+                         value="{{ form_data.last_name if form_data else (current_user.full_name.split()[-1] if current_user.full_name.split()|length > 1 else '') }}"
+                         required autocomplete="family-name">
+                  {% if form_errors and form_errors.last_name %}
+                    <span class="form-error" role="alert">{{ form_errors.last_name }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Email #}
+              <div class="form-field">
+                <label class="form-label" for="pr-email">Email address</label>
+                <input type="email" id="pr-email" name="email"
+                       class="form-input {% if form_errors and form_errors.email %}is-error{% endif %}"
+                       value="{{ form_data.email if form_data else current_user.email }}"
+                       required autocomplete="email">
+                {% if form_errors and form_errors.email %}
+                  <span class="form-error" role="alert">{{ form_errors.email }}</span>
+                {% else %}
+                  <span class="form-hint">Used to log in. Changes take effect immediately.</span>
+                {% endif %}
+              </div>
+
+              {# Phone #}
+              <div class="form-field">
+                <label class="form-label" for="pr-phone">
+                  Phone number
+                  <span class="pr-optional" aria-label="optional">(optional)</span>
+                </label>
+                <input type="tel" id="pr-phone" name="phone"
+                       class="form-input"
+                       value="{{ form_data.phone if form_data else (current_user.phone or '') }}"
+                       placeholder="+237 6XX XXX XXX"
+                       autocomplete="tel">
+              </div>
+
+              {# Region #}
+              <div class="form-field">
+                <label class="form-label" for="pr-region">Preferred region</label>
+                <div class="filter-select-wrap">
+                  <select id="pr-region" name="region" class="form-select">
+                    <option value="">Select region…</option>
+                    {% for r in regions %}
+                      <option value="{{ r }}"
+                        {% if (form_data.region if form_data else current_user.region) == r %}
+                          selected
+                        {% endif %}>
+                        {{ r }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                  <svg class="filter-select-chevron" width="11" height="11"
+                       viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round"
+                       stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </div>
+                <span class="form-hint">
+                  Used to personalise marketplace results.
+                </span>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-buyer-primary">
+                  Save changes
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+
+        {# ════════════════════════════════════════════════════
+           TAB: SECURITY — change password
+           ════════════════════════════════════════════════════ #}
+        {% elif active_tab == 'security' %}
+
+          <div class="profile-form-card" role="tabpanel" aria-label="Security settings">
+            <div class="profile-form-title">Change password</div>
+
+            <form method="POST"
+                  action="{{ url_for('buyer.profile') }}?tab=security"
+                  novalidate autocomplete="off">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="change_password">
+              <input type="hidden" name="current_tab" value="security">
+
+              {# Current password #}
+              <div class="form-field">
+                <label class="form-label" for="pr-cur-pw">Current password</label>
+                <div class="pr-pw-wrap">
+                  <input type="password" id="pr-cur-pw" name="current_password"
+                         class="form-input pr-pw-input {% if form_errors and form_errors.current_password %}is-error{% endif %}"
+                         required autocomplete="current-password">
+                  <button type="button" class="pr-pw-toggle"
+                          onclick="togglePw('pr-cur-pw', this)"
+                          aria-label="Show/hide password">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </div>
+                {% if form_errors and form_errors.current_password %}
+                  <span class="form-error" role="alert">{{ form_errors.current_password }}</span>
+                {% endif %}
+              </div>
+
+              {# New password #}
+              <div class="form-field">
+                <label class="form-label" for="pr-new-pw">New password</label>
+                <div class="pr-pw-wrap">
+                  <input type="password" id="pr-new-pw" name="new_password"
+                         class="form-input pr-pw-input {% if form_errors and form_errors.new_password %}is-error{% endif %}"
+                         required minlength="8"
+                         autocomplete="new-password"
+                         oninput="checkStrength(this.value)">
+                  <button type="button" class="pr-pw-toggle"
+                          onclick="togglePw('pr-new-pw', this)"
+                          aria-label="Show/hide password">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </div>
+                {# Password strength bar #}
+                <div class="pr-strength-wrap" id="pr-strength-wrap" aria-hidden="true" hidden>
+                  <div class="pr-strength-bar" id="pr-strength-bar"></div>
+                </div>
+                <span class="pr-strength-label" id="pr-strength-label" aria-live="polite"></span>
+                {% if form_errors and form_errors.new_password %}
+                  <span class="form-error" role="alert">{{ form_errors.new_password }}</span>
+                {% else %}
+                  <span class="form-hint">Minimum 8 characters.</span>
+                {% endif %}
+              </div>
+
+              {# Confirm new password #}
+              <div class="form-field">
+                <label class="form-label" for="pr-conf-pw">Confirm new password</label>
+                <div class="pr-pw-wrap">
+                  <input type="password" id="pr-conf-pw" name="confirm_password"
+                         class="form-input pr-pw-input {% if form_errors and form_errors.confirm_password %}is-error{% endif %}"
+                         required autocomplete="new-password">
+                  <button type="button" class="pr-pw-toggle"
+                          onclick="togglePw('pr-conf-pw', this)"
+                          aria-label="Show/hide password">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </button>
+                </div>
+                {% if form_errors and form_errors.confirm_password %}
+                  <span class="form-error" role="alert">{{ form_errors.confirm_password }}</span>
+                {% endif %}
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-buyer-primary">
+                  Update password
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+
+        {# ════════════════════════════════════════════════════
+           TAB: DANGER — delete account
+           ════════════════════════════════════════════════════ #}
+        {% elif active_tab == 'danger' %}
+
+          <div class="pr-danger-info" role="tabpanel" aria-label="Danger zone">
+
+            {# What gets deleted #}
+            <div class="profile-form-card">
+              <div class="profile-form-title">Before you delete</div>
+              <p style="font-size:13px;color:var(--gray-mid);line-height:1.65;margin-bottom:16px;">
+                Deleting your account is permanent and cannot be undone.
+                The following data will be removed immediately:
+              </p>
+              <ul class="pr-delete-list">
+                <li>Your profile, email, and login credentials</li>
+                <li>All {{ total_alerts }} harvest alert registration{{ 's' if total_alerts != 1 }}</li>
+                <li>All notifications in your inbox</li>
+                <li>Your marketplace enquiry history</li>
+              </ul>
+              <p style="font-size:12px;color:var(--gray-mid);margin-top:12px;">
+                Listings you viewed and farmers you contacted will not be affected.
+              </p>
+            </div>
+
+            {# Delete form #}
+            <div class="danger-zone-card">
+              <div class="danger-zone-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     style="display:inline-block;vertical-align:-2px;margin-right:5px"
+                     aria-hidden="true">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Delete account permanently
+              </div>
+              <div class="danger-zone-text">
+                Type <strong>delete my account</strong> below to confirm.
+                This action cannot be reversed.
+              </div>
+
+              <form method="POST"
+                    action="{{ url_for('buyer.profile') }}?tab=danger"
+                    novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete_account">
+                <input type="hidden" name="current_tab" value="danger">
+
+                <div class="form-field" style="margin-bottom:14px">
+                  <input type="text" name="confirm_delete"
+                         class="form-input"
+                         placeholder='Type "delete my account"'
+                         autocomplete="off"
+                         id="pr-delete-confirm">
+                </div>
+
+                <button type="submit" class="btn-danger"
+                        id="pr-delete-btn" disabled>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6"/><path d="M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                  Delete my account
+                </button>
+
+              </form>
+            </div>
+
+          </div>
+
+        {% endif %}{# /tab content #}
+
+      </div>{# /pr-right #}
+
+    </div>{# /profile-layout #}
+
+
+  </main>
+</div>{# /portal-layout #}
+
+
+{# ════════════════════════════════════════════════════════════════
+   BUYER PROFILE CSS — prefixed .pr-*
+   ════════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── Photo block ──────────────────────────────────────────── */
+.pr-photo-file-input {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+
+.pr-photo-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: var(--border);
+}
+
+.pr-photo-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: var(--teal-bg);
+  border: 3px solid var(--teal-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(8,80,65,0.12);
+}
+
+.pr-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.pr-photo-initials {
+  font-size: 44px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.pr-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.pr-upload-btn {
+  cursor: pointer;
+  font-size: 12px !important;
+  padding: 7px 14px !important;
+}
+
+.pr-remove-btn {
+  font-size: 12px;
+  padding: 7px 12px;
+  color: #A32D2D;
+  border-color: #E8BABA;
+}
+
+.pr-remove-btn:hover {
+  background: #FDF2F2;
+  border-color: #A32D2D;
+}
+
+.pr-photo-hint {
+  font-size: 11px;
+  color: var(--gray-mid);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Identity card details ────────────────────────────────── */
+.pr-id-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: var(--border);
+  width: 100%;
+}
+
+.pr-id-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.pr-id-verified {
+  color: var(--teal-mid);
+  font-weight: var(--fw-medium);
+}
+
+.pr-stat-divider {
+  width: 0.5px;
+  height: 28px;
+  background: var(--gray-light);
+}
+
+.pr-id-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 16px;
+  border-top: var(--border);
+}
+
+.pr-id-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-mid);
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  transition: background 0.12s, color 0.12s;
+}
+
+.pr-id-link:hover {
+  background: var(--teal-bg);
+  color: var(--teal-mid);
+}
+
+/* ── Right column ─────────────────────────────────────────── */
+.pr-right { min-width: 0; }
+
+/* ── Form extras ─────────────────────────────────────────── */
+.pr-optional {
+  font-size: 11px;
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+  margin-left: 4px;
+}
+
+/* ── Password field with show/hide toggle ─────────────────── */
+.pr-pw-wrap {
+  position: relative;
+}
+
+.pr-pw-input {
+  padding-right: 40px !important;
+}
+
+.pr-pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--gray-mid);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: color 0.12s;
+}
+
+.pr-pw-toggle:hover { color: var(--black); }
+
+/* Password strength bar */
+.pr-strength-wrap {
+  height: 4px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.pr-strength-bar {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.2s ease, background 0.2s ease;
+  width: 0%;
+}
+
+.pr-strength-label {
+  font-size: 11px;
+  margin-top: 3px;
+  display: block;
+}
+
+/* ── Danger zone extras ───────────────────────────────────── */
+.pr-danger-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pr-delete-list {
+  font-size: 13px;
+  color: var(--gray-mid);
+  padding-left: 18px;
+  line-height: 1.8;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .profile-id-card { position: static; }
+  .pr-avatar-label { width: 72px; }
+  .profile-avatar  { width: 72px; height: 72px; font-size: 20px; }
+}
+
+@media (max-width: 480px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+
+
+{# ── JS ──────────────────────────────────────────────────────── #}
+<script>
+(function () {
+  'use strict';
+
+  /* Show/hide password toggle */
+  window.togglePw = function (inputId, btn) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    btn.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
+  };
+
+  /* Password strength meter */
+  window.checkStrength = function (pw) {
+    var bar   = document.getElementById('pr-strength-bar');
+    var label = document.getElementById('pr-strength-label');
+    var wrap  = document.getElementById('pr-strength-wrap');
+    if (!bar || !label || !wrap) return;
+
+    if (pw.length === 0) {
+      wrap.hidden = true;
+      label.textContent = '';
+      return;
+    }
+
+    wrap.hidden = false;
+
+    var score = 0;
+    if (pw.length >= 8)  score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    var levels = [
+      { pct: '20%', color: '#A32D2D', text: 'Very weak' },
+      { pct: '40%', color: '#A32D2D', text: 'Weak' },
+      { pct: '60%', color: 'var(--amber-mid)', text: 'Fair' },
+      { pct: '80%', color: 'var(--teal-mid)',  text: 'Strong' },
+      { pct: '100%',color: 'var(--teal-mid)',  text: 'Very strong' },
+    ];
+
+    var lvl = levels[Math.min(score, 4)];
+    bar.style.width      = lvl.pct;
+    bar.style.background = lvl.color;
+    label.textContent    = lvl.text;
+    label.style.color    = lvl.color;
+  };
+
+  /* Delete confirm — enable button only when text matches exactly */
+  var confirmInput = document.getElementById('pr-delete-confirm');
+  var deleteBtn    = document.getElementById('pr-delete-btn');
+  if (confirmInput && deleteBtn) {
+    confirmInput.addEventListener('input', function () {
+      var match = this.value.trim().toLowerCase() === 'delete my account';
+      deleteBtn.disabled = !match;
+    });
+  }
+
+  /* Flash auto-dismiss */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4000);
+  });
+
+}());
+</script>
+
+</body>
+</html>
