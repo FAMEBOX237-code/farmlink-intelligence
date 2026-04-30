@@ -2345,24 +2345,6 @@
   margin-top: 2px;
 }
 
-/* ── Visibility banners ── */
-.prof-vis-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  border: 0.5px solid;
-  font-size: 12px;
-  line-height: 1.5;
-  margin-bottom: var(--space-lg);
-}
-.prof-vis-banner svg { flex-shrink: 0; margin-top: 1px; }
-.prof-vis-own        { background: var(--green-bg);  border-color: var(--green-light); color: var(--green-dark); }
-.prof-vis-registered { background: var(--blue-bg);   border-color: var(--blue-light);  color: var(--blue-mid); }
-.prof-vis-public     { background: var(--amber-bg);  border-color: var(--amber-light); color: var(--amber-mid); }
-.prof-vis-link       { color: inherit; font-weight: var(--fw-medium); text-decoration: underline; }
-
 /* ── Profile tab navigation ── */
 .prof-tabs {
   display: flex;
@@ -2858,9 +2840,150 @@
 }
 
 
-/* ══════════════════════════════════════════════════════════════
-   SIDEBAR TOGGLE SYSTEM
-   → Moved to partials.css (sidebar is a partial template).
-      All .sb-toggle, .sb-bars, .sb-backdrop, .sb-btn-wrap rules
-      now live in partials.css §02.
-   ══════════════════════════════════════════════════════════════ */
+  /* ── Profile photo redesign — scoped to this page ─────────
+       These styles override the original prof-avatar-* classes
+       only on this page to avoid touching farmer.css globally.
+    ─────────────────────────────────────────────────────────── */
+
+    /* Remove the old cover banner entirely */
+    .prof-cover { display: none !important; }
+
+    /* Hero card: no overflow clip — photo can breathe */
+    .prof-hero-card {
+      padding-top: 36px;
+      overflow: visible;
+    }
+
+    /* New photo section — centred above the hero info */
+    .prof-photo-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 32px 24px;
+      gap: 16px;
+    }
+
+    /* Large circular photo container */
+    .prof-photo-ring {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      flex-shrink: 0;
+    }
+
+    /* The circle itself */
+    .prof-photo-circle {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-dark) 0%, #0F6E56 100%);
+      border: 5px solid var(--white);
+      box-shadow:
+        0 0 0 2px var(--green-light),
+        0 8px 32px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: var(--fw-medium);
+      color: var(--white);
+      letter-spacing: 0.04em;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+
+    .prof-photo-circle:hover {
+      box-shadow:
+        0 0 0 2px var(--green-mid),
+        0 8px 40px rgba(0,0,0,0.24);
+    }
+
+    .prof-photo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    /* Camera edit button — bottom-right of circle */
+    .prof-photo-edit-btn {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      width: 36px;
+      height: 36px;
+      background: var(--green-dark);
+      border: 2.5px solid var(--white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--white);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+      transition: background 0.15s, transform 0.15s;
+      z-index: 4;
+    }
+
+    .prof-photo-edit-btn:hover {
+      background: var(--green-mid);
+      transform: scale(1.08);
+    }
+
+    /* Upload hint text below the photo */
+    .prof-photo-hint {
+      font-size: 11px;
+      color: var(--gray-mid);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .prof-photo-hint strong {
+      display: block;
+      font-size: 13px;
+      color: var(--gray-dark);
+      font-weight: var(--fw-medium);
+      margin-bottom: 2px;
+    }
+
+    /* Override: old avatar-wrap is hidden — we use prof-photo-section */
+    .prof-avatar-wrap { display: none !important; }
+
+    /* Hero info starts right below photo section — no left indent */
+    .prof-hero-info {
+      padding: 0 32px 20px;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .prof-hero-text { padding-top: 0; }
+    .prof-hero-actions { padding-top: 0; }
+
+    .prof-badge-row {
+      justify-content: center;
+    }
+
+    /* Stats strip sits below — unchanged */
+    .prof-stats-strip {
+      border-top: var(--border);
+    }
+
+    /* Topbar avatar: show real photo when uploaded */
+    .topbar-avatar-photo {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 1.5px solid var(--white);
+    }
+
+    .topbar-avatar-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
