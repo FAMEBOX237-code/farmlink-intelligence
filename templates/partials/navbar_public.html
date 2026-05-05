@@ -1,0 +1,1196 @@
+{# ============================================================
+   templates/partials/navbar_public.html — FarmLink Intelligence
+
+   The smart public navigation bar. Used on every page that
+   is accessible without login — primarily the Marketplace,
+   Listing Detail (public view), and public Farmer profiles.
+
+   DESIGN:
+     Fixed, frosted-glass bar at 64px height. Three nav links
+     centred. Right side adapts to auth state:
+
+     State 1 — Anonymous visitor:
+       IoT Verified pill  |  Log in  |  Join free →
+
+     State 2 — Logged-in buyer:
+       → My dashboard  |  avatar chip (initials + name)
+
+     State 3 — Logged-in farmer visiting marketplace:
+       → Farmer portal  |  avatar chip (initials + name)
+
+     State 4 — Admin:
+       → Admin panel  |  avatar chip
+
+   INCLUDE:
+     {% include 'partials/navbar_public.html' %}
+
+   REQUIRES:
+     current_user    — Flask-Login proxy (always available)
+     active_nav      str  — 'marketplace'|'how_it_works'|
+                            'about'|'' (optional, highlights
+                            the active link)
+
+   CSS:
+     public.css — all .pub-nav-* classes live here.
+     No extra stylesheet needed.
+
+   USAGE NOTE:
+     Pages that include this partial must NOT also have their
+     own inline <nav> block. Remove any existing <nav> before
+     including this file.
+   ============================================================ #}
+
+{# ── Resolve avatar initials (max 2 chars, safe) ──────────── #}
+{% if current_user.is_authenticated %}
+  {% set _name   = current_user.full_name or '' %}
+  {% set _parts  = _name.split() %}
+  {% if _parts | length >= 2 %}
+    {% set _initials = (_parts[0][0] ~ _parts[-1][0]) | upper %}
+  {% elif _parts | length == 1 %}
+    {% set _initials = _parts[0][:2] | upper %}
+  {% else %}
+    {% set _initials = '??' %}
+  {% endif %}
+  {# Short display name — first name + last initial #}
+  {% if _parts | length >= 2 %}
+    {% set _display_name = _parts[0] ~ ' ' ~ _parts[-1][0] ~ '.' %}
+  {% else %}
+    {% set _display_name = _name %}
+  {% endif %}
+{% endif %}
+
+<nav class="pub-nav" role="navigation" aria-label="Main navigation">
+  <div class="pub-nav-inner">
+
+    {# ── Logo ─────────────────────────────────────────────── #}
+    <a href="{{ url_for('public.landing') }}"
+       class="pub-nav-logo"
+       aria-label="FarmLink Intelligence — home">
+      <div class="pub-nav-logo-mark" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#ffffff" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <div class="pub-nav-logo-text">
+        <span class="pub-nav-logo-name">FarmLink Intelligence</span>
+        <span class="pub-nav-logo-sub">IoT Agricultural Marketplace</span>
+      </div>
+    </a>
+
+    {# ── Centre nav links ─────────────────────────────────── #}
+    <ul class="pub-nav-links" role="list" aria-label="Site navigation">
+      <li>
+        <a href="{{ url_for('buyer.marketplace') }}"
+           class="pub-nav-link{% if active_nav == 'marketplace' %} is-active{% endif %}"
+           {% if active_nav == 'marketplace' %}aria-current="page"{% endif %}>
+          Marketplace
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('public.how_it_works') }}"
+           class="pub-nav-link{% if active_nav == 'how_it_works' %} is-active{% endif %}"
+           {% if active_nav == 'how_it_works' %}aria-current="page"{% endif %}>
+          How it works
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('public.about') }}"
+           class="pub-nav-link{% if active_nav == 'about' %} is-active{% endif %}"
+           {% if active_nav == 'about' %}aria-current="page"{% endif %}>
+          About us
+        </a>
+      </li>
+    </ul>
+
+    {# ── Global search bar with live dropdown ────────────── #}
+    <form class="pub-nav-search" method="GET"
+          action="{{ url_for('public.search') }}"
+          role="search" aria-label="Search FarmLink"
+          id="pub-nav-search-form">
+      <div class="pub-nav-search-wrap" id="pub-nav-search-container">
+        <span class="pub-nav-search-icon" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          type="search"
+          name="q"
+          id="pub-nav-search-input"
+          class="pub-nav-search-input"
+          placeholder="Produce, farmers, buyers…"
+          value="{{ request.args.get('q', '') }}"
+          autocomplete="off"
+          aria-label="Search FarmLink"
+          aria-expanded="false"
+          aria-autocomplete="list"
+          aria-controls="pub-nav-search-dropdown"
+        >
+        {# Live results dropdown #}
+        <div id="pub-nav-search-dropdown"
+             class="pub-nav-search-dropdown"
+             role="listbox"
+             aria-label="Search suggestions"
+             hidden>
+        </div>
+      </div>
+    </form>
+    <div class="pub-nav-actions">
+
+      {% if current_user.is_authenticated %}
+
+        {# ── STATE 2 / 3 / 4 — Logged-in user ─────────────── #}
+
+        {# Dashboard shortcut — colour matches their portal #}
+        {% if current_user.is_farmer() %}
+          <a href="{{ url_for('farmer.dashboard') }}"
+             class="pub-nav-dash pub-nav-dash-farmer"
+             aria-label="Go to your farmer portal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Farmer portal
+          </a>
+        {% elif current_user.is_admin() %}
+          <a href="{{ url_for('admin.dashboard') }}"
+             class="pub-nav-dash pub-nav-dash-admin"
+             aria-label="Go to the admin panel">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+            Admin panel
+          </a>
+        {% else %}
+          {# Buyer — teal dashboard link #}
+          <a href="{{ url_for('buyer.marketplace') }}"
+             class="pub-nav-dash pub-nav-dash-buyer"
+             aria-label="Go to your buyer dashboard">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            My dashboard
+          </a>
+        {% endif %}
+
+        {# Avatar chip — initials + name, links to their profile #}
+        {% if current_user.is_farmer() %}
+          {% set _profile_url = url_for('farmer.profile') %}
+          {% set _chip_class  = 'pub-nav-chip pub-nav-chip-farmer' %}
+          {% set _avatar_class = 'pub-nav-avatar pub-nav-avatar-farmer' %}
+        {% elif current_user.is_admin() %}
+          {% set _profile_url = url_for('admin.dashboard') %}
+          {% set _chip_class  = 'pub-nav-chip pub-nav-chip-admin' %}
+          {% set _avatar_class = 'pub-nav-avatar pub-nav-avatar-admin' %}
+        {% else %}
+          {% set _profile_url = url_for('buyer.profile') %}
+          {% set _chip_class  = 'pub-nav-chip pub-nav-chip-buyer' %}
+          {% set _avatar_class = 'pub-nav-avatar pub-nav-avatar-buyer' %}
+        {% endif %}
+
+        <a href="{{ _profile_url }}"
+           class="{{ _chip_class }}"
+           aria-label="Your profile — {{ current_user.full_name }}">
+          {# Photo if uploaded, else initials #}
+          {% if current_user.profile_photo_url %}
+            <div class="{{ _avatar_class }} has-photo">
+              <img src="{{ url_for('static', filename=current_user.profile_photo_url) }}"
+                   alt="{{ current_user.full_name }}">
+            </div>
+          {% else %}
+            <div class="{{ _avatar_class }}" aria-hidden="true">
+              {{ _initials }}
+            </div>
+          {% endif %}
+          <span class="pub-nav-chip-name">{{ _display_name }}</span>
+        </a>
+
+      {% else %}
+
+        {# ── STATE 1 — Anonymous visitor ─────────────────── #}
+
+        {# IoT Verified trust pill — only for anonymous (not cluttering logged-in bar) #}
+        <span class="pub-nav-trust-pill" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          IoT Verified
+        </span>
+
+        <a href="{{ url_for('auth.login') }}"
+           class="pub-nav-btn-ghost">
+          Log in
+        </a>
+
+        <a href="{{ url_for('auth.register') }}"
+           class="pub-nav-btn-solid">
+          Join free
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </a>
+
+      {% endif %}
+
+    </div>{# /pub-nav-actions #}
+
+    {# ── Mobile hamburger — injected by JS ─────────────────── #}
+    <button class="pub-nav-hamburger" id="pub-nav-hamburger"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="pub-nav-mobile-drawer">
+      <span class="pub-nav-ham-bar" aria-hidden="true"></span>
+      <span class="pub-nav-ham-bar" aria-hidden="true"></span>
+      <span class="pub-nav-ham-bar" aria-hidden="true"></span>
+    </button>
+
+  </div>{# /pub-nav-inner #}
+</nav>
+
+{# ── Mobile drawer ─────────────────────────────────────────── #}
+<div class="pub-nav-drawer" id="pub-nav-mobile-drawer"
+     role="dialog" aria-modal="true"
+     aria-label="Navigation menu" hidden>
+
+  <div class="pub-nav-drawer-inner">
+
+    <ul class="pub-nav-drawer-links" role="list">
+      <li>
+        {# Search in mobile drawer #}
+        <form method="GET" action="{{ url_for('public.search') }}"
+              role="search" style="padding: 4px 0 8px;">
+          <div class="pub-nav-search-wrap">
+            <span class="pub-nav-search-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <input type="search" name="q"
+                   class="pub-nav-search-input"
+                   style="background:var(--white);width:100%;border-radius:var(--radius-md);"
+                   placeholder="Search produce, farmers&#x2026;"
+                   autocomplete="off">
+          </div>
+        </form>
+      </li>
+      <li>
+        <a href="{{ url_for('buyer.marketplace') }}"
+           class="pub-nav-drawer-link{% if active_nav == 'marketplace' %} is-active{% endif %}">
+          Marketplace
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('public.how_it_works') }}"
+           class="pub-nav-drawer-link{% if active_nav == 'how_it_works' %} is-active{% endif %}">
+          How it works
+        </a>
+      </li>
+      <li>
+        <a href="{{ url_for('public.about') }}"
+           class="pub-nav-drawer-link{% if active_nav == 'about' %} is-active{% endif %}">
+          About us
+        </a>
+      </li>
+    </ul>
+
+    <div class="pub-nav-drawer-actions">
+      {% if current_user.is_authenticated %}
+        {% if current_user.is_farmer() %}
+          <a href="{{ url_for('farmer.dashboard') }}"
+             class="pub-nav-btn-solid pub-nav-btn-solid-farmer pub-nav-btn-full">
+            Farmer portal
+          </a>
+        {% elif current_user.is_admin() %}
+          <a href="{{ url_for('admin.dashboard') }}"
+             class="pub-nav-btn-solid pub-nav-btn-full">
+            Admin panel
+          </a>
+        {% else %}
+          <a href="{{ url_for('buyer.marketplace') }}"
+             class="pub-nav-btn-solid pub-nav-btn-full">
+            My dashboard
+          </a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}"
+           class="pub-nav-btn-ghost pub-nav-btn-full">
+          Log out
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}"
+           class="pub-nav-btn-solid pub-nav-btn-full">
+          Join free
+        </a>
+        <a href="{{ url_for('auth.login') }}"
+           class="pub-nav-btn-ghost pub-nav-btn-full">
+          Log in
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{# ── Mobile backdrop ───────────────────────────────────────── #}
+<div class="pub-nav-backdrop" id="pub-nav-backdrop" aria-hidden="true"></div>
+
+{# ══════════════════════════════════════════════════════════
+   CSS — scoped to .pub-nav-* so no conflict with existing
+   .nav classes used in landing/about/how_it_works pages.
+   Injected here so the partial is fully self-contained.
+   ══════════════════════════════════════════════════════════ #}
+<style>
+/* Base nav */
+.pub-nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--nav-height, 64px);
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: var(--border);
+  z-index: 500;
+}
+
+.pub-nav-inner {
+  max-width: var(--max-width, 1100px);
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  gap: 20px;
+}
+
+/* Logo */
+.pub-nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.pub-nav-logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--green-mid);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pub-nav-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.pub-nav-logo-name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.01em;
+}
+
+.pub-nav-logo-sub {
+  font-size: 10px;
+  color: var(--gray-mid);
+  margin-top: 2px;
+}
+
+/* Centre links */
+.pub-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global search bar in navbar */
+.pub-nav-search {
+  flex: 1;
+  max-width: 220px;
+  margin: 0 8px;
+}
+
+.pub-nav-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pub-nav-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--gray-mid);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.pub-nav-search-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 32px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--black);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  outline: none;
+  transition: background 0.12s, border-color 0.15s, box-shadow 0.15s, width 0.2s;
+  box-sizing: border-box;
+}
+
+.pub-nav-search-input:focus {
+  background: var(--white);
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 3px rgba(104, 163, 37, 0.12);
+  width: 260px;
+}
+
+/* ── Live search dropdown ───────────────────────────────── */
+.pub-nav-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 300px;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  z-index: 600;
+  overflow: hidden;
+}
+
+.pub-nav-search-dropdown:not([hidden]) {
+  display: block;
+}
+
+.pns-section-label {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 10px 14px 4px;
+}
+
+.pns-section-label:not(:first-child) {
+  border-top: var(--border);
+  margin-top: 4px;
+}
+
+.pns-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pns-item:hover,
+.pns-item.is-focused {
+  background: var(--gray-bg);
+}
+
+.pns-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.pns-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pns-thumb-listing { background: var(--green-bg); color: var(--green-mid); }
+.pns-thumb-farmer  { background: var(--green-mid); color: var(--white); border-radius: 50%; font-size: 11px; font-weight: var(--fw-medium); }
+.pns-thumb-buyer   { background: var(--teal-mid);  color: var(--white); border-radius: 50%; font-size: 11px; font-weight: var(--fw-medium); }
+
+.pns-info { flex: 1; min-width: 0; }
+
+.pns-name {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pns-meta {
+  font-size: 11px;
+  color: var(--gray-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pns-badge {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.pns-badge-high   { background: var(--green-bg); color: var(--green-mid); }
+.pns-badge-medium { background: var(--amber-bg, #FFF8E6); color: var(--amber-mid, #B86D00); }
+.pns-badge-low    { background: var(--red-bg,   #FFF0EF); color: var(--red-mid,   #B91C1C); }
+.pns-badge-trust  { background: var(--teal-bg);  color: var(--teal-mid); }
+
+.pns-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-top: var(--border);
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--green-mid);
+  text-decoration: none;
+  transition: background 0.1s;
+}
+
+.pns-footer:hover { background: var(--gray-bg); }
+
+.pns-empty {
+  padding: 20px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.pns-loading {
+  padding: 16px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+.pub-nav-link {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.pub-nav-link:hover {
+  background: var(--gray-bg);
+  color: var(--black);
+}
+
+.pub-nav-link.is-active {
+  color: var(--green-mid);
+  background: var(--green-bg);
+  font-weight: var(--fw-medium);
+}
+
+/* Right actions area */
+.pub-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* IoT trust pill */
+.pub-nav-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+/* Ghost login button */
+.pub-nav-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--gray-dark);
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.pub-nav-btn-ghost:hover {
+  background: var(--gray-bg);
+  border-color: var(--gray-mid);
+  color: var(--black);
+}
+
+/* Solid Join free button */
+.pub-nav-btn-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  background: var(--green-mid);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.pub-nav-btn-solid:hover { background: var(--green-dark); }
+
+/* Farmer variant of solid button */
+.pub-nav-btn-solid-farmer {
+  background: var(--green-mid);
+}
+.pub-nav-btn-solid-farmer:hover { background: var(--green-dark); }
+
+/* Full-width button (mobile drawer only) */
+.pub-nav-btn-full {
+  width: 100%;
+  justify-content: center;
+  padding: 11px 16px;
+}
+
+/* Dashboard shortcut buttons (logged-in states) */
+.pub-nav-dash {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-md);
+  padding: 7px 13px;
+  text-decoration: none;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  border: 0.5px solid transparent;
+}
+
+/* Buyer — teal */
+.pub-nav-dash-buyer {
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border-color: var(--teal-light);
+}
+.pub-nav-dash-buyer:hover {
+  background: #C7EEE3;
+  border-color: var(--teal-mid);
+}
+
+/* Farmer — green */
+.pub-nav-dash-farmer {
+  color: var(--green-mid);
+  background: var(--green-bg);
+  border-color: var(--green-light);
+}
+.pub-nav-dash-farmer:hover {
+  background: #D5EBB5;
+  border-color: var(--green-mid);
+}
+
+/* Admin — neutral */
+.pub-nav-dash-admin {
+  color: var(--gray-dark);
+  background: var(--gray-bg);
+  border-color: var(--gray-light);
+}
+.pub-nav-dash-admin:hover {
+  background: var(--gray-xbg);
+  border-color: var(--gray-mid);
+}
+
+/* Avatar chip (logged-in) */
+.pub-nav-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px 4px 4px;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+
+.pub-nav-chip:hover {
+  background: var(--gray-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.pub-nav-chip-buyer  { border-color: var(--teal-light); }
+.pub-nav-chip-farmer { border-color: var(--green-light); }
+.pub-nav-chip-admin  { border-color: var(--gray-light); }
+
+.pub-nav-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+}
+
+.pub-nav-avatar-buyer  { background: var(--teal-mid);  color: var(--white); }
+.pub-nav-avatar-farmer { background: var(--green-mid); color: var(--white); }
+.pub-nav-avatar-admin  { background: var(--gray-dark); color: var(--white); }
+
+.pub-nav-avatar.has-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.pub-nav-chip-name {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hamburger button (mobile only) */
+.pub-nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s;
+}
+
+.pub-nav-hamburger:hover { background: var(--gray-bg); }
+
+.pub-nav-ham-bar {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  background: var(--gray-dark);
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+/* Hamburger open state */
+.pub-nav-hamburger.is-open .pub-nav-ham-bar:nth-child(1) {
+  transform: translateY(6.5px) rotate(45deg);
+}
+.pub-nav-hamburger.is-open .pub-nav-ham-bar:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.pub-nav-hamburger.is-open .pub-nav-ham-bar:nth-child(3) {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* Mobile drawer */
+.pub-nav-drawer {
+  position: fixed;
+  top: var(--nav-height, 64px);
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-bottom: var(--border);
+  z-index: 499;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.pub-nav-drawer:not([hidden]) {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pub-nav-drawer[hidden] {
+  display: block !important;
+  visibility: hidden;
+}
+
+.pub-nav-drawer-inner {
+  padding: 16px 24px 24px;
+  max-width: var(--max-width, 1100px);
+  margin: 0 auto;
+}
+
+.pub-nav-drawer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pub-nav-drawer-link {
+  display: block;
+  font-size: 15px;
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+
+.pub-nav-drawer-link:hover {
+  background: var(--gray-bg);
+  color: var(--black);
+}
+
+.pub-nav-drawer-link.is-active {
+  color: var(--green-mid);
+  background: var(--green-bg);
+  font-weight: var(--fw-medium);
+}
+
+.pub-nav-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: var(--border);
+}
+
+/* Backdrop (mobile only) */
+.pub-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: var(--nav-height, 64px) 0 0 0;
+  background: rgba(26, 26, 24, 0.3);
+  z-index: 498;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.pub-nav-backdrop.is-visible {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pub-nav-links,
+  .pub-nav-actions,
+  .pub-nav-search { display: none; }
+  .pub-nav-hamburger { display: flex; }
+  .pub-nav-backdrop { display: block; }
+}
+
+@media (max-width: 480px) {
+  .pub-nav-inner { padding: 0 16px; }
+  .pub-nav-logo-sub { display: none; }
+}
+</style>
+
+{# ══════════════════════════════════════════════════════════
+   JS — mobile drawer toggle.
+   Self-contained. No external dependencies.
+   ══════════════════════════════════════════════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  /* ── Mobile drawer toggle ───────────────────────────────── */
+  var btn      = document.getElementById('pub-nav-hamburger');
+  var drawer   = document.getElementById('pub-nav-mobile-drawer');
+  var backdrop = document.getElementById('pub-nav-backdrop');
+
+  if (btn && drawer && backdrop) {
+    function openDrawer() {
+      drawer.hidden = false;
+      btn.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+      backdrop.classList.add('is-visible');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      drawer.hidden = true;
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      backdrop.classList.remove('is-visible');
+      document.body.style.overflow = '';
+    }
+    function toggleDrawer() { drawer.hidden ? openDrawer() : closeDrawer(); }
+
+    btn.addEventListener('click', toggleDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 768 && !drawer.hidden) closeDrawer();
+    });
+  }
+
+  /* ── Live search dropdown ───────────────────────────────── */
+  var searchInput    = document.getElementById('pub-nav-search-input');
+  var searchDropdown = document.getElementById('pub-nav-search-dropdown');
+  var searchForm     = document.getElementById('pub-nav-search-form');
+
+  if (!searchInput || !searchDropdown) return;
+
+  var debounceTimer = null;
+  var currentQuery  = '';
+  var focusedIndex  = -1;
+  var dropdownItems = [];
+
+  /* Debounced fetch — fires 280ms after last keystroke */
+  function onInput() {
+    var q = searchInput.value.trim();
+    clearTimeout(debounceTimer);
+
+    if (q.length < 2) {
+      closeDropdown();
+      return;
+    }
+
+    currentQuery = q;
+    debounceTimer = setTimeout(function () { fetchResults(q); }, 280);
+  }
+
+  function fetchResults(q) {
+    showLoading();
+    fetch('/search/quick?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (q === currentQuery) renderDropdown(data, q);
+      })
+      .catch(function () { closeDropdown(); });
+  }
+
+  function showLoading() {
+    searchDropdown.innerHTML = '<div class="pns-loading">Searching…</div>';
+    searchDropdown.hidden = false;
+    searchInput.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDropdown() {
+    searchDropdown.hidden = true;
+    searchInput.setAttribute('aria-expanded', 'false');
+    focusedIndex = -1;
+    dropdownItems = [];
+  }
+
+  function renderDropdown(data, q) {
+    var html = '';
+    var total = (data.listings || []).length +
+                (data.farmers  || []).length +
+                (data.buyers   || []).length;
+
+    if (total === 0) {
+      html = '<div class="pns-empty">No results for &ldquo;' +
+             escHtml(q) + '&rdquo;</div>';
+    } else {
+
+      /* Listings */
+      if (data.listings && data.listings.length) {
+        html += '<div class="pns-section-label">Produce</div>';
+        data.listings.forEach(function (lst) {
+          var qCss = lst.q >= 75 ? 'high' : (lst.q >= 50 ? 'medium' : 'low');
+          var thumb = lst.photo
+            ? '<img src="/static/' + escHtml(lst.photo) + '" alt="">'
+            : '🌿';
+          html += '<a href="/listings/' + lst.id +
+            '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-listing">' + thumb + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(lst.crop) + '</div>' +
+              '<div class="pns-meta">' + escHtml(lst.farm) + ' · ' +
+                escHtml(lst.region) + '</div>' +
+            '</div>' +
+            (lst.q > 0 ? '<span class="pns-badge pns-badge-' + qCss +
+              '">Q ' + lst.q + '</span>' : '') +
+            '</a>';
+        });
+      }
+
+      /* Farmers */
+      if (data.farmers && data.farmers.length) {
+        html += '<div class="pns-section-label">Farmers</div>';
+        data.farmers.forEach(function (f) {
+          var avatarContent = f.photo
+            ? '<img src="/static/' + escHtml(f.photo) + '" alt="">'
+            : escHtml(f.initials);
+          html += '<a href="/farmer/' + f.id +
+            '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-farmer">' + avatarContent + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(f.name) +
+                (f.verified ? ' <span style="color:var(--teal-mid);font-size:10px">✓</span>' : '') +
+              '</div>' +
+              '<div class="pns-meta">' + escHtml(f.region) + ' · Farmer</div>' +
+            '</div>' +
+            (f.trust ? '<span class="pns-badge pns-badge-trust">★ ' +
+              escHtml(String(f.trust)) + '</span>' : '') +
+            '</a>';
+        });
+      }
+
+      /* Buyers */
+      if (data.buyers && data.buyers.length) {
+        html += '<div class="pns-section-label">Buyers</div>';
+        data.buyers.forEach(function (b) {
+          var avatarContent = b.photo
+            ? '<img src="/static/' + escHtml(b.photo) + '" alt="">'
+            : escHtml(b.initials);
+          html += '<a href="/buyer/' + b.id + '" class="pns-item" role="option">' +
+            '<div class="pns-thumb pns-thumb-buyer">' + avatarContent + '</div>' +
+            '<div class="pns-info">' +
+              '<div class="pns-name">' + escHtml(b.name) + '</div>' +
+              '<div class="pns-meta">' + escHtml(b.region) + ' · Buyer</div>' +
+            '</div></a>';
+        });
+      }
+
+      /* "See all results" footer link */
+      html += '<a href="/search?q=' + encodeURIComponent(q) +
+        '" class="pns-footer">See all results for &ldquo;' +
+        escHtml(q) + '&rdquo; →</a>';
+    }
+
+    searchDropdown.innerHTML = html;
+    searchDropdown.hidden = false;
+    searchInput.setAttribute('aria-expanded', 'true');
+    dropdownItems = Array.from(searchDropdown.querySelectorAll('.pns-item'));
+    focusedIndex = -1;
+  }
+
+  /* Keyboard navigation inside dropdown */
+  searchInput.addEventListener('keydown', function (e) {
+    if (searchDropdown.hidden) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedIndex = Math.min(focusedIndex + 1, dropdownItems.length - 1);
+      updateFocus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedIndex = Math.max(focusedIndex - 1, -1);
+      updateFocus();
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault();
+      var link = dropdownItems[focusedIndex];
+      if (link && link.href) window.location.href = link.href;
+    }
+  });
+
+  function updateFocus() {
+    dropdownItems.forEach(function (el, i) {
+      el.classList.toggle('is-focused', i === focusedIndex);
+    });
+  }
+
+  /* Close on outside click */
+  document.addEventListener('click', function (e) {
+    var container = document.getElementById('pub-nav-search-container');
+    if (container && !container.contains(e.target)) closeDropdown();
+  });
+
+  searchInput.addEventListener('input', onInput);
+
+  /* Re-open dropdown on focus if input has value */
+  searchInput.addEventListener('focus', function () {
+    if (searchInput.value.trim().length >= 2) onInput();
+  });
+
+  /* Helper: escape HTML to prevent XSS */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+}());
+</script>

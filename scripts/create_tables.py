@@ -26,7 +26,7 @@ import os
 import sys
 
 # Make sure we can import from the project root
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -80,6 +80,29 @@ def create_database_if_missing():
         print(f"  Create it manually: CREATE DATABASE {db_name};")
 
 
+def drop_contact_requests():
+    """
+    Drops the contact_requests table so it can be recreated
+    with the new column structure (sender_id, recipient_id,
+    context_type, reply_message, replied_at).
+
+    SAFE: Only drops contact_requests. Every other table is
+    left completely untouched.
+    """
+    app = create_app()
+    with app.app_context():
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        existing  = inspector.get_table_names()
+
+        if 'contact_requests' in existing:
+            db.session.execute(text('DROP TABLE IF EXISTS contact_requests;'))
+            db.session.commit()
+            print("  ✓ Old contact_requests table dropped.")
+        else:
+            print("  ✓ contact_requests did not exist yet — nothing to drop.")
+
+
 def create_all_tables():
     app = create_app()
     with app.app_context():
@@ -102,4 +125,5 @@ if __name__ == '__main__':
     print("FarmLink Intelligence — Database Setup")
     print("=" * 40)
     create_database_if_missing()
+    drop_contact_requests()
     create_all_tables()

@@ -1,4 +1,4 @@
-{# ============================================================
+<!--  ============================================================
    templates/farmer/dashboard.html — FarmLink Intelligence
 
    CSS:  public.css → farmer.css
@@ -27,7 +27,7 @@
      alerts_display       list[dict]  — message,time,dot_css
      unread_notifs        int
      active_page          str
-   ============================================================ #}
+   ============================================================  -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,9 +70,19 @@
       {% endif %}
     </a>
     <span class="topbar-username">{{ farmer.full_name }}</span>
-    <div class="topbar-avatar" title="{{ farmer.full_name }}" aria-hidden="true">
-      {{ farmer.full_name[:2].upper() }}
-    </div>
+    {# ── TOPBAR AVATAR: shows real photo when uploaded ── #}
+    {% if farmer.profile_photo_url %}
+      <div class="topbar-avatar-photo" id="topbar-avatar"
+           title="{{ farmer.full_name }}" aria-hidden="true">
+        <img src="{{ url_for('static', filename=farmer.profile_photo_url) }}"
+             alt="{{ farmer.full_name }}" id="topbar-avatar-img">
+      </div>
+    {% else %}
+      <div class="topbar-avatar" id="topbar-avatar"
+           title="{{ farmer.full_name }}" aria-hidden="true">
+        <span id="topbar-avatar-initials">{{ farmer.full_name[:2].upper() }}</span>
+      </div>
+    {% endif %}
     <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">

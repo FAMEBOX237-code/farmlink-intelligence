@@ -35,7 +35,12 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from extensions  import db
 from models.models import (
     Farm, SensorReading, HarvestForecast,
+<<<<<<< HEAD
     ProduceListing, Notification, Transaction, Rating
+=======
+    ProduceListing, Notification, Transaction,
+    Rating, ContactRequest, User,
+>>>>>>> b7d53ac (major editings)
 )
 from services.quality_engine   import (
     sensor_status, sensor_status_label,
@@ -96,14 +101,21 @@ def _farms_summary(farms_data):
 
 
 def _sidebar(u):
-    """Unread count + active forecast for sidebar badge."""
+    """Unread notifications + unread enquiries + active forecast for sidebar."""
     unread = Notification.query.filter_by(recipient_id=u.id, is_read=False).count()
+    unread_enq = ContactRequest.query.filter_by(
+        recipient_id=u.id, status='sent'
+    ).count()
     fc = (HarvestForecast.query
           .join(Farm, Farm.id == HarvestForecast.farm_id)
           .filter(Farm.owner_id == u.id, HarvestForecast.is_active == True)
           .order_by(HarvestForecast.created_at.desc())
           .first())
-    return dict(unread_notifs=unread, active_forecast=fc)
+    return dict(
+        unread_notifs    = unread,
+        unread_enquiries = unread_enq,
+        active_forecast  = fc,
+    )
 
 
 def _f(v):
@@ -755,7 +767,38 @@ def trust_score():
 def notifications():
     tab = request.args.get('tab', 'all')
 
+<<<<<<< HEAD
     # ── Fetch all notifications for this farmer ───────────────
+=======
+    # ── POST — mark read / mark all read ─────────────────────
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        if action == 'mark_all_read':
+            Notification.query.filter_by(
+                recipient_id=current_user.id, is_read=False
+            ).update({'is_read': True})
+            db.session.commit()
+            flash('All notifications marked as read.', 'success')
+        elif action == 'mark_read':
+            nid = request.form.get('notif_id', type=int)
+            if nid:
+                n = Notification.query.filter_by(
+                    id=nid, recipient_id=current_user.id).first()
+                if n:
+                    n.is_read = True
+                    db.session.commit()
+        elif action == 'delete':
+            nid = request.form.get('notif_id', type=int)
+            if nid:
+                n = Notification.query.filter_by(
+                    id=nid, recipient_id=current_user.id).first()
+                if n:
+                    db.session.delete(n)
+                    db.session.commit()
+        return redirect(url_for('farmer.notifications') + f'?tab={tab}')
+
+    # ── GET — fetch all notifications ────────────────────────
+>>>>>>> b7d53ac (major editings)
     all_notifs = (Notification.query
                   .filter_by(recipient_id=current_user.id)
                   .order_by(Notification.sent_at.desc())
@@ -778,6 +821,7 @@ def notifications():
     else:
         filtered = all_notifs
 
+<<<<<<< HEAD
     # ── Notification icon + dot class mapping ─────────────────
     ICON_MAP = {
         'harvest_alert':         'notif-icon-harvest',
@@ -789,11 +833,29 @@ def notifications():
         'account_verified':      'notif-icon-trust',
         'account_suspended':     'notif-icon-danger',
         'system':                'notif-icon-system',
+=======
+    # ── Notification type label + colour mapping ──────────────
+    TYPE_META = {
+        'harvest_alert'       : ('amber', 'Harvest forecast'),
+        'sensor_offline'      : ('gray',  'Sensor offline'),
+        'quality_change'      : ('teal',  'Quality update'),
+        'buyer_enquiry'       : ('blue',  'Buyer enquiry'),
+        'listing_published'   : ('green', 'Listing published'),
+        'transaction_completed': ('green','Transaction complete'),
+        'account_verified'    : ('teal',  'Account verified'),
+        'account_suspended'   : ('red',   'Account suspended'),
+        'system'              : ('gray',  'System'),
+>>>>>>> b7d53ac (major editings)
     }
 
     # ── Build display list ────────────────────────────────────
     notifications_display = []
     for n in filtered:
+<<<<<<< HEAD
+=======
+        colour, type_label = TYPE_META.get(n.type, ('gray', 'Notification'))
+
+>>>>>>> b7d53ac (major editings)
         # Compute human-readable time
         secs = (datetime.utcnow() - n.sent_at).total_seconds() if n.sent_at else 0
         if secs < 60:       t = 'Just now'
@@ -804,9 +866,18 @@ def notifications():
         else:               t = n.sent_at.strftime('%b %d, %Y')
 
         # Action URL
+<<<<<<< HEAD
         action_url = None
         action_label = 'View'
         if n.forecast_id:
+=======
+        action_url   = None
+        action_label = 'View'
+        if n.type == 'buyer_enquiry':
+            action_url   = url_for('farmer.enquiries')
+            action_label = 'View enquiries'
+        elif n.forecast_id:
+>>>>>>> b7d53ac (major editings)
             action_url   = url_for('farmer.forecast_detail', forecast_id=n.forecast_id)
             action_label = 'View forecast'
         elif n.listing_id:
@@ -817,6 +888,7 @@ def notifications():
             action_label = 'View farm'
 
         notifications_display.append({
+<<<<<<< HEAD
             'id':           n.id,
             'type':         n.type,
             'icon_class':   ICON_MAP.get(n.type, 'notif-icon-system'),
@@ -826,6 +898,19 @@ def notifications():
             'action_url':   action_url,
             'action_label': action_label,
             'is_unread':    not n.is_read,
+=======
+            'id'          : n.id,
+            'type'        : n.type,
+            'type_label'  : type_label,
+            'colour'      : colour,
+            'title'       : n.title,
+            'message'     : n.message,
+            'time_display': t,
+            'sent_at'     : n.sent_at,
+            'action_url'  : action_url,
+            'action_label': action_label,
+            'is_unread'   : not n.is_read,
+>>>>>>> b7d53ac (major editings)
         })
 
     # ── Tab counts ────────────────────────────────────────────
@@ -837,6 +922,7 @@ def notifications():
         'system': sum(1 for n in all_notifs if n.type in SYSTEM_TYPES),
     }
 
+<<<<<<< HEAD
     # ── POST — mark read ──────────────────────────────────────
     if request.method == 'POST':
         action = request.form.get('action', '')
@@ -861,10 +947,18 @@ def notifications():
         current_tab=tab,
         tab_counts=tab_counts,
         active_page='notifications',
+=======
+    return render_template('farmer/notifications.html',
+        notifications_display = notifications_display,
+        active_tab            = tab,
+        tab_counts            = tab_counts,
+        active_page           = 'notifications',
+>>>>>>> b7d53ac (major editings)
         **_sidebar(current_user),
     )
 
 
+<<<<<<< HEAD
 
 
 
@@ -875,6 +969,8 @@ def notifications():
 #          update_notifs, delete_account)
 # ══════════════════════════════════════════════════════════════
  
+=======
+>>>>>>> b7d53ac (major editings)
 # ══════════════════════════════════════════════════════════════
 # FARMER PROFILE — OWN VIEW (WF16)
 # Private. Only the logged-in farmer sees this.
@@ -1199,4 +1295,257 @@ def farmer_profile_registered(farmer_id):
         active_page='',
         unread_notifs=un,
         active_forecast=active_fc,
+<<<<<<< HEAD
     )
+=======
+    )
+
+
+# ══════════════════════════════════════════════════════════════
+# FARMER ENQUIRIES INBOX  —  GET/POST /farmer/enquiries
+#
+# Shows all messages received by this farmer.
+# POST with action='reply'  — saves reply, notifies sender.
+# POST with action='mark_read' — marks a message as read.
+#
+# OOP NOTE:
+#   Uses ContactRequest.can_reply(user) and
+#   ContactRequest.is_unread_for(user) — the object decides
+#   its own state. The route just orchestrates.
+# ══════════════════════════════════════════════════════════════
+@farmer_bp.route('/enquiries', methods=['GET', 'POST'])
+@login_required
+@farmer_required
+def enquiries():
+    sb = _sidebar(current_user)
+
+    # ── POST — handle reply or mark-as-read ───────────────────
+    if request.method == 'POST':
+        action      = request.form.get('action', '')
+        enquiry_id  = request.form.get('enquiry_id', type=int)
+
+        enquiry = ContactRequest.query.get(enquiry_id) if enquiry_id else None
+
+        # Safety: only the recipient can act on their own messages
+        if not enquiry or enquiry.recipient_id != current_user.id:
+            flash('Message not found.', 'error')
+            return redirect(url_for('farmer.enquiries'))
+
+        # ── Reply ─────────────────────────────────────────────
+        if action == 'reply':
+            if not enquiry.can_reply(current_user):
+                flash('You have already replied to this message.', 'error')
+                return redirect(url_for('farmer.enquiries'))
+
+            reply_text = request.form.get('reply_message', '').strip()
+
+            if not reply_text:
+                flash('Your reply cannot be empty.', 'error')
+                return redirect(url_for('farmer.enquiries'))
+
+            if len(reply_text) > 1000:
+                flash('Reply is too long. Please keep it under 1000 characters.', 'error')
+                return redirect(url_for('farmer.enquiries'))
+
+            # Save the reply on the ContactRequest object
+            enquiry.reply_message = reply_text
+            enquiry.replied_at    = datetime.utcnow()
+            enquiry.status        = 'replied'
+
+            # Notify the original sender that a reply has arrived
+            notification = Notification(
+                recipient_id = enquiry.sender_id,
+                type         = 'buyer_enquiry',
+                title        = 'Your enquiry has been replied to',
+                message      = (
+                    f'{current_user.full_name} replied to your message: '
+                    f'"{reply_text[:80]}{"…" if len(reply_text) > 80 else ""}"'
+                ),
+                is_read = False,
+                sent_at = datetime.utcnow(),
+            )
+            db.session.add(notification)
+            db.session.commit()
+
+            flash('Your reply has been sent.', 'success')
+            return redirect(url_for('farmer.enquiries'))
+
+        # ── Mark as read ──────────────────────────────────────
+        elif action == 'mark_read':
+            if enquiry.status == 'sent':
+                enquiry.status  = 'read'
+                enquiry.read_at = datetime.utcnow()
+                db.session.commit()
+            return redirect(url_for('farmer.enquiries'))
+
+    # ── GET — build inbox display ─────────────────────────────
+    tab = request.args.get('tab', 'all')   # all | listing | profile | farmer
+
+    # Fetch all messages addressed to this farmer, newest first
+    all_enquiries = (
+        ContactRequest.query
+        .filter_by(recipient_id=current_user.id)
+        .order_by(ContactRequest.created_at.desc())
+        .all()
+    )
+
+    # Mark any 'sent' messages as 'read' now that the farmer
+    # is looking at them (auto-read on open)
+    changed = False
+    for eq in all_enquiries:
+        if eq.status == 'sent':
+            eq.status  = 'read'
+            eq.read_at = datetime.utcnow()
+            changed = True
+    if changed:
+        db.session.commit()
+
+    # Build display dicts — template receives clean data, not ORM objects
+    def _build_display(eq):
+        sender = User.query.get(eq.sender_id)
+        listing_label = None
+        if eq.listing_id:
+            from models.models import ProduceListing
+            pl = ProduceListing.query.get(eq.listing_id)
+            listing_label = pl.crop_type if pl else 'Deleted listing'
+
+        return {
+            'id':             eq.id,
+            'sender_name':    sender.full_name if sender else 'Unknown user',
+            'sender_role':    sender.role      if sender else 'unknown',
+            'sender_id':      eq.sender_id,
+            'context_type':   eq.context_type,
+            'context_label':  eq.context_label,       # uses @property on model
+            'listing_label':  listing_label,
+            'message':        eq.message,
+            'reply_message':  eq.reply_message,
+            'status':         eq.status,
+            'created_ago':    _ago(eq.created_at),
+            'replied_ago':    _ago(eq.replied_at) if eq.replied_at else None,
+            'can_reply':      eq.can_reply(current_user),
+        }
+
+    display_list = [_build_display(eq) for eq in all_enquiries]
+
+    # Tab filtering
+    if tab == 'listing':
+        filtered = [e for e in display_list if e['context_type'] == 'listing_enquiry']
+    elif tab == 'profile':
+        filtered = [e for e in display_list if e['context_type'] == 'farmer_profile']
+    elif tab == 'farmer':
+        filtered = [e for e in display_list if e['context_type'] == 'farmer_to_farmer']
+    else:
+        filtered = display_list
+
+    # Tab counts for the tab bar badges
+    counts = {
+        'all':     len(display_list),
+        'listing': sum(1 for e in display_list if e['context_type'] == 'listing_enquiry'),
+        'profile': sum(1 for e in display_list if e['context_type'] == 'farmer_profile'),
+        'farmer':  sum(1 for e in display_list if e['context_type'] == 'farmer_to_farmer'),
+    }
+
+    # Unread count for the sidebar badge (recalculate after auto-read)
+    sb = _sidebar(current_user)
+
+    return render_template(
+        'farmer/enquiries.html',
+        enquiries    = filtered,
+        counts       = counts,
+        active_tab   = tab,
+        active_page  = 'enquiries',
+        **sb,
+    )
+
+
+
+#
+# Handles a farmer sending a message to another farmer.
+# Called from profile_registered.html — the page a farmer
+# sees when viewing another farmer's profile.
+#
+# OOP NOTE:
+#   Same pattern as buyer contact_send. One responsibility:
+#   receive, validate, save, notify. The ContactRequest object
+#   handles what it knows about itself. This route directs traffic.
+# ══════════════════════════════════════════════════════════════
+@farmer_bp.route('/contact/send', methods=['POST'])
+@login_required
+@farmer_required
+def farmer_contact_send():
+    """
+    Farmer sends a message to another farmer.
+
+    Form fields expected:
+      recipient_id  — user.id of the farmer being contacted
+      message       — the message text
+      redirect_back — URL to return to after submission
+
+    context_type is always 'farmer_to_farmer' for this route.
+    """
+    # ── Read form fields ──────────────────────────────────────
+    recipient_id  = request.form.get('recipient_id',  type=int)
+    message_text  = request.form.get('message',       '').strip()
+    redirect_back = request.form.get('redirect_back', '')
+
+    # ── Validate ──────────────────────────────────────────────
+    if not recipient_id:
+        flash('Could not identify the recipient. Please try again.', 'error')
+        return redirect(redirect_back or url_for('farmer.dashboard'))
+
+    if not message_text:
+        flash('Your message cannot be empty.', 'error')
+        return redirect(redirect_back or url_for('farmer.dashboard'))
+
+    if len(message_text) > 1000:
+        flash('Message is too long. Please keep it under 1000 characters.', 'error')
+        return redirect(redirect_back or url_for('farmer.dashboard'))
+
+    # ── Check recipient exists and is a farmer ────────────────
+    recipient = User.query.get(recipient_id)
+    if not recipient or recipient.role != 'farmer':
+        flash('Farmer not found.', 'error')
+        return redirect(redirect_back or url_for('farmer.dashboard'))
+
+    # ── Guard: cannot message yourself ───────────────────────
+    if recipient_id == current_user.id:
+        flash('You cannot send a message to yourself.', 'error')
+        return redirect(redirect_back or url_for('farmer.dashboard'))
+
+    # ── Create the ContactRequest object ──────────────────────
+    enquiry = ContactRequest(
+        sender_id    = current_user.id,
+        recipient_id = recipient_id,
+        context_type = 'farmer_to_farmer',
+        listing_id   = None,
+        message      = message_text,
+        status       = 'sent',
+        created_at   = datetime.utcnow(),
+    )
+    db.session.add(enquiry)
+
+    # ── Notify the recipient farmer ───────────────────────────
+    notification = Notification(
+        recipient_id = recipient_id,
+        type         = 'buyer_enquiry',
+        title        = 'New farmer message',
+        message      = (
+            f'Fellow farmer {current_user.full_name} '
+            f'sent you a message.'
+        ),
+        is_read  = False,
+        sent_at  = datetime.utcnow(),
+    )
+    db.session.add(notification)
+
+    db.session.commit()
+
+    flash(
+        f'Your message has been sent to {recipient.full_name}.',
+        'success'
+    )
+
+    if redirect_back:
+        return redirect(redirect_back)
+    return redirect(url_for('farmer.dashboard'))
+>>>>>>> b7d53ac (major editings)
