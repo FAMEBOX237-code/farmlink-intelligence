@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject.full_name }} · Buyer · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <style>
+    body { background: var(--gray-bg); min-height: 100vh; }
+    .bp-page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: calc(var(--nav-height, 64px) + 40px) 24px 80px;
+    }
+    .bp-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: var(--fs-sm); color: var(--gray-mid); text-decoration: none;
+      margin-bottom: 20px; padding: 6px 0; transition: color 0.12s;
+    }
+    .bp-back:hover { color: var(--black); }
+    .bp-card {
+      background: var(--white); border: var(--border);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden;
+    }
+    .bp-accent {
+      height: 4px;
+      background: linear-gradient(90deg, var(--teal-dark) 0%, var(--teal-mid) 50%, var(--teal-light) 100%);
+    }
+    .bp-header { padding: 32px 32px 24px; display: flex; align-items: flex-start; gap: 20px; }
+    .bp-avatar {
+      width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+      overflow: hidden; background: var(--teal-mid);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: var(--fw-medium); color: var(--white);
+      border: 3px solid var(--white); box-shadow: var(--shadow-sm);
+    }
+    .bp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .bp-identity { flex: 1; min-width: 0; }
+    .bp-name { font-size: 1.25rem; font-weight: var(--fw-medium); color: var(--black); margin: 0 0 8px; letter-spacing: -0.01em; }
+    .bp-meta-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .bp-role-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: var(--fw-medium); color: var(--teal-mid);
+      background: var(--teal-bg); border: 1px solid rgba(93,202,165,0.2);
+      border-radius: var(--radius-pill); padding: 3px 9px;
+    }
+    .bp-region-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--gray-mid); background: var(--gray-bg);
+      border: var(--border); border-radius: var(--radius-pill); padding: 3px 9px;
+    }
+    .bp-member-since { font-size: 11px; color: var(--gray-mid); }
+    .bp-divider { height: 1px; background: var(--gray-bg); margin: 0 32px; }
+    .bp-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .bp-stat { padding: 20px 16px; text-align: center; border-right: var(--border); }
+    .bp-stat:last-child { border-right: none; }
+    .bp-stat-value { font-size: 1.5rem; font-weight: var(--fw-medium); color: var(--black); line-height: 1; margin-bottom: 5px; }
+    .bp-stat-label { font-size: 11px; color: var(--gray-mid); line-height: 1.4; }
+    .bp-section { padding: 20px 32px; border-top: var(--border); }
+    .bp-section-title {
+      font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--black);
+      margin: 0 0 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .bp-section-title svg { color: var(--teal-mid); }
+    .bp-about-text { font-size: var(--fs-sm); color: var(--gray-mid); line-height: 1.65; margin: 0; }
+    .bp-info-list { display: flex; flex-direction: column; gap: 10px; }
+    .bp-info-row { display: flex; align-items: center; gap: 10px; font-size: var(--fs-sm); }
+    .bp-info-icon {
+      width: 28px; height: 28px; border-radius: var(--radius-sm);
+      background: var(--gray-bg); border: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: var(--gray-mid);
+    }
+    .bp-info-label { color: var(--gray-mid); width: 90px; flex-shrink: 0; }
+    .bp-info-value { color: var(--black); font-weight: var(--fw-medium); }
+    .bp-cta {
+      padding: 20px 32px 28px; border-top: var(--border);
+      background: var(--gray-bg);
+    }
+    .bp-cta-note { font-size: 11px; color: var(--gray-mid); line-height: 1.5; margin: 0 0 12px; }
+    .bp-cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .bp-btn-primary {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-family: var(--font-sans); font-size: var(--fs-sm); font-weight: var(--fw-medium);
+      color: var(--white); background: var(--teal-mid); border: none;
+      border-radius: var(--radius-md); padding: 10px 22px;
+      text-decoration: none; transition: background 0.13s; white-space: nowrap;
+    }
+    .bp-btn-primary:hover { background: var(--teal-dark); }
+    .bp-btn-ghost {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-family: var(--font-sans); font-size: var(--fs-sm); font-weight: var(--fw-medium);
+      color: var(--gray-dark); background: var(--white); border: var(--border);
+      border-radius: var(--radius-md); padding: 10px 22px;
+      text-decoration: none; transition: background 0.13s; white-space: nowrap;
+    }
+    .bp-btn-ghost:hover { background: var(--gray-bg); }
+    @media (max-width: 520px) {
+      .bp-header { padding: 24px 20px 18px; gap: 14px; }
+      .bp-section { padding: 16px 20px; }
+      .bp-cta { padding: 16px 20px 24px; }
+      .bp-divider { margin: 0 20px; }
+      .bp-stat { padding: 14px 8px; }
+      .bp-stat-value { font-size: 1.2rem; }
+      .bp-cta-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  {% include 'partials/navbar_public.html' %}
+
+  <main class="bp-page" role="main">
+
+    <a href="{{ url_for('buyer.marketplace') }}" class="bp-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Back to Marketplace
+    </a>
+
+    <article class="bp-card" aria-labelledby="bp-name">
+
+      <div class="bp-accent" aria-hidden="true"></div>
+
+      <!-- Header -->
+      <div class="bp-header">
+        <div class="bp-avatar">
+          {% if subject.profile_photo_url %}
+            <img src="{{ url_for('static', filename=subject.profile_photo_url) }}" alt="{{ subject.full_name }}">
+          {% else %}
+            {{ subject.full_name[:2].upper() }}
+          {% endif %}
+        </div>
+        <div class="bp-identity">
+          <h1 class="bp-name" id="bp-name">{{ subject.full_name }}</h1>
+          <div class="bp-meta-row">
+            <span class="bp-role-pill">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+              Buyer
+            </span>
+            {% if subject.region %}
+            <span class="bp-region-pill">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              {{ subject.region }}
+            </span>
+            {% endif %}
+            <span class="bp-member-since">Member since {{ member_since }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bp-divider" aria-hidden="true"></div>
+
+      <!-- Stats -->
+      <div class="bp-stats" role="list">
+        <div class="bp-stat" role="listitem">
+          <div class="bp-stat-value">{{ completed_purchases }}</div>
+          <div class="bp-stat-label">Completed<br>purchases</div>
+        </div>
+        <div class="bp-stat" role="listitem">
+          <div class="bp-stat-value">{{ ratings_given }}</div>
+          <div class="bp-stat-label">Ratings<br>given</div>
+        </div>
+        <div class="bp-stat" role="listitem">
+          <div class="bp-stat-value">{{ active_alerts }}</div>
+          <div class="bp-stat-label">Active<br>alerts</div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <section class="bp-section" aria-label="About">
+        <h2 class="bp-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          About this buyer
+        </h2>
+        <p class="bp-about-text">
+          {{ subject.full_name }} is a registered buyer on FarmLink Intelligence{% if subject.region %} based in {{ subject.region }}{% endif %}, purchasing IoT-verified produce directly from smallholder farmers across Cameroon.
+          {% if completed_purchases > 0 %}
+            They have completed {{ completed_purchases }} purchase{{ 's' if completed_purchases != 1 else '' }} and left {{ ratings_given }} rating{{ 's' if ratings_given != 1 else '' }} for farmers on the platform.
+          {% else %}
+            They are new to the platform and have not yet made any purchases.
+          {% endif %}
+        </p>
+      </section>
+
+      <!-- Details -->
+      <section class="bp-section" aria-label="Details">
+        <h2 class="bp-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Details
+        </h2>
+        <div class="bp-info-list">
+          <div class="bp-info-row">
+            <div class="bp-info-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span class="bp-info-label">Full name</span>
+            <span class="bp-info-value">{{ subject.full_name }}</span>
+          </div>
+          {% if subject.region %}
+          <div class="bp-info-row">
+            <div class="bp-info-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <span class="bp-info-label">Region</span>
+            <span class="bp-info-value">{{ subject.region }}, Cameroon</span>
+          </div>
+          {% endif %}
+          <div class="bp-info-row">
+            <div class="bp-info-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <span class="bp-info-label">Member since</span>
+            <span class="bp-info-value">{{ member_since }}</span>
+          </div>
+          <div class="bp-info-row">
+            <div class="bp-info-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+            </div>
+            <span class="bp-info-label">Role</span>
+            <span class="bp-info-value">Buyer · FarmLink Intelligence</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <div class="bp-cta">
+        <p class="bp-cta-note">
+          Are you a farmer? Browse the marketplace to list your produce —
+          buyers like {{ subject.full_name.split()[0] }} are looking for IoT-verified supply.
+        </p>
+        <div class="bp-cta-row">
+          <a href="{{ url_for('buyer.marketplace') }}" class="bp-btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+            Browse Marketplace
+          </a>
+          <a href="{{ url_for('auth.register') }}" class="bp-btn-ghost">Create an account</a>
+        </div>
+      </div>
+
+    </article>
+  </main>
+</body>
+</html>

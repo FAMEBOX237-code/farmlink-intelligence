@@ -35,12 +35,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from extensions  import db
 from models.models import (
     Farm, SensorReading, HarvestForecast,
-<<<<<<< HEAD
-    ProduceListing, Notification, Transaction, Rating
-=======
     ProduceListing, Notification, Transaction,
     Rating, ContactRequest, User,
->>>>>>> b7d53ac (major editings)
 )
 from services.quality_engine   import (
     sensor_status, sensor_status_label,
@@ -767,9 +763,6 @@ def trust_score():
 def notifications():
     tab = request.args.get('tab', 'all')
 
-<<<<<<< HEAD
-    # ── Fetch all notifications for this farmer ───────────────
-=======
     # ── POST — mark read / mark all read ─────────────────────
     if request.method == 'POST':
         action = request.form.get('action', '')
@@ -798,7 +791,6 @@ def notifications():
         return redirect(url_for('farmer.notifications') + f'?tab={tab}')
 
     # ── GET — fetch all notifications ────────────────────────
->>>>>>> b7d53ac (major editings)
     all_notifs = (Notification.query
                   .filter_by(recipient_id=current_user.id)
                   .order_by(Notification.sent_at.desc())
@@ -821,19 +813,6 @@ def notifications():
     else:
         filtered = all_notifs
 
-<<<<<<< HEAD
-    # ── Notification icon + dot class mapping ─────────────────
-    ICON_MAP = {
-        'harvest_alert':         'notif-icon-harvest',
-        'sensor_offline':        'notif-icon-sensor',
-        'quality_change':        'notif-icon-trust',
-        'buyer_enquiry':         'notif-icon-buyer',
-        'listing_published':     'notif-icon-listing',
-        'transaction_completed': 'notif-icon-txn',
-        'account_verified':      'notif-icon-trust',
-        'account_suspended':     'notif-icon-danger',
-        'system':                'notif-icon-system',
-=======
     # ── Notification type label + colour mapping ──────────────
     TYPE_META = {
         'harvest_alert'       : ('amber', 'Harvest forecast'),
@@ -845,17 +824,13 @@ def notifications():
         'account_verified'    : ('teal',  'Account verified'),
         'account_suspended'   : ('red',   'Account suspended'),
         'system'              : ('gray',  'System'),
->>>>>>> b7d53ac (major editings)
     }
 
     # ── Build display list ────────────────────────────────────
     notifications_display = []
     for n in filtered:
-<<<<<<< HEAD
-=======
         colour, type_label = TYPE_META.get(n.type, ('gray', 'Notification'))
 
->>>>>>> b7d53ac (major editings)
         # Compute human-readable time
         secs = (datetime.utcnow() - n.sent_at).total_seconds() if n.sent_at else 0
         if secs < 60:       t = 'Just now'
@@ -866,18 +841,12 @@ def notifications():
         else:               t = n.sent_at.strftime('%b %d, %Y')
 
         # Action URL
-<<<<<<< HEAD
-        action_url = None
-        action_label = 'View'
-        if n.forecast_id:
-=======
         action_url   = None
         action_label = 'View'
         if n.type == 'buyer_enquiry':
             action_url   = url_for('farmer.enquiries')
             action_label = 'View enquiries'
         elif n.forecast_id:
->>>>>>> b7d53ac (major editings)
             action_url   = url_for('farmer.forecast_detail', forecast_id=n.forecast_id)
             action_label = 'View forecast'
         elif n.listing_id:
@@ -888,17 +857,6 @@ def notifications():
             action_label = 'View farm'
 
         notifications_display.append({
-<<<<<<< HEAD
-            'id':           n.id,
-            'type':         n.type,
-            'icon_class':   ICON_MAP.get(n.type, 'notif-icon-system'),
-            'title':        n.title,
-            'message':      n.message,
-            'time_display': t,
-            'action_url':   action_url,
-            'action_label': action_label,
-            'is_unread':    not n.is_read,
-=======
             'id'          : n.id,
             'type'        : n.type,
             'type_label'  : type_label,
@@ -910,7 +868,6 @@ def notifications():
             'action_url'  : action_url,
             'action_label': action_label,
             'is_unread'   : not n.is_read,
->>>>>>> b7d53ac (major editings)
         })
 
     # ── Tab counts ────────────────────────────────────────────
@@ -922,55 +879,15 @@ def notifications():
         'system': sum(1 for n in all_notifs if n.type in SYSTEM_TYPES),
     }
 
-<<<<<<< HEAD
-    # ── POST — mark read ──────────────────────────────────────
-    if request.method == 'POST':
-        action = request.form.get('action', '')
-        if action == 'mark_all_read':
-            Notification.query.filter_by(
-                recipient_id=current_user.id, is_read=False
-            ).update({'is_read': True})
-            db.session.commit()
-            flash('All notifications marked as read.', 'success')
-        elif action == 'mark_read':
-            nid = request.form.get('notif_id', type=int)
-            if nid:
-                n = Notification.query.filter_by(
-                    id=nid, recipient_id=current_user.id).first()
-                if n:
-                    n.is_read = True
-                    db.session.commit()
-        return redirect(url_for('farmer.notifications') + f'?tab={tab}')
-
-    return render_template('farmer/notifications.html',
-        notifications_display=notifications_display,
-        current_tab=tab,
-        tab_counts=tab_counts,
-        active_page='notifications',
-=======
     return render_template('farmer/notifications.html',
         notifications_display = notifications_display,
         active_tab            = tab,
         tab_counts            = tab_counts,
         active_page           = 'notifications',
->>>>>>> b7d53ac (major editings)
         **_sidebar(current_user),
     )
 
 
-<<<<<<< HEAD
-
-
-
-# ══════════════════════════════════════════════════════════════
-# FARMER PROFILE — OWN VIEW (WF16)
-# Private. Only the logged-in farmer sees this.
-# Handles: GET (tab display) + POST (update_info, change_password,
-#          update_notifs, delete_account)
-# ══════════════════════════════════════════════════════════════
- 
-=======
->>>>>>> b7d53ac (major editings)
 # ══════════════════════════════════════════════════════════════
 # FARMER PROFILE — OWN VIEW (WF16)
 # Private. Only the logged-in farmer sees this.
@@ -1295,9 +1212,6 @@ def farmer_profile_registered(farmer_id):
         active_page='',
         unread_notifs=un,
         active_forecast=active_fc,
-<<<<<<< HEAD
-    )
-=======
     )
 
 
@@ -1548,4 +1462,3 @@ def farmer_contact_send():
     if redirect_back:
         return redirect(redirect_back)
     return redirect(url_for('farmer.dashboard'))
->>>>>>> b7d53ac (major editings)
