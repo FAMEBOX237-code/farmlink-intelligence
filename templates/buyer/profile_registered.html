@@ -1,0 +1,773 @@
+{# ============================================================
+   templates/buyer/profile_registered.html — FarmLink Intelligence
+   WF24 — Buyer Profile (Registered User View)
+
+   Login required. Any role can view.
+   CSS:   public.css → partials.css → buyer.css
+   Route: GET /buyer/<buyer_id>/profile
+
+   DESIGN PRINCIPLE:
+     Buyers are not sellers. They have no listings, no trust
+     score, no farm data to display. This page is intentionally
+     minimal — it shows only what is safe to share publicly:
+     display name and region. Everything else is private.
+
+   Context:
+     subject         User    — the buyer being viewed
+     member_since    str     — e.g. 'March 2025'
+     unread_notifs   int     — for the viewing user's topbar
+     active_alerts   int     — for the viewing user's sidebar
+     active_page     str     — '' (no sidebar link active)
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{ subject.full_name }} · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buyer.css') }}">
+</head>
+
+<body class="{% if current_user.is_buyer() %}portal-body{% else %}portal-body{% endif %}">
+
+{# ── Topbar — adapts to who is viewing ──────────────────────── #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">
+      {% if current_user.is_buyer() %}Buyer Portal
+      {% elif current_user.is_farmer() %}Farmer Portal
+      {% else %}Admin Panel{% endif %}
+    </span>
+  </div>
+  <div class="topbar-right">
+    {# Notifications link — route depends on viewer's role #}
+    <a href="{{ url_for('buyer.notifications') if current_user.is_buyer() else url_for('farmer.notifications') if current_user.is_farmer() else url_for('admin.dashboard') }}"
+       class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ current_user.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true">
+      {{ current_user.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+{# Flash messages #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{# Layout — sidebar shown for buyers, not for farmers/admins visiting #}
+{% if current_user.is_buyer() %}
+  <div class="portal-layout">
+    {% include 'partials/sidebar_buyer.html' %}
+    <main class="portal-main" id="main" role="main">
+{% else %}
+  <main class="portal-main bpr-no-sidebar" id="main" role="main">
+{% endif %}
+
+
+      {# ── Breadcrumb ──────────────────────────────────────── #}
+      <nav class="ld-breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('buyer.marketplace') }}" class="ld-breadcrumb-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          Marketplace
+        </a>
+        <span class="ld-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ld-breadcrumb-cur">Buyer profile</span>
+      </nav>
+
+
+      {# ════════════════════════════════════════════════════════
+         PROFILE CARD — intentionally minimal
+         ════════════════════════════════════════════════════════ #}
+      <div class="bpr-layout">
+
+        {# ── Profile identity card ─────────────────────────── #}
+        <div class="bpr-id-card" aria-label="Buyer profile">
+
+          {# Avatar — initials only, no photo shown to other users #}
+          <div class="bpr-avatar" aria-hidden="true">
+            {{ subject.full_name[:2].upper() }}
+          </div>
+
+          <h1 class="bpr-name">{{ subject.full_name }}</h1>
+
+          <div class="bpr-role-pill">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            Buyer
+          </div>
+
+          {# Visible details — region + member since only #}
+          <div class="bpr-details">
+            {% if subject.region %}
+              <div class="bpr-detail-row">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span>{{ subject.region }}</span>
+              </div>
+            {% endif %}
+            <div class="bpr-detail-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>Member since {{ member_since }}</span>
+            </div>
+          </div>
+
+          {# Back to marketplace link #}
+          <a href="{{ url_for('buyer.marketplace') }}"
+             class="btn-ghost bpr-back-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Back to marketplace
+          </a>
+
+        </div>{# /bpr-id-card #}
+
+
+        {# ── Right side — privacy info panels ──────────────── #}
+        <div class="bpr-right">
+
+          {# Privacy banner — explains what is and isn't shown #}
+          <div class="bpr-privacy-banner" role="note" aria-label="Privacy information">
+            <div class="bpr-privacy-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div class="bpr-privacy-body">
+              <div class="bpr-privacy-title">
+                Registered user view — limited information
+              </div>
+              <p class="bpr-privacy-text">
+                Buyers are not sellers. Only a display name and region are
+                shared. All other account data is private to the account holder.
+              </p>
+            </div>
+          </div>
+
+
+          {# What is hidden — locked items list #}
+          <div class="bpr-hidden-card">
+            <div class="bpr-hidden-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Private to this buyer only
+            </div>
+            <ul class="bpr-hidden-list" aria-label="Information not shown">
+              {% set hidden_items = [
+                ('Email address',        'Contact details are never shared.'),
+                ('Phone number',         'Communication is through the platform only.'),
+                ('Harvest alert registrations', 'Which crops and regions a buyer is watching.'),
+                ('Purchase history',     'Transaction records are private.'),
+                ('Preferred suppliers',  'Buying preferences are confidential.'),
+                ('Account settings',     'Notification and privacy settings.'),
+              ] %}
+              {% for item, reason in hidden_items %}
+                <li class="bpr-hidden-item">
+                  <div class="bpr-hidden-item-row">
+                    <span class="bpr-lock-icon" aria-hidden="true">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                           stroke="currentColor" stroke-width="2.5"
+                           stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    </span>
+                    <span class="bpr-hidden-name">{{ item }}</span>
+                  </div>
+                  <span class="bpr-hidden-reason">{{ reason }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+
+
+          {# Why explainer — accordion-style expandable #}
+          <div class="bpr-why-card">
+            <button class="bpr-why-toggle" id="bpr-why-btn"
+                    aria-expanded="false" aria-controls="bpr-why-body"
+                    type="button">
+              <span>Why is buyer profile information limited?</span>
+              <svg class="bpr-why-chevron" width="14" height="14"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round"
+                   stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="bpr-why-body" id="bpr-why-body" hidden>
+              <p>
+                FarmLink Intelligence is designed to connect <strong>farmers</strong>
+                (sellers) with <strong>buyers</strong> (purchasers). Farmers
+                have public listings, quality scores, trust scores, and farm
+                profiles — all the information buyers need to make purchasing
+                decisions.
+              </p>
+              <p>
+                Buyers, by contrast, do not sell anything on FarmLink.
+                Their role is to browse, contact farmers, and register
+                pre-order alerts. Exposing their contact details, buying
+                patterns, or alert registrations to other platform users
+                would be a privacy violation with no corresponding benefit.
+              </p>
+              <p>
+                If you need to contact a buyer you transacted with,
+                that communication happens through the transaction
+                record, not through their public profile.
+              </p>
+            </div>
+          </div>
+
+
+          {# Suggest action — go browse or look at a farmer instead #}
+          <div class="bpr-suggest-card" role="complementary"
+               aria-label="Suggested actions">
+            <div class="bpr-suggest-title">Looking for something?</div>
+            <div class="bpr-suggest-row">
+              <a href="{{ url_for('buyer.marketplace') }}"
+                 class="bpr-suggest-item">
+                <div class="bpr-suggest-icon bpr-sicon-teal" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 0 1-8 0"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="bpr-suggest-item-title">Browse marketplace</div>
+                  <div class="bpr-suggest-item-sub">
+                    Find IoT-verified produce listings from farmers.
+                  </div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="bpr-suggest-arrow" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
+
+              {% if current_user.is_buyer() %}
+                <a href="{{ url_for('buyer.alerts') }}"
+                   class="bpr-suggest-item">
+                  <div class="bpr-suggest-icon bpr-sicon-amber" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="bpr-suggest-item-title">My harvest alerts</div>
+                    <div class="bpr-suggest-item-sub">
+                      Manage your pre-order alert registrations.
+                    </div>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round"
+                       class="bpr-suggest-arrow" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </a>
+              {% endif %}
+
+            </div>
+          </div>
+
+        </div>{# /bpr-right #}
+
+      </div>{# /bpr-layout #}
+
+
+    </main>
+
+{% if current_user.is_buyer() %}
+  </div>{# /portal-layout #}
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════════════
+   CSS — all prefixed .bpr-*
+   ════════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── No-sidebar variant (farmer/admin viewing) ─────────────── */
+.bpr-no-sidebar {
+  margin-left: 0 !important;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: calc(56px + 32px) 28px 64px;
+}
+
+/* ── Page layout ────────────────────────────────────────────── */
+.bpr-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── Identity card ──────────────────────────────────────────── */
+.bpr-id-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px 24px;
+  text-align: center;
+  position: sticky;
+  top: calc(56px + 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Avatar — large initials, no photo for privacy */
+.bpr-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--teal-bg);
+  border: 2px solid var(--teal-light);
+  color: var(--teal-mid);
+  font-size: 30px;
+  font-weight: var(--fw-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.bpr-name {
+  font-size: 18px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.015em;
+  margin-bottom: 8px;
+}
+
+.bpr-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  margin-bottom: 20px;
+}
+
+/* Visible details */
+.bpr-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 0;
+  border-top: var(--border);
+  border-bottom: var(--border);
+  margin-bottom: 18px;
+}
+
+.bpr-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-mid);
+}
+
+.bpr-back-btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+/* ── Right column ───────────────────────────────────────────── */
+.bpr-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Privacy banner */
+.bpr-privacy-banner {
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bpr-privacy-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: rgba(15,110,86,0.1);
+  border: 0.5px solid var(--teal-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-mid);
+  flex-shrink: 0;
+}
+
+.bpr-privacy-title {
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-dark);
+  margin-bottom: 5px;
+}
+
+.bpr-privacy-text {
+  font-size: 13px;
+  color: var(--teal-mid);
+  line-height: 1.55;
+}
+
+/* Hidden items card */
+.bpr-hidden-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.bpr-hidden-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+}
+
+.bpr-hidden-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.bpr-hidden-item {
+  padding: 10px 0;
+  border-bottom: var(--border);
+}
+
+.bpr-hidden-item:last-child { border-bottom: none; }
+
+.bpr-hidden-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.bpr-lock-icon {
+  color: var(--gray-mid);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.bpr-hidden-name {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+}
+
+.bpr-hidden-reason {
+  font-size: 11px;
+  color: var(--gray-mid);
+  padding-left: 19px;
+  line-height: 1.45;
+  display: block;
+}
+
+/* Why explainer accordion */
+.bpr-why-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.bpr-why-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.bpr-why-toggle:hover { background: var(--gray-bg); }
+
+.bpr-why-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: var(--gray-mid);
+}
+
+.bpr-why-toggle[aria-expanded="true"] .bpr-why-chevron {
+  transform: rotate(180deg);
+}
+
+.bpr-why-body {
+  padding: 0 20px 20px;
+  border-top: var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: bpr-expand 0.15s ease;
+}
+
+@keyframes bpr-expand {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bpr-why-body p {
+  font-size: 13px;
+  color: var(--gray-mid);
+  line-height: 1.65;
+  padding-top: 10px;
+}
+
+.bpr-why-body p:first-child { padding-top: 16px; }
+
+.bpr-why-body strong { color: var(--black); font-weight: var(--fw-medium); }
+
+/* Suggest card */
+.bpr-suggest-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.bpr-suggest-title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 14px;
+}
+
+.bpr-suggest-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bpr-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+
+.bpr-suggest-item:hover {
+  background: var(--gray-bg);
+  border-color: var(--gray-mid);
+  box-shadow: var(--shadow-sm);
+}
+
+.bpr-suggest-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bpr-sicon-teal  {
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  color: var(--teal-mid);
+}
+
+.bpr-sicon-amber {
+  background: var(--amber-bg);
+  border: 0.5px solid var(--amber-light);
+  color: var(--amber-mid);
+}
+
+.bpr-suggest-item-title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 2px;
+}
+
+.bpr-suggest-item-sub {
+  font-size: 11px;
+  color: var(--gray-mid);
+  line-height: 1.4;
+}
+
+.bpr-suggest-arrow {
+  margin-left: auto;
+  color: var(--gray-light);
+  flex-shrink: 0;
+  transition: color 0.12s, transform 0.12s;
+}
+
+.bpr-suggest-item:hover .bpr-suggest-arrow {
+  color: var(--teal-mid);
+  transform: translateX(2px);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .bpr-layout { grid-template-columns: 1fr; }
+  .bpr-id-card { position: static; }
+}
+
+@media (max-width: 480px) {
+  .bpr-avatar { width: 80px; height: 80px; font-size: 22px; }
+  .bpr-no-sidebar { padding: 80px 14px 48px; }
+}
+</style>
+
+
+{# ── JS: accordion toggle + flash dismiss ────────────────────── #}
+<script>
+(function () {
+  'use strict';
+
+  /* Why accordion */
+  var btn  = document.getElementById('bpr-why-btn');
+  var body = document.getElementById('bpr-why-body');
+
+  if (btn && body) {
+    btn.addEventListener('click', function () {
+      var isOpen = btn.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        btn.setAttribute('aria-expanded', 'false');
+        body.hidden = true;
+      } else {
+        btn.setAttribute('aria-expanded', 'true');
+        body.hidden = false;
+      }
+    });
+  }
+
+  /* Flash auto-dismiss */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4000);
+  });
+
+}());
+</script>
+
+</body>
+</html>
