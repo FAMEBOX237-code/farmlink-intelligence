@@ -180,6 +180,24 @@
 }
 .sidebar-link.is-logout:hover .sidebar-icon { opacity: 1; }
 
+/* Unread badge — shown on Enquiries link when messages are waiting */
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--green-light, #c0dd97);
+  color: var(--sidebar-bg, #1a2e1a);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 
 /* ══════════════════════════════════════════════════════════════
    02  SIDEBAR TOGGLE SYSTEM  (partial: partials/sidebar_farmer.html)
