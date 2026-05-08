@@ -1,0 +1,1544 @@
+{# ============================================================
+   templates/buyer/listing_detail.html — FarmLink Intelligence
+   WF20 — Listing Detail (Public + Buyer Portal)
+
+   Public — no login required.
+   Logged-in buyers see portal topbar + sidebar.
+   Anonymous visitors see public navbar.
+
+   CSS:   public.css → partials.css → buyer.css
+   Route: GET /listings/<listing_id>
+
+   Context (all pre-computed in route):
+     listing         ProduceListing
+     farmer          User
+     farm            Farm
+     q_live          int     — live quality score 0-100
+     q_lock          int     — quality score at listing time
+     q_css           str     — 'high'|'medium'|'low'
+     sensor          dict|None — latest sensor reading
+     total_readings  int     — total IoT readings on this farm
+     forecast        dict|None — harvest forecast data
+     trust_raw       float   — farmer trust score 0-5
+     trust_pct       int     — trust as 0-100 for progress bar
+     trust_css       str     — 'high'|'medium'|'low'
+     rating_count    int     — total buyer ratings
+     avg_rating      float   — average star rating
+     other_listings  list    — other active listings by farmer
+     unread_notifs   int
+     active_alerts   int
+     active_page     str     — 'marketplace'
+     active_nav      str     — 'marketplace'
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+        content="Buy {{ listing.crop_type }} from {{ farmer.full_name }} — IoT quality score {{ q_live }}/100. Sensor-verified produce from {{ farm.region }}, Cameroon.">
+  <title>{{ listing.crop_type }} · {{ farm.name }} · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buyer.css') }}">
+</head>
+
+<body class="{% if current_user.is_authenticated and current_user.is_buyer() %}portal-body{% else %}mkt-public-body{% endif %}">
+
+
+{# ══════════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════════ #}
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+  {% include 'partials/navbar_buyer.html' %}
+{% else %}
+  {% include 'partials/navbar_public.html' %}
+{% endif %}
+
+
+{# Flash messages #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   LAYOUT
+   ══════════════════════════════════════════════════════════════ #}
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+  <div class="portal-layout">
+    {% include 'partials/sidebar_buyer.html' %}
+    <main class="portal-main" id="main" role="main">
+{% else %}
+  <main class="mkt-public-main" id="main" role="main">
+{% endif %}
+
+
+      {# ── Breadcrumb ──────────────────────────────────────── #}
+      <nav class="ld-breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ url_for('buyer.marketplace') }}" class="ld-breadcrumb-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+          Marketplace
+        </a>
+        <span class="ld-breadcrumb-sep" aria-hidden="true">›</span>
+        <span class="ld-breadcrumb-cur">{{ listing.crop_type }}</span>
+      </nav>
+
+
+      {# ════════════════════════════════════════════════════════
+         MAIN DETAIL LAYOUT — two columns
+         Left: photo + all detail cards
+         Right: sticky action/price card
+         ════════════════════════════════════════════════════════ #}
+      <div class="detail-layout">
+
+        {# ══ LEFT COLUMN ═══════════════════════════════════════ #}
+        <div class="ld-left">
+
+          {# ── Hero: photo + title + badges ──────────────────── #}
+          <div class="ld-hero-card detail-card">
+
+            {# Photo or placeholder #}
+            <div class="ld-photo-wrap">
+              {% if listing.photo_url %}
+                <img src="{{ url_for('static', filename=listing.photo_url) }}"
+                     alt="{{ listing.crop_type }} produce photo"
+                     class="ld-photo">
+              {% else %}
+                <div class="ld-photo-placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  <span>No photo uploaded</span>
+                </div>
+              {% endif %}
+
+              {# Quality score overlay #}
+              <div class="ld-q-overlay ld-q-{{ q_css }}" aria-label="Quality score {{ q_live }}/100">
+                <span class="ld-q-num">{{ q_live }}</span>
+                <span class="ld-q-lbl">/ 100</span>
+              </div>
+
+              {# Forecast ribbon if available #}
+              {% if forecast %}
+                <div class="ld-forecast-ribbon" aria-label="Harvest forecast available">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  Harvest forecast available
+                </div>
+              {% endif %}
+            </div>
+
+            {# Title row #}
+            <div class="ld-title-row">
+              <div>
+                <h1 class="ld-crop-title">{{ listing.crop_type }}</h1>
+                <div class="ld-location">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {{ farm.name }}
+                  {% if farm.town %} · {{ farm.town }}{% endif %}
+                  · {{ farm.region }}, Cameroon
+                </div>
+              </div>
+              <div class="ld-posted">
+                Listed {{ listing.created_at.strftime('%d %b %Y') }}
+              </div>
+            </div>
+
+            {# Badge row #}
+            <div class="ld-badge-row">
+              <span class="score-badge score-badge-quality"
+                    aria-label="Live quality score {{ q_live }}">
+                <span class="score-dot score-dot-{{ q_css }}" aria-hidden="true"></span>
+                Quality {{ q_live }}/100
+              </span>
+              <span class="score-badge score-badge-trust"
+                    aria-label="Farmer trust score {{ trust_raw }} out of 5">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Trust {{ trust_raw }}/5
+              </span>
+              {% if forecast %}
+                <span class="ld-badge-forecast">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  Forecast: {{ forecast.window_label }}
+                </span>
+              {% endif %}
+              <span class="ld-badge-neutral">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8"/>
+                </svg>
+                {{ listing.quantity_kg | int }} kg available
+              </span>
+              {% if listing.inquiry_count and listing.inquiry_count > 0 %}
+                <span class="ld-badge-neutral">
+                  {{ listing.inquiry_count }} enquir{{ 'y' if listing.inquiry_count == 1 else 'ies' }}
+                </span>
+              {% endif %}
+            </div>
+
+            {# Description #}
+            {% if listing.description %}
+              <p class="ld-description">{{ listing.description }}</p>
+            {% endif %}
+
+          </div>{# /ld-hero-card #}
+
+
+          {# ── Two column data section ───────────────────────── #}
+          <div class="ld-two-col">
+
+            {# Quality score breakdown card #}
+            <div class="detail-card ld-score-card">
+              <div class="detail-card-title">
+                IoT Quality Score
+                <span class="ld-card-sub">Updated every 30 min</span>
+              </div>
+
+              {# Big score ring #}
+              <div class="ld-score-ring-wrap">
+                <div class="ld-score-ring ld-ring-{{ q_css }}"
+                     role="meter" aria-valuenow="{{ q_live }}"
+                     aria-valuemin="0" aria-valuemax="100"
+                     aria-label="Quality score {{ q_live }} out of 100">
+                  <svg viewBox="0 0 80 80" class="ld-ring-svg" aria-hidden="true">
+                    <circle class="ld-ring-track" cx="40" cy="40" r="32"/>
+                    <circle class="ld-ring-fill ld-ring-fill-{{ q_css }}"
+                            cx="40" cy="40" r="32"
+                            stroke-dasharray="{{ (q_live / 100 * 201.06) | round(1) }} 201.06"/>
+                  </svg>
+                  <div class="ld-ring-inner">
+                    <span class="ld-ring-num">{{ q_live }}</span>
+                    <span class="ld-ring-lbl">/ 100</span>
+                  </div>
+                </div>
+                <div class="ld-score-verdict ld-verdict-{{ q_css }}">
+                  {% if q_css == 'high' %}Excellent conditions
+                  {% elif q_css == 'medium' %}Good conditions
+                  {% else %}Suboptimal conditions{% endif %}
+                </div>
+              </div>
+
+              {# Score factor breakdown #}
+              <div class="ld-score-factors">
+                <div class="detail-card-title" style="margin-bottom:12px">Score factors</div>
+                {% if sensor %}
+                  {# Soil moisture factor (35% weight) #}
+                  {% set sm = sensor.soil_moisture %}
+                  {% set sm_score = [sm * 0.35, 35] | min | round | int %}
+                  <div class="ld-factor-row">
+                    <span class="ld-factor-label">Soil moisture</span>
+                    <div class="ld-factor-bar-wrap" aria-hidden="true">
+                      <div class="ld-factor-bar {% if sm >= 50 %}ld-bar-high{% elif sm >= 30 %}ld-bar-medium{% else %}ld-bar-low{% endif %}"
+                           style="width:{{ sm | round | int }}%"></div>
+                    </div>
+                    <span class="ld-factor-val">{{ sm | round(1) }}%</span>
+                  </div>
+                  {# Temperature factor (30% weight) #}
+                  {% set t = sensor.temperature %}
+                  <div class="ld-factor-row">
+                    <span class="ld-factor-label">Temperature</span>
+                    <div class="ld-factor-bar-wrap" aria-hidden="true">
+                      <div class="ld-factor-bar {% if t <= 30 and t >= 18 %}ld-bar-high{% elif t <= 35 %}ld-bar-medium{% else %}ld-bar-low{% endif %}"
+                           style="width:{% if t <= 30 and t >= 18 %}80{% elif t <= 35 %}55{% else %}30{% endif %}%"></div>
+                    </div>
+                    <span class="ld-factor-val">{{ t | round(1) }}°C</span>
+                  </div>
+                  {# Humidity factor (25% weight) #}
+                  {% set h = sensor.humidity %}
+                  <div class="ld-factor-row">
+                    <span class="ld-factor-label">Humidity</span>
+                    <div class="ld-factor-bar-wrap" aria-hidden="true">
+                      <div class="ld-factor-bar {% if h >= 50 and h <= 80 %}ld-bar-high{% elif h >= 35 %}ld-bar-medium{% else %}ld-bar-low{% endif %}"
+                           style="width:{{ h | round | int }}%"></div>
+                    </div>
+                    <span class="ld-factor-val">{{ h | round(1) }}%</span>
+                  </div>
+                  {# Light factor (10% weight) #}
+                  {% set lux = sensor.light_intensity %}
+                  <div class="ld-factor-row">
+                    <span class="ld-factor-label">Light intensity</span>
+                    <div class="ld-factor-bar-wrap" aria-hidden="true">
+                      <div class="ld-factor-bar ld-bar-high"
+                           style="width:{{ [lux / 100, 100] | min | round | int }}%"></div>
+                    </div>
+                    <span class="ld-factor-val">{{ lux | round | int }} lux</span>
+                  </div>
+                {% else %}
+                  <div class="ld-no-sensor">
+                    No sensor readings available yet.
+                  </div>
+                {% endif %}
+              </div>
+
+              {# Score at listing vs live comparison #}
+              {% if q_lock != q_live %}
+                <div class="ld-score-compare">
+                  <span class="ld-compare-label">Score at listing time</span>
+                  <span class="ld-compare-val">{{ q_lock }}/100</span>
+                </div>
+              {% endif %}
+
+            </div>{# /ld-score-card #}
+
+
+            {# Live sensor data card #}
+            <div class="detail-card ld-sensor-card">
+              <div class="detail-card-title">
+                Live Sensor Data
+                {% if sensor %}
+                  <span class="ld-card-sub">
+                    {{ sensor.timestamp.strftime('%d %b · %H:%M') }}
+                  </span>
+                {% endif %}
+              </div>
+
+              {% if sensor %}
+                <table class="sensor-table" aria-label="Latest sensor readings">
+                  <tbody>
+                    <tr>
+                      <td class="sensor-label">
+                        <div class="ld-sensor-icon-row">
+                          <span class="ld-sensor-dot ld-dot-teal" aria-hidden="true"></span>
+                          Soil moisture
+                        </div>
+                      </td>
+                      <td class="sensor-value">{{ sensor.soil_moisture | round(1) }}%</td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">
+                        <div class="ld-sensor-icon-row">
+                          <span class="ld-sensor-dot ld-dot-amber" aria-hidden="true"></span>
+                          Temperature
+                        </div>
+                      </td>
+                      <td class="sensor-value">{{ sensor.temperature | round(1) }}°C
+                        {% if sensor.temperature > 35 %}
+                          <span class="ld-sensor-warn" title="Heat stress threshold exceeded">⚠</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">
+                        <div class="ld-sensor-icon-row">
+                          <span class="ld-sensor-dot ld-dot-blue" aria-hidden="true"></span>
+                          Humidity
+                        </div>
+                      </td>
+                      <td class="sensor-value">{{ sensor.humidity | round(1) }}%</td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">
+                        <div class="ld-sensor-icon-row">
+                          <span class="ld-sensor-dot ld-dot-amber" aria-hidden="true"></span>
+                          Light intensity
+                        </div>
+                      </td>
+                      <td class="sensor-value">{{ sensor.light_intensity | round | int }} lux</td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">
+                        <div class="ld-sensor-icon-row">
+                          <span class="ld-sensor-dot ld-dot-blue" aria-hidden="true"></span>
+                          Rainfall
+                        </div>
+                      </td>
+                      <td class="sensor-value">
+                        {% if sensor.is_raining %}
+                          <span class="ld-raining">Raining now</span>
+                        {% else %}
+                          Dry
+                        {% endif %}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="ld-sensor-footer">
+                  <div class="ld-readings-count">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    {{ total_readings }} total readings on record
+                  </div>
+                  <div class="ld-sync-chip">
+                    <span class="ld-sync-dot" aria-hidden="true"></span>
+                    IoT Verified
+                  </div>
+                </div>
+
+              {% else %}
+                <div class="ld-no-sensor">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  <span>Sensor data not yet available for this farm.</span>
+                </div>
+              {% endif %}
+
+              {# Farm details mini table #}
+              <div class="ld-farm-details">
+                <div class="detail-card-title" style="margin-top:20px;margin-bottom:12px">
+                  Farm details
+                </div>
+                <table class="sensor-table" aria-label="Farm information">
+                  <tbody>
+                    <tr>
+                      <td class="sensor-label">Farm name</td>
+                      <td class="sensor-value">{{ farm.name }}</td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">Region</td>
+                      <td class="sensor-value">{{ farm.region }}{% if farm.town %}, {{ farm.town }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                      <td class="sensor-label">Primary crop</td>
+                      <td class="sensor-value">{{ farm.crop_type }}</td>
+                    </tr>
+                    {% if farm.size_hectares %}
+                      <tr>
+                        <td class="sensor-label">Farm size</td>
+                        <td class="sensor-value">{{ farm.size_hectares }} ha</td>
+                      </tr>
+                    {% endif %}
+                    <tr>
+                      <td class="sensor-label">Sensor node</td>
+                      <td class="sensor-value">
+                        {% if farm.sensor_node_id %}
+                          <span class="ld-sync-chip" style="display:inline-flex;">
+                            <span class="ld-sync-dot" aria-hidden="true"></span>
+                            Active
+                          </span>
+                        {% else %}
+                          <span style="color:var(--gray-mid)">Not installed</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>{# /ld-sensor-card #}
+
+          </div>{# /ld-two-col #}
+
+
+          {# ── Harvest forecast card ─────────────────────────── #}
+          {% if forecast %}
+            <div class="detail-card ld-forecast-card">
+              <div class="ld-forecast-header">
+                <div class="ld-forecast-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="ld-forecast-title">Harvest Forecast</div>
+                  <div class="ld-forecast-sub">
+                    Predicted from {{ forecast.data_points }} sensor readings
+                    · {{ forecast.buyers_alerted }} buyer{{ 's' if forecast.buyers_alerted != 1 }} alerted
+                  </div>
+                </div>
+                <div class="ld-forecast-conf ld-conf-{{ forecast.conf_css }}"
+                     aria-label="Forecast confidence {{ forecast.confidence }}%">
+                  {{ forecast.confidence }}%<br>
+                  <span style="font-size:10px;font-weight:400">confidence</span>
+                </div>
+              </div>
+
+              <div class="ld-forecast-window">
+                <div class="ld-forecast-stat">
+                  <div class="ld-fstat-num">{{ forecast.window_label }}</div>
+                  <div class="ld-fstat-label">Predicted harvest window</div>
+                </div>
+                <div class="ld-fstat-sep" aria-hidden="true"></div>
+                <div class="ld-forecast-stat">
+                  <div class="ld-fstat-num">
+                    {% if forecast.days_to_start <= 0 %}
+                      Harvest open
+                    {% elif forecast.days_to_start == 1 %}
+                      Tomorrow
+                    {% else %}
+                      {{ forecast.days_to_start }} days
+                    {% endif %}
+                  </div>
+                  <div class="ld-fstat-label">Until harvest opens</div>
+                </div>
+                <div class="ld-fstat-sep" aria-hidden="true"></div>
+                <div class="ld-forecast-stat">
+                  <div class="ld-fstat-num">
+                    {{ forecast.days_to_end }} day{{ 's' if forecast.days_to_end != 1 }}
+                  </div>
+                  <div class="ld-fstat-label">Until window closes</div>
+                </div>
+              </div>
+
+              {% if not current_user.is_authenticated %}
+                <div class="ld-forecast-cta">
+                  <a href="{{ url_for('auth.register') }}" class="btn-buyer-primary">
+                    Register to set up a pre-order alert
+                  </a>
+                </div>
+              {% elif current_user.is_buyer() %}
+                <div class="ld-forecast-cta">
+                  <a href="{{ url_for('buyer.alerts') }}" class="btn-buyer-secondary">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Set up pre-order alert for {{ listing.crop_type }}
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+
+          {# ── Farmer card ───────────────────────────────────── #}
+          <div class="detail-card ld-farmer-card">
+            <div class="detail-card-title">About the farmer</div>
+
+            <div class="ld-farmer-top">
+              <div class="ld-farmer-avatar" aria-hidden="true">
+                {% if farmer.profile_photo_url %}
+                  <img src="{{ url_for('static', filename=farmer.profile_photo_url) }}"
+                       alt="{{ farmer.full_name }}">
+                {% else %}
+                  {{ farmer.full_name[:2].upper() }}
+                {% endif %}
+              </div>
+              <div class="ld-farmer-info">
+                <div class="ld-farmer-name">{{ farmer.full_name }}</div>
+                <div class="ld-farmer-meta">
+                  {{ farm.region }}
+                  {% if farmer.is_verified %}
+                    <span class="ld-verified-pill">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                           stroke="currentColor" stroke-width="3"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Verified
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="ld-farmer-since">
+                  Member since {{ farmer.created_at.strftime('%B %Y') }}
+                </div>
+              </div>
+              <a href="{{ url_for('public.farmer_profile_public', farmer_id=farmer.id) }}"
+                 class="btn-ghost ld-view-profile-btn">
+                View profile
+              </a>
+            </div>
+
+            {# Trust score breakdown #}
+            <div class="ld-trust-section">
+              <div class="ld-trust-header">
+                <div class="ld-trust-score-big">
+                  <span class="ld-trust-num">{{ trust_raw }}</span>
+                  <span class="ld-trust-denom">/5</span>
+                </div>
+                <div class="ld-trust-label-col">
+                  <div class="ld-trust-title">Trust Score</div>
+                  {% if rating_count > 0 %}
+                    <div class="ld-trust-ratings">
+                      {# Star display #}
+                      {% for i in range(1, 6) %}
+                        <svg width="12" height="12" viewBox="0 0 24 24"
+                             fill="{% if i <= avg_rating %}var(--amber-mid){% else %}var(--gray-light){% endif %}"
+                             stroke="{% if i <= avg_rating %}var(--amber-mid){% else %}var(--gray-light){% endif %}"
+                             stroke-width="1.5" aria-hidden="true">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                      {% endfor %}
+                      {{ avg_rating }} · {{ rating_count }} review{{ 's' if rating_count != 1 }}
+                    </div>
+                  {% else %}
+                    <div class="ld-trust-ratings" style="color:var(--gray-mid);font-size:11px">
+                      No ratings yet
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Trust progress bar #}
+              <div class="ld-trust-bar-wrap" aria-hidden="true">
+                <div class="ld-trust-bar ld-trust-bar-{{ trust_css }}"
+                     style="width:{{ trust_pct }}%"></div>
+              </div>
+              <div class="ld-trust-bar-labels" aria-hidden="true">
+                <span>0</span><span>5</span>
+              </div>
+            </div>
+
+            {# Other listings by this farmer #}
+            {% if other_listings %}
+              <div class="ld-other-listings">
+                <div class="detail-card-title" style="margin-bottom:12px">
+                  Other listings by {{ farmer.full_name.split()[0] }}
+                </div>
+                {% for ol in other_listings %}
+                  <a href="{{ url_for('buyer.listing_detail', listing_id=ol.id) }}"
+                     class="ld-other-item">
+                    <div class="ld-other-crop">{{ ol.crop_type }}</div>
+                    <div class="ld-other-price">
+                      {{ "{:,.0f}".format(ol.price_per_kg | float) }} FCFA/kg
+                    </div>
+                    <div class="ld-other-q score-badge score-badge-quality"
+                         style="font-size:10px;padding:2px 7px">
+                      Q{{ ol.quality_score_live or 0 }}
+                    </div>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round"
+                         class="ld-other-arrow" aria-hidden="true">
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                      <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                  </a>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+          </div>{# /ld-farmer-card #}
+
+        </div>{# /ld-left #}
+
+
+        {# ══ RIGHT COLUMN — sticky action card ════════════════ #}
+        <div class="ld-right">
+          <div class="detail-sidebar-card" id="ld-action-card">
+
+            {# Price block #}
+            <div class="detail-price-block">
+              <div class="detail-price-main">
+                {{ "{:,.0f}".format(listing.price_per_kg | float) }}
+                <span style="font-size:14px;font-weight:400;color:var(--gray-mid)">FCFA</span>
+              </div>
+              <div class="detail-price-sub">per kilogram</div>
+              {% if listing.min_order_kg %}
+                <div class="ld-min-order">
+                  Minimum order: {{ listing.min_order_kg | int }} kg
+                </div>
+              {% endif %}
+            </div>
+
+            {# Key listing stats #}
+            <div class="ld-action-stats">
+              <div class="ld-action-stat">
+                <span class="ld-action-stat-label">Available</span>
+                <span class="ld-action-stat-val">{{ listing.quantity_kg | int }} kg</span>
+              </div>
+              <div class="ld-action-stat">
+                <span class="ld-action-stat-label">Quality</span>
+                <span class="ld-action-stat-val ld-astat-{{ q_css }}">{{ q_live }}/100</span>
+              </div>
+              <div class="ld-action-stat">
+                <span class="ld-action-stat-label">Trust</span>
+                <span class="ld-action-stat-val">{{ trust_raw }}/5</span>
+              </div>
+              {% if forecast %}
+                <div class="ld-action-stat">
+                  <span class="ld-action-stat-label">Harvest in</span>
+                  <span class="ld-action-stat-val" style="color:var(--amber-mid)">
+                    {% if forecast.days_to_start <= 0 %}Now{% else %}{{ forecast.days_to_start }}d{% endif %}
+                  </span>
+                </div>
+              {% endif %}
+            </div>
+
+            {# CTA buttons #}
+            <div class="detail-action-stack">
+              {% if current_user.is_authenticated and current_user.is_buyer() %}
+                {# Logged-in buyer — opens contact modal #}
+                <button type="button"
+                        class="btn-buyer-primary"
+                        onclick="openContactModal()"
+                        aria-haspopup="dialog">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  Contact farmer
+                </button>
+                {% if forecast %}
+                  <a href="{{ url_for('buyer.alerts') }}" class="btn-buyer-secondary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Set pre-order alert
+                  </a>
+                {% endif %}
+                <a href="{{ url_for('buyer.marketplace') }}" class="btn-ghost">
+                  ← Back to marketplace
+                </a>
+
+              {% elif current_user.is_authenticated %}
+                {# Logged in but not a buyer — farmer or admin visiting #}
+                <div class="ld-not-buyer-note">
+                  You are logged in as a
+                  {{ 'farmer' if current_user.is_farmer() else 'administrator' }}.
+                  Contact actions are for buyers only.
+                </div>
+                <a href="{{ url_for('buyer.marketplace') }}" class="btn-ghost">
+                  ← Back to marketplace
+                </a>
+
+              {% else %}
+                {# Anonymous — prompt to register #}
+                <a href="{{ url_for('auth.register') }}" class="btn-buyer-primary">
+                  Register to contact farmer
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn-ghost">
+                  Log in to your account
+                </a>
+                <a href="{{ url_for('buyer.marketplace') }}" class="btn-ghost">
+                  ← Back to marketplace
+                </a>
+              {% endif %}
+            </div>
+
+            {# IoT trust note #}
+            <div class="ld-trust-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Quality score computed from live IoT sensor data.
+              Last updated {{ sensor.timestamp.strftime('%d %b %Y, %H:%M') if sensor else 'N/A' }}.
+            </div>
+
+          </div>{# /detail-sidebar-card #}
+        </div>{# /ld-right #}
+
+      </div>{# /detail-layout #}
+
+
+    </main>
+
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+  </div>{# /portal-layout #}
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   LISTING DETAIL CSS — all prefixed .ld-*
+   ══════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── Public body ─────────────────────────────────────────────── */
+.mkt-public-body {
+  font-family: var(--font-sans);
+  background: var(--gray-bg);
+  color: var(--black);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+.mkt-public-main {
+  max-width: var(--max-width, 1100px);
+  margin: 0 auto;
+  padding: calc(var(--nav-height, 64px) + 24px) 28px 80px;
+}
+
+/* ── Breadcrumb ─────────────────────────────────────────────── */
+.ld-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.ld-breadcrumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--gray-mid);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.ld-breadcrumb-link:hover { color: var(--teal-mid); }
+.ld-breadcrumb-sep { color: var(--gray-light); font-size: 14px; }
+.ld-breadcrumb-cur { font-size: 13px; color: var(--black); font-weight: var(--fw-medium); }
+
+/* ── Two column layout ──────────────────────────────────────── */
+.ld-left  { min-width: 0; }
+.ld-right { min-width: 0; }
+
+/* detail-layout already defined in buyer.css */
+
+/* ── Hero card ──────────────────────────────────────────────── */
+.ld-hero-card { padding: 0; overflow: hidden; margin-bottom: 18px; }
+
+.ld-photo-wrap {
+  position: relative;
+  height: 280px;
+  background: var(--green-bg);
+  overflow: hidden;
+}
+.ld-photo {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ld-photo-placeholder {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--green-light);
+  font-size: 12px;
+}
+
+/* Quality overlay — top right of photo */
+.ld-q-overlay {
+  position: absolute;
+  top: 14px; right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+}
+.ld-q-high   { background: rgba(15,110,86,0.9); color:#fff; }
+.ld-q-medium { background: rgba(133,79,11,0.9);  color:#fff; }
+.ld-q-low    { background: rgba(163,45,45,0.9);  color:#fff; }
+.ld-q-num  { font-size: 22px; font-weight: var(--fw-medium); line-height: 1; }
+.ld-q-lbl  { font-size: 10px; opacity: 0.8; }
+
+/* Forecast ribbon on photo */
+.ld-forecast-ribbon {
+  position: absolute;
+  bottom: 12px; left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-dark);
+  background: rgba(250,238,218,0.92);
+  border: 0.5px solid var(--amber-light);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  backdrop-filter: blur(6px);
+}
+
+/* Title + badges under photo */
+.ld-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 10px;
+}
+.ld-crop-title {
+  font-size: 22px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.02em;
+  margin-bottom: 5px;
+}
+.ld-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--gray-mid);
+}
+.ld-posted {
+  font-size: 11px;
+  color: var(--gray-mid);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ld-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 22px 16px;
+}
+.ld-badge-forecast {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-dark);
+  background: var(--amber-bg);
+  border: 0.5px solid var(--amber-light);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+}
+.ld-badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+}
+.ld-description {
+  font-size: 13px;
+  color: var(--gray-mid);
+  line-height: 1.65;
+  padding: 0 22px 20px;
+  border-top: var(--border);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+/* ── Two col under hero ─────────────────────────────────────── */
+.ld-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+/* card-sub label next to card title */
+.ld-card-sub {
+  font-size: 10px;
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Score ring ─────────────────────────────────────────────── */
+.ld-score-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.ld-score-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 10px;
+}
+.ld-ring-svg {
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.ld-ring-track {
+  fill: none;
+  stroke: var(--gray-bg);
+  stroke-width: 6;
+}
+.ld-ring-fill {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+.ld-ring-fill-high   { stroke: var(--teal-mid); }
+.ld-ring-fill-medium { stroke: var(--amber-mid); }
+.ld-ring-fill-low    { stroke: #A32D2D; }
+.ld-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ld-ring-num { font-size: 24px; font-weight: var(--fw-medium); color: var(--black); line-height: 1; }
+.ld-ring-lbl { font-size: 10px; color: var(--gray-mid); }
+.ld-score-verdict {
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+}
+.ld-verdict-high   { color: var(--teal-mid);  background: var(--teal-bg);  }
+.ld-verdict-medium { color: var(--amber-mid); background: var(--amber-bg); }
+.ld-verdict-low    { color: #A32D2D;          background: #FDF2F2;         }
+
+/* Score factor bars */
+.ld-score-factors { display: flex; flex-direction: column; gap: 10px; }
+.ld-factor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ld-factor-label {
+  font-size: 11px;
+  color: var(--gray-mid);
+  width: 90px;
+  flex-shrink: 0;
+}
+.ld-factor-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.ld-factor-bar {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.5s ease;
+}
+.ld-bar-high   { background: var(--teal-mid); }
+.ld-bar-medium { background: var(--amber-mid); }
+.ld-bar-low    { background: #A32D2D; }
+.ld-factor-val {
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Score comparison row */
+.ld-score-compare {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: var(--border);
+  font-size: 12px;
+}
+.ld-compare-label { color: var(--gray-mid); }
+.ld-compare-val   { color: var(--black); font-weight: var(--fw-medium); }
+
+/* ── Sensor data card ───────────────────────────────────────── */
+.ld-sensor-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.ld-dot-teal  { background: var(--teal-mid); }
+.ld-dot-amber { background: var(--amber-mid); }
+.ld-dot-blue  { background: #185FA5; }
+.ld-sensor-icon-row {
+  display: flex; align-items: center; gap: 7px;
+}
+.ld-raining {
+  color: #185FA5;
+  font-weight: var(--fw-medium);
+}
+.ld-sensor-warn { color: var(--amber-mid); font-size: 12px; margin-left: 3px; }
+.ld-sensor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: var(--border);
+}
+.ld-readings-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+.ld-sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+.ld-sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal-mid);
+  animation: ld-pulse 2s infinite;
+}
+@keyframes ld-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.5; transform:scale(0.8); }
+}
+.ld-no-sensor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: var(--gray-mid);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ── Forecast card ──────────────────────────────────────────── */
+.ld-forecast-card { margin-bottom: 18px; }
+.ld-forecast-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.ld-forecast-icon {
+  width: 42px; height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--amber-bg);
+  border: 0.5px solid var(--amber-light);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--amber-mid);
+  flex-shrink: 0;
+}
+.ld-forecast-title {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 3px;
+}
+.ld-forecast-sub {
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+.ld-forecast-conf {
+  margin-left: auto;
+  font-size: 18px;
+  font-weight: var(--fw-medium);
+  text-align: center;
+  flex-shrink: 0;
+}
+.ld-conf-high   { color: var(--teal-mid); }
+.ld-conf-medium { color: var(--amber-mid); }
+.ld-conf-low    { color: #A32D2D; }
+
+.ld-forecast-window {
+  display: flex;
+  align-items: center;
+  background: var(--amber-bg);
+  border: 0.5px solid var(--amber-light);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  gap: 0;
+  margin-bottom: 16px;
+}
+.ld-forecast-stat { flex: 1; text-align: center; }
+.ld-fstat-sep {
+  width: 0.5px;
+  height: 36px;
+  background: var(--amber-light);
+  flex-shrink: 0;
+}
+.ld-fstat-num {
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-dark);
+  margin-bottom: 3px;
+}
+.ld-fstat-label {
+  font-size: 10px;
+  color: var(--amber-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ld-forecast-cta {
+  padding-top: 14px;
+  border-top: var(--border);
+}
+
+/* ── Farmer card ────────────────────────────────────────────── */
+.ld-farmer-card { margin-bottom: 18px; }
+.ld-farmer-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: var(--border);
+  flex-wrap: wrap;
+}
+.ld-farmer-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  border: 0.5px solid var(--green-light);
+  color: var(--green-mid);
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.ld-farmer-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.ld-farmer-info { flex: 1; min-width: 0; }
+.ld-farmer-name { font-size: 16px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 3px; }
+.ld-farmer-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--gray-mid); margin-bottom: 3px;
+}
+.ld-farmer-since { font-size: 11px; color: var(--gray-mid); }
+.ld-verified-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+}
+.ld-view-profile-btn { flex-shrink: 0; font-size: 12px; padding: 6px 12px; }
+
+/* Trust section */
+.ld-trust-section { margin-bottom: 18px; }
+.ld-trust-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+}
+.ld-trust-score-big { display: flex; align-items: baseline; gap: 2px; }
+.ld-trust-num { font-size: 32px; font-weight: var(--fw-medium); color: var(--black); letter-spacing: -0.03em; }
+.ld-trust-denom { font-size: 14px; color: var(--gray-mid); }
+.ld-trust-title { font-size: 13px; font-weight: var(--fw-medium); color: var(--black); margin-bottom: 4px; }
+.ld-trust-ratings {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 11px; color: var(--gray-mid);
+}
+.ld-trust-bar-wrap {
+  height: 6px; background: var(--gray-bg);
+  border-radius: var(--radius-pill); overflow: hidden; margin-bottom: 4px;
+}
+.ld-trust-bar { height: 100%; border-radius: var(--radius-pill); transition: width 0.5s ease; }
+.ld-trust-bar-high   { background: var(--teal-mid); }
+.ld-trust-bar-medium { background: var(--amber-mid); }
+.ld-trust-bar-low    { background: #A32D2D; }
+.ld-trust-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--gray-mid);
+}
+
+/* Other listings */
+.ld-other-listings { padding-top: 18px; border-top: var(--border); }
+.ld-other-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: var(--border);
+  text-decoration: none; color: inherit;
+  transition: background 0.1s;
+}
+.ld-other-item:last-child { border-bottom: none; }
+.ld-other-item:hover { background: var(--gray-bg); border-radius: var(--radius-md); padding-left: 8px; }
+.ld-other-crop { flex: 1; font-size: 13px; font-weight: var(--fw-medium); color: var(--black); }
+.ld-other-price { font-size: 12px; color: var(--gray-mid); white-space: nowrap; }
+.ld-other-q { flex-shrink: 0; }
+.ld-other-arrow { color: var(--gray-light); flex-shrink: 0; }
+.ld-other-item:hover .ld-other-arrow { color: var(--teal-mid); }
+
+/* ── Action card (right column) ─────────────────────────────── */
+.ld-min-order {
+  font-size: 11px; color: var(--gray-mid); margin-top: 5px;
+}
+.ld-action-stats {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 18px;
+}
+.ld-action-stat {
+  background: var(--gray-bg); border: var(--border);
+  border-radius: var(--radius-md); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.ld-action-stat-label { font-size: 10px; color: var(--gray-mid); text-transform: uppercase; letter-spacing: 0.06em; }
+.ld-action-stat-val { font-size: 16px; font-weight: var(--fw-medium); color: var(--black); }
+.ld-astat-high   { color: var(--teal-mid); }
+.ld-astat-medium { color: var(--amber-mid); }
+.ld-astat-low    { color: #A32D2D; }
+.ld-not-buyer-note {
+  font-size: 12px; color: var(--gray-mid);
+  background: var(--gray-bg); border: var(--border);
+  border-radius: var(--radius-md); padding: 12px 14px;
+  line-height: 1.55;
+}
+.ld-trust-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 11px; color: var(--gray-mid);
+  margin-top: 14px; padding-top: 14px; border-top: var(--border);
+  line-height: 1.55;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .ld-two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-sidebar-card { position: static; }
+  .ld-right { order: -1; }
+}
+@media (max-width: 600px) {
+  .ld-photo-wrap { height: 200px; }
+  .ld-title-row { flex-direction: column; gap: 6px; }
+  .ld-farmer-top { flex-direction: column; }
+  .ld-forecast-window { flex-direction: column; gap: 14px; }
+  .ld-fstat-sep { width: 100%; height: 0.5px; }
+  .ld-action-stats { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .mkt-public-main { padding: 80px 14px 48px; }
+  .ld-badge-row { gap: 5px; }
+}
+
+/* ── Contact modal ───────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 900; padding: 20px;
+}
+.modal-box {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: var(--border);
+  width: 100%; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: var(--border);
+}
+.modal-title {
+  font-size: 15px; font-weight: var(--fw-medium);
+  color: var(--black); margin-bottom: 3px;
+}
+.modal-sub { font-size: 12px; color: var(--gray-mid); }
+.modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-mid); padding: 2px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0; margin-top: 2px;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--black); }
+.modal-form { padding: 20px; }
+.modal-label {
+  display: flex; justify-content: space-between;
+  font-size: 12px; font-weight: var(--fw-medium);
+  color: var(--black); margin-bottom: 6px;
+}
+.modal-char-count { font-weight: 400; color: var(--gray-mid); }
+.modal-textarea {
+  width: 100%; box-sizing: border-box;
+  border: var(--border); border-radius: var(--radius-md);
+  padding: 10px 12px; font-size: 13px; color: var(--black);
+  font-family: inherit; resize: vertical; min-height: 110px;
+  background: var(--white); transition: border-color 0.15s;
+}
+.modal-textarea:focus {
+  outline: none; border-color: var(--teal-mid);
+  box-shadow: 0 0 0 3px rgba(var(--teal-rgb, 45,130,110),0.08);
+}
+.modal-farmer-note {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 11px; color: var(--gray-mid);
+  margin: 10px 0 18px; line-height: 1.5;
+}
+.modal-farmer-note svg { flex-shrink: 0; margin-top: 1px; }
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.modal-cancel { font-size: 13px; }
+.modal-submit { font-size: 13px; }
+</style>
+
+
+{# ══════════════════════════════════════════════════════════
+   CONTACT MODAL — buyer sends enquiry to farmer about listing
+   Only rendered for logged-in buyers.
+   ══════════════════════════════════════════════════════════ #}
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+<div id="contact-modal-overlay"
+     class="modal-overlay"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="contact-modal-title"
+     style="display:none">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="contact-modal-title">
+          Contact {{ farmer.full_name.split()[0] }}
+        </div>
+        <div class="modal-sub">
+          About: {{ listing.crop_type }} · {{ farm.name }}
+        </div>
+      </div>
+      <button type="button"
+              class="modal-close"
+              onclick="closeContactModal()"
+              aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="POST"
+          action="{{ url_for('buyer.contact_send') }}"
+          class="modal-form">
+      <input type="hidden" name="csrf_token"    value="{{ csrf_token() }}">
+      <input type="hidden" name="recipient_id"  value="{{ farmer.id }}">
+      <input type="hidden" name="context_type"  value="listing_enquiry">
+      <input type="hidden" name="listing_id"    value="{{ listing.id }}">
+      <input type="hidden" name="redirect_back" value="{{ request.url }}">
+
+      <label class="modal-label" for="contact-message">
+        Your message
+        <span class="modal-char-count" id="modal-char-count">0 / 1000</span>
+      </label>
+      <textarea id="contact-message"
+                name="message"
+                class="modal-textarea"
+                rows="5"
+                maxlength="1000"
+                placeholder="Hi, I am interested in your {{ listing.crop_type }}. Could you tell me more about availability and delivery options?"
+                required
+                oninput="updateCharCount(this)"></textarea>
+
+      <div class="modal-farmer-note">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ farmer.full_name }} will be notified and can reply from their dashboard.
+      </div>
+
+      <div class="modal-actions">
+        <button type="button"
+                class="btn-ghost modal-cancel"
+                onclick="closeContactModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn-buyer-primary modal-submit">
+          Send message
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endif %}
+
+
+{# ── JS: Modal open/close + char counter ─────────────────────── #}
+<script>
+(function () {
+  'use strict';
+
+  window.openContactModal = function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    var ta = document.getElementById('contact-message');
+    if (ta) setTimeout(function () { ta.focus(); }, 60);
+  };
+
+  window.closeContactModal = function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  window.updateCharCount = function (el) {
+    var counter = document.getElementById('modal-char-count');
+    if (counter) counter.textContent = el.value.length + ' / 1000';
+  };
+
+  /* Close on overlay click (outside the box) */
+  document.addEventListener('DOMContentLoaded', function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) window.closeContactModal();
+      });
+    }
+  });
+
+  /* Close on Escape key */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.closeContactModal();
+  });
+}());
+</script>
+
+
+{# ── JS: Flash auto-dismiss ──────────────────────────────────── #}
+<script>
+(function () {
+  'use strict';
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4000);
+  });
+}());
+</script>
+
+</body>
+</html>
