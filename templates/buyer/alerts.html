@@ -1,0 +1,942 @@
+{# ============================================================
+   templates/buyer/alerts.html — FarmLink Intelligence
+   WF21 — My Harvest Alerts
+
+   Login required. Buyer only.
+   CSS:   public.css → partials.css → buyer.css
+   Route: GET|POST /buyer/alerts
+
+   Context:
+     all_alerts       list[BuyerAlert] — all buyer alerts
+     display_alerts   list[BuyerAlert] — filtered by active tab
+     active_tab       str — 'all'|'triggered'|'watching'|'inactive'
+     all_count        int
+     active_count     int
+     triggered_count  int
+     inactive_count   int
+     regions          list[str] — for create form dropdown
+     unread_notifs    int
+     active_alerts    int
+     active_page      str — 'alerts'
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Harvest Alerts · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buyer.css') }}">
+</head>
+<body class="portal-body">
+
+{# ── Topbar ──────────────────────────────────────────────────── #}
+{% include 'partials/navbar_buyer.html' %}
+
+{# Flash messages #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<div class="portal-layout">
+  {% include 'partials/sidebar_buyer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header ─────────────────────────────────────────── #}
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <h1 class="page-title">Harvest Alerts</h1>
+          <p class="page-subtitle">
+            Register standing alerts — get notified before produce is harvested,
+            before it ever appears on the marketplace.
+          </p>
+        </div>
+        <button class="btn-buyer-primary" id="al-create-btn"
+                aria-expanded="false" aria-controls="al-create-panel">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New alert
+        </button>
+      </div>
+    </div>
+
+
+    {# ════════════════════════════════════════════════════════════
+       CREATE ALERT PANEL — slides open on button click
+       ════════════════════════════════════════════════════════════ #}
+    <div class="al-create-panel" id="al-create-panel" hidden>
+      <div class="al-create-inner">
+
+        <div class="al-create-header">
+          <div>
+            <div class="al-create-title">New pre-order alert</div>
+            <div class="al-create-sub">
+              You'll receive an in-app notification when a matching
+              harvest forecast is generated.
+            </div>
+          </div>
+          <button class="al-create-close" id="al-create-close"
+                  aria-label="Close create panel" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('buyer.alerts') }}"
+              class="al-create-form" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="create">
+
+          <div class="al-form-grid">
+
+            {# Crop type #}
+            <div class="form-field">
+              <label class="form-label" for="al-produce">
+                Crop type <span class="al-required" aria-hidden="true">*</span>
+              </label>
+              <input type="text" id="al-produce" name="produce_type"
+                     class="form-input" required
+                     placeholder="e.g. Tomatoes, Maize, Cassava…"
+                     autocomplete="off"
+                     list="al-crop-suggestions">
+              <datalist id="al-crop-suggestions">
+                {% set common_crops = ['Tomatoes', 'Maize', 'Cassava', 'Plantain',
+                                       'Groundnuts', 'Sweet Potatoes', 'Yams',
+                                       'Cocoa', 'Coffee', 'Palm Oil', 'Onions',
+                                       'Peppers', 'Cabbage', 'Carrots'] %}
+                {% for crop in common_crops %}
+                  <option value="{{ crop }}">
+                {% endfor %}
+              </datalist>
+              <span class="form-hint">
+                Type a crop name — we'll alert you for any listing that matches.
+              </span>
+            </div>
+
+            {# Region #}
+            <div class="form-field">
+              <label class="form-label" for="al-region">
+                Region <span class="al-required" aria-hidden="true">*</span>
+              </label>
+              <div class="filter-select-wrap">
+                <select id="al-region" name="region" class="form-select" required>
+                  <option value="">Select a region…</option>
+                  {% if regions %}
+                    {% for r in regions %}
+                      <option value="{{ r }}">{{ r }}</option>
+                    {% endfor %}
+                  {% else %}
+                    {# Fallback — Cameroon regions #}
+                    {% for r in ['Adamawa', 'Centre', 'East', 'Far North',
+                                  'Littoral', 'North', 'Northwest', 'South',
+                                  'Southwest', 'West'] %}
+                      <option value="{{ r }}">{{ r }}</option>
+                    {% endfor %}
+                  {% endif %}
+                </select>
+                <svg class="filter-select-chevron" width="11" height="11"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
+
+            {# Min quality score #}
+            <div class="form-field">
+              <label class="form-label" for="al-quality">
+                Minimum quality score
+              </label>
+              <div class="filter-select-wrap">
+                <select id="al-quality" name="min_quality_score" class="form-select">
+                  <option value="0">Any quality</option>
+                  <option value="25">25+ (Basic)</option>
+                  <option value="50">50+ (Good)</option>
+                  <option value="70">70+ (High)</option>
+                  <option value="85">85+ (Excellent)</option>
+                </select>
+                <svg class="filter-select-chevron" width="11" height="11"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
+
+            {# Min quantity #}
+            <div class="form-field">
+              <label class="form-label" for="al-qty">
+                Minimum quantity (kg)
+              </label>
+              <input type="number" id="al-qty" name="min_quantity_kg"
+                     class="form-input" min="0" step="10"
+                     placeholder="0 = any quantity">
+              <span class="form-hint">Leave at 0 to alert for any quantity.</span>
+            </div>
+
+          </div>{# /al-form-grid #}
+
+          <div class="al-form-actions">
+            <button type="submit" class="btn-buyer-primary">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              Create alert
+            </button>
+            <button type="button" class="btn-ghost" id="al-cancel-btn">
+              Cancel
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+
+    {# ════════════════════════════════════════════════════════════
+       SUMMARY METRICS
+       ════════════════════════════════════════════════════════════ #}
+    <div class="al-metrics" role="region" aria-label="Alert summary">
+      <div class="al-metric">
+        <div class="al-metric-num">{{ all_count }}</div>
+        <div class="al-metric-label">Total alerts</div>
+      </div>
+      <div class="al-metric al-metric-teal">
+        <div class="al-metric-num">{{ active_alerts }}</div>
+        <div class="al-metric-label">Active watching</div>
+      </div>
+      <div class="al-metric al-metric-amber">
+        <div class="al-metric-num">{{ triggered_count }}</div>
+        <div class="al-metric-label">Triggered</div>
+      </div>
+      <div class="al-metric al-metric-gray">
+        <div class="al-metric-num">{{ inactive_count }}</div>
+        <div class="al-metric-label">Paused</div>
+      </div>
+    </div>
+
+
+    {# ════════════════════════════════════════════════════════════
+       TAB BAR
+       ════════════════════════════════════════════════════════════ #}
+    <nav class="notif-tabs" aria-label="Filter alerts" role="tablist">
+      <a href="{{ url_for('buyer.alerts', tab='all') }}"
+         class="notif-tab{% if active_tab == 'all' %} is-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'all' else 'false' }}">
+        All
+        {% if all_count > 0 %}
+          <span class="al-tab-count">{{ all_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{{ url_for('buyer.alerts', tab='triggered') }}"
+         class="notif-tab{% if active_tab == 'triggered' %} is-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'triggered' else 'false' }}">
+        Triggered
+        {% if triggered_count > 0 %}
+          <span class="al-tab-count al-tab-count-amber">{{ triggered_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{{ url_for('buyer.alerts', tab='watching') }}"
+         class="notif-tab{% if active_tab == 'watching' %} is-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'watching' else 'false' }}">
+        Watching
+        {% if active_count > 0 %}
+          <span class="al-tab-count al-tab-count-teal">{{ active_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{{ url_for('buyer.alerts', tab='inactive') }}"
+         class="notif-tab{% if active_tab == 'inactive' %} is-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'inactive' else 'false' }}">
+        Paused
+        {% if inactive_count > 0 %}
+          <span class="al-tab-count">{{ inactive_count }}</span>
+        {% endif %}
+      </a>
+    </nav>
+
+
+    {# ════════════════════════════════════════════════════════════
+       ALERT LIST
+       ════════════════════════════════════════════════════════════ #}
+    {% if display_alerts %}
+
+      <div class="al-list" role="list" aria-label="Your harvest alerts">
+
+        {% for alert in display_alerts %}
+          <div class="al-card {% if alert.triggered_count > 0 %}al-card-triggered{% elif not alert.is_active %}al-card-inactive{% endif %}"
+               role="listitem">
+
+            {# Card header — crop + region + status pill #}
+            <div class="al-card-header">
+              <div class="al-card-icon {% if alert.triggered_count > 0 %}al-icon-amber{% elif not alert.is_active %}al-icon-gray{% else %}al-icon-teal{% endif %}"
+                   aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </div>
+
+              <div class="al-card-title-block">
+                <div class="al-card-crop">{{ alert.produce_type }}</div>
+                <div class="al-card-region">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {{ alert.region }}
+                </div>
+              </div>
+
+              <div class="al-card-status">
+                {% if alert.triggered_count > 0 %}
+                  <span class="alert-status-pill is-triggered">
+                    <span class="al-status-dot al-dot-amber" aria-hidden="true"></span>
+                    Triggered {{ alert.triggered_count }}×
+                  </span>
+                {% elif alert.is_active %}
+                  <span class="alert-status-pill is-active">
+                    <span class="al-status-dot al-dot-teal" aria-hidden="true"></span>
+                    Watching
+                  </span>
+                {% else %}
+                  <span class="alert-status-pill is-inactive">
+                    Paused
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+
+            {# Card body — criteria chips #}
+            <div class="al-card-body">
+              <div class="al-criteria-row">
+                {% if alert.min_quality_score and alert.min_quality_score > 0 %}
+                  <span class="al-criteria-chip al-chip-quality">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Quality ≥ {{ alert.min_quality_score }}
+                  </span>
+                {% else %}
+                  <span class="al-criteria-chip al-chip-neutral">Any quality</span>
+                {% endif %}
+
+                {% if alert.min_trust_score and alert.min_trust_score > 0 %}
+                  <span class="al-criteria-chip al-chip-trust">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    Trust ≥ {{ alert.min_trust_score }}
+                  </span>
+                {% endif %}
+
+                {% if alert.min_quantity_kg and alert.min_quantity_kg > 0 %}
+                  <span class="al-criteria-chip al-chip-neutral">
+                    Min {{ alert.min_quantity_kg | int }} kg
+                  </span>
+                {% else %}
+                  <span class="al-criteria-chip al-chip-neutral">Any quantity</span>
+                {% endif %}
+
+                <span class="al-criteria-chip al-chip-date">
+                  Created {{ alert.created_at.strftime('%d %b %Y') }}
+                </span>
+              </div>
+            </div>
+
+            {# Card footer — actions #}
+            <div class="al-card-footer">
+              {# Toggle active/inactive #}
+              <form method="POST" action="{{ url_for('buyer.alerts') }}"
+                    style="display:inline" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="toggle">
+                <input type="hidden" name="alert_id" value="{{ alert.id }}">
+                <button type="submit"
+                        class="btn-ghost al-action-btn"
+                        aria-label="{{ 'Pause' if alert.is_active else 'Resume' }} alert for {{ alert.produce_type }}">
+                  {% if alert.is_active %}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="6" y="4" width="4" height="16"/>
+                      <rect x="14" y="4" width="4" height="16"/>
+                    </svg>
+                    Pause
+                  {% else %}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Resume
+                  {% endif %}
+                </button>
+              </form>
+
+              {# View matching listings #}
+              <a href="{{ url_for('buyer.marketplace', crop=alert.produce_type, region=alert.region) }}"
+                 class="btn-buyer-secondary al-action-btn"
+                 aria-label="Browse {{ alert.produce_type }} listings in {{ alert.region }}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+                Browse listings
+              </a>
+
+              {# Delete #}
+              <form method="POST" action="{{ url_for('buyer.alerts') }}"
+                    style="display:inline" novalidate
+                    onsubmit="return confirm('Delete this alert permanently?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="alert_id" value="{{ alert.id }}">
+                <button type="submit" class="btn-danger al-action-btn"
+                        aria-label="Delete alert for {{ alert.produce_type }}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6"/><path d="M14 11v6"/>
+                    <path d="M9 6V4h6v2"/>
+                  </svg>
+                  Delete
+                </button>
+              </form>
+            </div>
+
+          </div>{# /al-card #}
+        {% endfor %}
+
+      </div>{# /al-list #}
+
+
+    {% else %}
+
+      {# ── Empty state ────────────────────────────────────────── #}
+      <div class="empty-state" role="status">
+        <div class="empty-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        {% if active_tab == 'triggered' %}
+          <h2 class="empty-title">No triggered alerts yet</h2>
+          <p class="empty-text">
+            When a harvest forecast matches one of your alerts,
+            it appears here and you get notified instantly.
+          </p>
+        {% elif active_tab == 'watching' %}
+          <h2 class="empty-title">No active alerts</h2>
+          <p class="empty-text">
+            Create a new alert to start watching for a crop.
+          </p>
+        {% elif active_tab == 'inactive' %}
+          <h2 class="empty-title">No paused alerts</h2>
+          <p class="empty-text">
+            Alerts you pause appear here. You can resume them anytime.
+          </p>
+        {% else %}
+          <h2 class="empty-title">No harvest alerts yet</h2>
+          <p class="empty-text">
+            Register an alert for a crop and region — FarmLink will notify you
+            the moment a harvest forecast is generated, before the listing
+            even appears on the marketplace.
+          </p>
+          <button class="btn-buyer-primary" id="al-empty-cta">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Create your first alert
+          </button>
+        {% endif %}
+      </div>
+
+    {% endif %}
+
+
+    {# ── How it works explainer (only if zero alerts total) ──── #}
+    {% if all_count == 0 %}
+      <div class="al-explainer" role="complementary" aria-label="How harvest alerts work">
+        <div class="al-explainer-title">How harvest alerts work</div>
+        <div class="al-explainer-steps">
+          <div class="al-step">
+            <div class="al-step-num" aria-hidden="true">1</div>
+            <div class="al-step-body">
+              <div class="al-step-title">Register your interest</div>
+              <div class="al-step-text">
+                Tell FarmLink which crop and region you need.
+                Set optional quality and quantity thresholds.
+              </div>
+            </div>
+          </div>
+          <div class="al-step-arrow" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </div>
+          <div class="al-step">
+            <div class="al-step-num al-step-num-teal" aria-hidden="true">2</div>
+            <div class="al-step-body">
+              <div class="al-step-title">Sensor data builds a forecast</div>
+              <div class="al-step-text">
+                After 28 days of IoT readings, the system predicts the harvest
+                window automatically — no farmer input needed.
+              </div>
+            </div>
+          </div>
+          <div class="al-step-arrow" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </div>
+          <div class="al-step">
+            <div class="al-step-num al-step-num-amber" aria-hidden="true">3</div>
+            <div class="al-step-body">
+              <div class="al-step-title">You're notified first</div>
+              <div class="al-step-text">
+                FarmLink notifies you with the predicted harvest window
+                before the produce even appears on the marketplace.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+
+  </main>
+</div>{# /portal-layout #}
+
+
+{# ════════════════════════════════════════════════════════════════
+   ALERTS PAGE CSS — all prefixed .al-*
+   ════════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── Create panel ─────────────────────────────────────────────── */
+.al-create-panel {
+  background: var(--white);
+  border: var(--border);
+  border-left: 3px solid var(--teal-mid);
+  border-radius: var(--radius-lg);
+  margin-bottom: 24px;
+  overflow: hidden;
+  animation: al-slide-in 0.18s ease;
+}
+
+@keyframes al-slide-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.al-create-inner { padding: 24px; }
+
+.al-create-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: var(--border);
+}
+
+.al-create-title {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 3px;
+}
+
+.al-create-sub {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.5;
+}
+
+.al-create-close {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  color: var(--gray-mid);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.al-create-close:hover { background: var(--gray-xbg); color: var(--black); }
+
+.al-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.al-required { color: #A32D2D; }
+
+.al-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: var(--border);
+}
+
+/* ── Metrics strip ────────────────────────────────────────────── */
+.al-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.al-metric {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+
+.al-metric-num {
+  font-size: 28px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.al-metric-label {
+  font-size: 11px;
+  color: var(--gray-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.al-metric-teal  { border-top: 2px solid var(--teal-mid); }
+.al-metric-amber { border-top: 2px solid var(--amber-mid); }
+.al-metric-gray  { border-top: 2px solid var(--gray-light); }
+.al-metric-teal  .al-metric-num { color: var(--teal-mid); }
+.al-metric-amber .al-metric-num { color: var(--amber-mid); }
+
+/* ── Tab count chips ──────────────────────────────────────────── */
+.al-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  min-width: 18px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  padding: 0 5px;
+  background: var(--gray-bg);
+  color: var(--gray-mid);
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.al-tab-count-teal  { background: var(--teal-bg);  color: var(--teal-mid);  }
+.al-tab-count-amber { background: var(--amber-bg); color: var(--amber-mid); }
+
+/* ── Alert cards ──────────────────────────────────────────────── */
+.al-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.al-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.12s;
+}
+.al-card:hover { box-shadow: var(--shadow-sm); }
+
+.al-card-triggered {
+  border-color: var(--amber-light);
+  border-left: 3px solid var(--amber-mid);
+}
+.al-card-inactive { opacity: 0.7; }
+
+/* Card header */
+.al-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: var(--border);
+  background: var(--gray-bg);
+}
+
+.al-card-triggered .al-card-header { background: var(--amber-bg); }
+
+.al-card-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.al-icon-teal  { background: var(--teal-bg);  color: var(--teal-mid);  border: 0.5px solid var(--teal-light); }
+.al-icon-amber { background: var(--amber-bg); color: var(--amber-mid); border: 0.5px solid var(--amber-light); }
+.al-icon-gray  { background: var(--white);    color: var(--gray-mid);  border: var(--border); }
+
+.al-card-title-block { flex: 1; min-width: 0; }
+
+.al-card-crop {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 2px;
+}
+
+.al-card-region {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gray-mid);
+}
+
+/* Status pill */
+.alert-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.alert-status-pill.is-active    { background: var(--teal-bg);  color: var(--teal-mid);  border: 0.5px solid var(--teal-light);  }
+.alert-status-pill.is-triggered { background: var(--amber-bg); color: var(--amber-mid); border: 0.5px solid var(--amber-light); }
+.alert-status-pill.is-inactive  { background: var(--gray-bg);  color: var(--gray-mid);  border: var(--border); }
+
+.al-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.al-dot-teal  { background: var(--teal-mid); animation: al-pulse 2s infinite; }
+.al-dot-amber { background: var(--amber-mid); }
+
+@keyframes al-pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.4; }
+}
+
+/* Card body — criteria chips */
+.al-card-body { padding: 14px 20px; }
+
+.al-criteria-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.al-criteria-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+.al-chip-quality { background: var(--teal-bg);  color: var(--teal-mid);  border: 0.5px solid var(--teal-light); }
+.al-chip-trust   { background: var(--green-bg); color: var(--green-mid); border: 0.5px solid var(--green-light); }
+.al-chip-neutral { background: var(--gray-bg);  color: var(--gray-mid);  border: var(--border); }
+.al-chip-date    { background: transparent;     color: var(--gray-mid);  font-weight: var(--fw-regular); }
+
+/* Card footer — action buttons */
+.al-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: var(--border);
+  flex-wrap: wrap;
+}
+
+.al-action-btn {
+  font-size: 12px !important;
+  padding: 6px 12px !important;
+  gap: 5px !important;
+}
+
+/* ── How it works explainer ───────────────────────────────────── */
+.al-explainer {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-top: 28px;
+}
+
+.al-explainer-title {
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 22px;
+}
+
+.al-explainer-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.al-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.al-step-arrow {
+  color: var(--gray-light);
+  padding: 0 8px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.al-step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--gray-bg);
+  border: var(--border);
+  color: var(--gray-mid);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.al-step-num-teal  { background: var(--teal-bg);  color: var(--teal-mid);  border-color: var(--teal-light);  }
+.al-step-num-amber { background: var(--amber-bg); color: var(--amber-mid); border-color: var(--amber-light); }
+
+.al-step-title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 4px;
+}
+.al-step-text {
+  font-size: 12px;
+  color: var(--gray-mid);
+  line-height: 1.55;
+}
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .al-metrics     { grid-template-columns: 1fr 1fr; }
+  .al-form-grid   { grid-template-columns: 1fr; }
+  .al-step-arrow  { display: none; }
+  .al-explainer-steps { flex-direction: column; gap: 16px; }
+  .al-card-header { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .al-metrics { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .al-card-footer { gap: 6px; }
+}
+</style>
+
+
+{# ── JS: panel open/close + flash dismiss ────────────────────── #}
+<script>
+(function () {
+  'use strict';
+
+  var createBtn   = document.getElementById('al-create-btn');
+  var closeBtn    = document.getElementById('al-create-close');
+  var cancelBtn   = document.getElementById('al-cancel-btn');
+  var emptyCta    = document.getElementById('al-empty-cta');
+  var panel       = document.getElementById('al-create-panel');
+
+  function openPanel() {
+    if (!panel) return;
+    panel.hidden = false;
+    if (createBtn) createBtn.setAttribute('aria-expanded', 'true');
+    panel.querySelector('input[name="produce_type"]').focus();
+  }
+
+  function closePanel() {
+    if (!panel) return;
+    panel.hidden = true;
+    if (createBtn) createBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  if (createBtn) createBtn.addEventListener('click', openPanel);
+  if (closeBtn)  closeBtn.addEventListener('click', closePanel);
+  if (cancelBtn) cancelBtn.addEventListener('click', closePanel);
+  if (emptyCta)  emptyCta.addEventListener('click', openPanel);
+
+  /* Auto-dismiss flash messages */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4000);
+  });
+
+}());
+</script>
+
+</body>
+</html>
