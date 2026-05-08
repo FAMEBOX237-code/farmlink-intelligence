@@ -1,22 +1,5 @@
 {# ============================================================
    templates/farmer/notifications.html — FarmLink Intelligence
-<<<<<<< HEAD
-   WF15 — Farmer Notifications
-
-   CSS:    public.css → farmer.css
-   Route:  GET/POST /farmer/notifications
-   Access: Farmer only
-
-   Context (from routes/farmer.py → notifications()):
-     notifications_display  list[dict] — type, icon_class, dot_class,
-                              title, text, time_display, action_url,
-                              action_label, is_unread
-     current_tab           str — 'all'|'unread'|'farm'|'buyer'|'system'
-     tab_counts            dict — all, unread, farm, buyer, system
-     unread_notifs         int
-     active_forecast       HarvestForecast|None
-     active_page           str — 'notifications'
-=======
    WF15 — Farmer Notifications (redesigned to match buyer)
 
    Same structure/wireframe as buyer/notifications.html.
@@ -35,7 +18,6 @@
      tab_counts    dict — all, unread, farm, buyer, system
      unread_notifs int
      active_page   str — 'notifications'
->>>>>>> b7d53ac (major editings)
    ============================================================ #}
 <!DOCTYPE html>
 <html lang="en">
@@ -45,20 +27,12 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Notifications · FarmLink Intelligence</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
-<<<<<<< HEAD
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
-</head>
-<body class="portal-body">
-
-=======
   <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
 </head>
 <body class="portal-body">
 
 
->>>>>>> b7d53ac (major editings)
 {# ════ TOPBAR ════════════════════════════════════════════════ #}
 <header class="topbar" role="banner">
   <div class="topbar-left">
@@ -76,31 +50,15 @@
     <span class="topbar-portal-tag">Farmer Portal</span>
   </div>
   <div class="topbar-right">
-<<<<<<< HEAD
-    <a href="{{ url_for('farmer.notifications') }}" class="topbar-notif"
-       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-=======
     <a href="{{ url_for('farmer.notifications') }}"
        class="topbar-notif"
        aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
->>>>>>> b7d53ac (major editings)
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
       {% if unread_notifs and unread_notifs > 0 %}
-<<<<<<< HEAD
-        <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
-      {% endif %}
-    </a>
-    <span class="topbar-username">{{ current_user.full_name }}</span>
-    <div class="topbar-avatar" title="{{ current_user.full_name }}" aria-hidden="true">
-      {{ current_user.full_name[:2].upper() }}
-    </div>
-=======
         <span class="notif-badge" aria-hidden="true">
           {{ unread_notifs if unread_notifs <= 9 else '9+' }}
         </span>
@@ -117,7 +75,6 @@
         {{ current_user.full_name[:2].upper() }}
       </div>
     {% endif %}
->>>>>>> b7d53ac (major editings)
     <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -130,12 +87,8 @@
   </div>
 </header>
 
-<<<<<<< HEAD
-{# ════ FLASH ═════════════════════════════════════════════════ #}
-=======
 
 {# Flash messages #}
->>>>>>> b7d53ac (major editings)
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     <div class="flash-stack" role="alert" aria-live="polite">
@@ -146,236 +99,13 @@
   {% endif %}
 {% endwith %}
 
-<<<<<<< HEAD
-{# ════ LAYOUT ════════════════════════════════════════════════ #}
-=======
 
 {# ════ PORTAL LAYOUT ════════════════════════════════════════ #}
->>>>>>> b7d53ac (major editings)
 <div class="portal-layout">
   {% include 'partials/sidebar_farmer.html' %}
 
   <main class="portal-main" id="main" role="main">
 
-<<<<<<< HEAD
-    {# ── Page header ── #}
-    <div class="notif-page-hd">
-      <div>
-        <h1 class="inner-title">Notifications</h1>
-        <p class="inner-subtitle">System alerts, buyer enquiries, and farm events</p>
-      </div>
-      {% if tab_counts and tab_counts.unread > 0 %}
-        <form method="POST" action="{{ url_for('farmer.notifications') }}" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="action" value="mark_all_read">
-          <button type="submit" class="notif-mark-all">Mark all as read</button>
-        </form>
-      {% endif %}
-    </div>
-
-    {# ── Summary pills ── #}
-    <div class="notif-summary-strip" role="status" aria-live="polite">
-      {% if tab_counts and tab_counts.unread > 0 %}
-        <span class="notif-summary-pill nsp-unread">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          {{ tab_counts.unread }} unread
-        </span>
-      {% endif %}
-      {% if tab_counts and tab_counts.farm > 0 %}
-        <span class="notif-summary-pill nsp-sensor">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          </svg>
-          {{ tab_counts.farm }} farm alerts
-        </span>
-      {% endif %}
-      {% if tab_counts and tab_counts.buyer > 0 %}
-        <span class="notif-summary-pill nsp-buyer">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          {{ tab_counts.buyer }} buyer enquiries
-        </span>
-      {% endif %}
-    </div>
-
-    {# ── Tab bar + notification list ── #}
-    <div role="tablist" aria-label="Notification filters">
-      <nav class="notif-tabs">
-        <a href="{{ url_for('farmer.notifications') }}?tab=all"
-           class="notif-tab {% if current_tab == 'all' %}is-active{% endif %}"
-           role="tab" aria-selected="{{ 'true' if current_tab == 'all' else 'false' }}">
-          All
-          {% if tab_counts and tab_counts.all %}
-            <span class="notif-tab-badge">{{ tab_counts.all }}</span>
-          {% endif %}
-        </a>
-        <a href="{{ url_for('farmer.notifications') }}?tab=unread"
-           class="notif-tab {% if current_tab == 'unread' %}is-active{% endif %}"
-           role="tab" aria-selected="{{ 'true' if current_tab == 'unread' else 'false' }}">
-          Unread
-          {% if tab_counts and tab_counts.unread %}
-            <span class="notif-tab-badge">{{ tab_counts.unread }}</span>
-          {% endif %}
-        </a>
-        <a href="{{ url_for('farmer.notifications') }}?tab=farm"
-           class="notif-tab {% if current_tab == 'farm' %}is-active{% endif %}"
-           role="tab" aria-selected="{{ 'true' if current_tab == 'farm' else 'false' }}">
-          Farm alerts
-        </a>
-        <a href="{{ url_for('farmer.notifications') }}?tab=buyer"
-           class="notif-tab {% if current_tab == 'buyer' %}is-active{% endif %}"
-           role="tab" aria-selected="{{ 'true' if current_tab == 'buyer' else 'false' }}">
-          Buyer enquiries
-        </a>
-        <a href="{{ url_for('farmer.notifications') }}?tab=system"
-           class="notif-tab {% if current_tab == 'system' %}is-active{% endif %}"
-           role="tab" aria-selected="{{ 'true' if current_tab == 'system' else 'false' }}">
-          System
-        </a>
-      </nav>
-
-      <div class="notif-list" role="tabpanel">
-
-        {% if notifications_display %}
-          {% for n in notifications_display %}
-            <article class="notif-item {% if n.is_unread %}is-unread{% endif %}"
-                     aria-label="{{ n.title }}">
-
-              {# Type icon #}
-              <div class="notif-icon {{ n.icon_class }}" aria-hidden="true">
-                {% if n.type == 'harvest_alert' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                  </svg>
-                {% elif n.type == 'sensor_offline' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-                    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-                    <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
-                    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-                    <line x1="12" y1="20" x2="12.01" y2="20"/>
-                  </svg>
-                {% elif n.type == 'buyer_enquiry' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                {% elif n.type == 'quality_change' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                  </svg>
-                {% elif n.type == 'transaction_completed' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                {% elif n.type == 'listing_published' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                  </svg>
-                {% elif n.type == 'account_verified' %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  </svg>
-                {% else %}
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                       stroke-width="2" stroke-linecap="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                {% endif %}
-              </div>
-
-              {# Body #}
-              <div class="notif-body">
-                <div class="notif-title">{{ n.title }}</div>
-                <div class="notif-text">{{ n.message }}</div>
-                <div class="notif-meta">
-                  <span class="notif-time">{{ n.time_display }}</span>
-                  {% if n.action_url %}
-                    <a href="{{ n.action_url }}" class="notif-action">{{ n.action_label or 'View' }} ↗</a>
-                  {% endif %}
-                  {% if n.is_unread %}
-                    <form method="POST" action="{{ url_for('farmer.notifications') }}"
-                          style="display:inline;margin-left:auto">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <input type="hidden" name="action" value="mark_read">
-                      <input type="hidden" name="notif_id" value="{{ n.id }}">
-                      <button type="submit" class="notif-action" style="font-size:10px;color:var(--gray-mid)">
-                        Mark read
-                      </button>
-                    </form>
-                  {% endif %}
-                </div>
-              </div>
-
-              {# Unread pip #}
-              {% if n.is_unread %}
-                <div class="notif-unread-pip" aria-hidden="true"></div>
-              {% endif %}
-
-            </article>
-          {% endfor %}
-
-        {% else %}
-
-          <div class="notif-empty" role="status">
-            <div class="notif-empty-icon" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              </svg>
-            </div>
-            <div class="notif-empty-title">
-              {% if current_tab == 'unread' %}No unread notifications
-              {% elif current_tab == 'farm' %}No farm alerts
-              {% elif current_tab == 'buyer' %}No buyer enquiries
-              {% elif current_tab == 'system' %}No system notifications
-              {% else %}No notifications yet{% endif %}
-            </div>
-            <div class="notif-empty-sub">
-              {% if current_tab == 'unread' %}You're all caught up.
-              {% elif current_tab == 'farm' %}Farm alerts appear here when sensor or forecast events occur.
-              {% elif current_tab == 'buyer' %}Buyer enquiries appear here when someone contacts you about a listing.
-              {% else %}Notifications will appear here as your farm activity grows.{% endif %}
-            </div>
-          </div>
-
-        {% endif %}
-
-      </div>{# /notif-list #}
-    </div>
-
-  </main>
-</div>
-
-<script>
-  document.querySelectorAll('.flash').forEach(function(el) {
-    setTimeout(function() { el.classList.add('out'); setTimeout(function() { el.remove(); }, 200); }, 5000);
-  });
-</script>
-=======
     {# ── Page header ─────────────────────────────────────── #}
     <div class="page-header">
       <div class="page-header-inner">
@@ -859,6 +589,5 @@
 }());
 </script>
 
->>>>>>> b7d53ac (major editings)
 </body>
 </html>

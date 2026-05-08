@@ -18,9 +18,14 @@
 # ============================================================
 
 from functools import wraps
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from models.models import ProduceListing, User, Farm, HarvestForecast, BuyerAlert
+from models.models import (
+    ProduceListing, User, Farm, HarvestForecast,
+    BuyerAlert, ContactRequest, Notification,
+)
+from extensions import db
 from sqlalchemy import or_
 
 buyer_bp = Blueprint('buyer', __name__, url_prefix='')
@@ -527,12 +532,13 @@ def notifications():
 
     # Tab counts
     tab_counts = {
-        'all'     : len(all_notifs),
-        'unread'  : sum(1 for n in all_notifs if not n.is_read),
-        'harvest' : sum(1 for n in all_notifs if n.type == 'harvest_alert'),
-        'system'  : sum(1 for n in all_notifs
-                        if n.type in ('system', 'account_verified',
-                                      'account_suspended')),
+        'all'      : len(all_notifs),
+        'unread'   : sum(1 for n in all_notifs if not n.is_read),
+        'harvest'  : sum(1 for n in all_notifs if n.type == 'harvest_alert'),
+        'enquiries': sum(1 for n in all_notifs if n.type == 'buyer_enquiry'),
+        'system'   : sum(1 for n in all_notifs
+                         if n.type in ('system', 'account_verified',
+                                       'account_suspended')),
     }
 
     # Filter by tab
@@ -540,6 +546,8 @@ def notifications():
         display_notifs = [n for n in all_notifs if not n.is_read]
     elif active_tab == 'harvest':
         display_notifs = [n for n in all_notifs if n.type == 'harvest_alert']
+    elif active_tab == 'enquiries':
+        display_notifs = [n for n in all_notifs if n.type == 'buyer_enquiry']
     elif active_tab == 'system':
         display_notifs = [n for n in all_notifs
                           if n.type in ('system', 'account_verified',
@@ -564,8 +572,27 @@ def notifications():
     for n in display_notifs:
         colour, type_label = TYPE_META.get(n.type, ('gray', 'Notification'))
 
-        # Action URL — link to listing if available
-        if n.listing_id:
+        # Action URL — link depends on notification type
+        if n.type == 'buyer_enquiry':
+            # Find the ContactRequest where this buyer is the sender
+            # so we can link back to the farmer who replied
+            from models.models import ContactRequest
+            enquiry = (ContactRequest.query
+                       .filter_by(sender_id=current_user.id, status='replied')
+                       .order_by(ContactRequest.replied_at.desc())
+                       .first())
+            if enquiry:
+                action_url   = url_for('public.farmer_profile_public',
+                                       farmer_id=enquiry.recipient_id)
+                action_label = 'View farmer profile'
+            elif n.listing_id:
+                action_url   = url_for('buyer.listing_detail',
+                                       listing_id=n.listing_id)
+                action_label = 'View listing'
+            else:
+                action_url   = url_for('buyer.marketplace')
+                action_label = 'Browse marketplace'
+        elif n.listing_id:
             action_url   = url_for('buyer.listing_detail',
                                    listing_id=n.listing_id)
             action_label = 'View listing'
@@ -815,3 +842,119 @@ def profile():
         active_tab = tab,
         **_ctx()
     )
+
+
+# ══════════════════════════════════════════════════════════════
+# CONTACT SEND  —  POST /contact/send
+#
+# Handles a buyer sending a message to a farmer.
+# Called from two places:
+#   1. listing_detail.html  — buyer enquires about a listing
+#   2. profile_public.html  — buyer messages farmer from profile
+#
+# OOP NOTE:
+#   This route has one job: receive, validate, save, notify.
+#   All logic about what a ContactRequest "knows" lives inside
+#   the ContactRequest class (encapsulation). This route just
+#   creates the object and saves it.
+# ══════════════════════════════════════════════════════════════
+@buyer_bp.route('/contact/send', methods=['POST'])
+@login_required
+@buyer_required
+def contact_send():
+    """
+    Buyer sends a contact message to a farmer.
+
+    Form fields expected:
+      recipient_id  — user.id of the farmer being contacted
+      context_type  — 'listing_enquiry' or 'farmer_profile'
+      listing_id    — (optional) id of the listing (if context is listing_enquiry)
+      message       — the message text
+
+    On success: flashes confirmation, redirects back to origin.
+    On failure: flashes error, redirects back.
+    """
+    # ── Read form fields ──────────────────────────────────────
+    recipient_id  = request.form.get('recipient_id',  type=int)
+    context_type  = request.form.get('context_type',  '').strip()
+    listing_id    = request.form.get('listing_id',    type=int)
+    message_text  = request.form.get('message',       '').strip()
+    redirect_back = request.form.get('redirect_back', '')
+
+    # ── Validate — never trust form input ────────────────────
+    if not recipient_id:
+        flash('Could not identify the recipient. Please try again.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    if context_type not in ('listing_enquiry', 'farmer_profile'):
+        flash('Invalid message type.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    if not message_text:
+        flash('Your message cannot be empty.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    if len(message_text) > 1000:
+        flash('Message is too long. Please keep it under 1000 characters.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    # ── Check recipient exists and is a farmer ────────────────
+    recipient = User.query.get(recipient_id)
+    if not recipient or recipient.role != 'farmer':
+        flash('Farmer not found.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    # ── Guard: cannot message yourself ───────────────────────
+    if recipient_id == current_user.id:
+        flash('You cannot send a message to yourself.', 'error')
+        return redirect(redirect_back or url_for('buyer.marketplace'))
+
+    # ── Create the ContactRequest object ──────────────────────
+    enquiry = ContactRequest(
+        sender_id    = current_user.id,
+        recipient_id = recipient_id,
+        context_type = context_type,
+        listing_id   = listing_id if context_type == 'listing_enquiry' else None,
+        message      = message_text,
+        status       = 'sent',
+        created_at   = datetime.utcnow(),
+    )
+    db.session.add(enquiry)
+
+    # ── Create a Notification for the farmer ─────────────────
+    # The farmer will see this in their notifications sidebar.
+    if context_type == 'listing_enquiry':
+        notif_title = 'New listing enquiry'
+        notif_msg = (
+            f'{current_user.full_name} sent you an enquiry '
+            f'about your listing.'
+        )
+    else:
+        notif_title = 'New profile message'
+        notif_msg = (
+            f'{current_user.full_name} sent you a message '
+            f'from your profile.'
+        )
+
+    notification = Notification(
+        recipient_id = recipient_id,
+        type         = 'buyer_enquiry',
+        title        = notif_title,
+        message      = notif_msg,
+        is_read      = False,
+        sent_at      = datetime.utcnow(),
+    )
+    db.session.add(notification)
+
+    db.session.commit()
+
+    flash(
+        f'Your message has been sent to {recipient.full_name}. '
+        f'You will be notified when they reply.',
+        'success'
+    )
+
+    # ── Redirect back to where the buyer came from ────────────
+    if redirect_back:
+        return redirect(redirect_back)
+    return redirect(url_for('buyer.marketplace'))
