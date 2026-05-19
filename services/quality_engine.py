@@ -22,7 +22,7 @@ def sensor_status(reading):
     """
     if not reading:
         return 'no-data'
-    minutes = (datetime.utcnow() - reading.timestamp).total_seconds() / 60
+    minutes = (datetime.utcnow() - reading.recorded_at).total_seconds() / 60
     if minutes <= 35:  return 'online'
     if minutes <= 65:  return 'warning'
     return 'offline'

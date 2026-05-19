@@ -74,15 +74,15 @@ def compute_forecast_context(forecast, farmer):
     week_ago = datetime.utcnow() - timedelta(days=7)
     sensor_readings_7d = SensorReading.query.filter(
         SensorReading.farm_id == farm.id,
-        SensorReading.timestamp >= week_ago
+        SensorReading.recorded_at >= week_ago
     ).count()
 
     # Latest reading age
     latest_reading = (SensorReading.query
                       .filter_by(farm_id=farm.id)
-                      .order_by(SensorReading.timestamp.desc())
+                      .order_by(SensorReading.recorded_at.desc())
                       .first())
-    latest_reading_ago = _ago(latest_reading.timestamp) if latest_reading else 'never'
+    latest_reading_ago = _ago(latest_reading.recorded_at) if latest_reading else 'never'
 
     # Forecast history -- all forecasts for this farm, newest first
     all_forecasts = (HarvestForecast.query

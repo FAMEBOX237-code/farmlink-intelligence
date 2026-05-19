@@ -1,0 +1,509 @@
+<!--  ============================================================
+   templates/admin/reports.html — FarmLink Intelligence
+
+   CSS load order: public.css → admin.css → partials.css
+   Zero <style> blocks. Zero inline styles except dynamic widths.
+   Zero ORM calls. All data from route context.
+
+   Context variables from routes/admin.py → reports():
+     admin           User
+     active_page     str         — 'reports'
+     unread_notifs   int
+     region_data     list[Row]   — region, listing_count, farmer_count,
+                                   total_kg, avg_quality
+     crop_data       list[Row]   — crop_type, count, avg_quality
+     total_farmers   int
+     total_buyers    int
+     active_listings int
+     total_txns      int
+     max_listings    int         — for bar width calculations
+   ============================================================  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Reports · Admin Panel · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="portal-body">
+
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Admin Panel</span>
+  </div>
+
+  <div class="topbar-right">
+    <a href="{{ url_for('admin.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ admin.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true" title="{{ admin.full_name }}">
+      {{ admin.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+
+{# ════ FLASH ═════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ════ LAYOUT ════════════════════════════════════════════════ #}
+<div class="portal-layout">
+
+  {% include 'partials/sidebar_admin.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header ──────────────────────────────────────── #}
+    <div class="page-hd">
+      <div class="page-hd-left">
+        <h1 class="page-title">Platform Reports</h1>
+        <p class="page-subtitle">
+          Regional supply analysis, crop distribution, and platform
+          performance metrics.
+        </p>
+      </div>
+    </div>
+
+
+    {# ── Summary KPI row ──────────────────────────────────── #}
+    <div class="kpi-row" role="region" aria-label="Platform summary">
+
+      <div class="kpi kp-green">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Total Farmers</div>
+        <div class="kpi-value kv-green">{{ total_farmers }}</div>
+        <div class="kpi-sub">registered on platform</div>
+      </div>
+
+      <div class="kpi kp-blue">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Total Buyers</div>
+        <div class="kpi-value kv-blue">{{ total_buyers }}</div>
+        <div class="kpi-sub">registered on platform</div>
+      </div>
+
+      <div class="kpi kp-indigo">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8"  y1="6"  x2="21" y2="6"/>
+            <line x1="8"  y1="12" x2="21" y2="12"/>
+            <line x1="8"  y1="18" x2="21" y2="18"/>
+            <line x1="3"  y1="6"  x2="3.01" y2="6"/>
+            <line x1="3"  y1="12" x2="3.01" y2="12"/>
+            <line x1="3"  y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Active Listings</div>
+        <div class="kpi-value">{{ active_listings }}</div>
+        <div class="kpi-sub">in marketplace now</div>
+      </div>
+
+      <div class="kpi kp-violet">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+            <line x1="1" y1="10" x2="23" y2="10"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Completed Transactions</div>
+        <div class="kpi-value">{{ total_txns }}</div>
+        <div class="kpi-sub">platform-wide total</div>
+      </div>
+
+    </div>
+
+
+    {# ── Main two-column layout ────────────────────────────── #}
+    <div class="grid-main-aside">
+
+      {# ════ LEFT: Regional breakdown table ══════════════════ #}
+      <div>
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Supply by Region</div>
+              <div class="card-sub">
+                Active listings, farmer count, and average quality per region
+              </div>
+            </div>
+          </div>
+
+          {% if region_data %}
+
+            <div class="data-table-wrap">
+              <table class="data-table" aria-label="Regional supply breakdown">
+                <thead>
+                  <tr>
+                    <th scope="col">Region</th>
+                    <th scope="col">Listings</th>
+                    <th scope="col">Farmers</th>
+                    <th scope="col">Volume (kg)</th>
+                    <th scope="col">Avg Quality</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in region_data %}
+                  <tr>
+
+                    {# Region name #}
+                    <td>
+                      <div class="dt-name">{{ row.region or 'Unknown' }}</div>
+                    </td>
+
+                    {# Listings count with inline bar #}
+                    <td>
+                      {% set pct = ((row.listing_count / max_listings) * 100) | int %}
+                      <div class="report-bar-wrap">
+                        <div class="report-bar" role="presentation" aria-hidden="true">
+                          <div class="report-bar-fill rb-green"
+                               style="width: {{ pct }}%"></div>
+                        </div>
+                        <span class="report-bar-val">{{ row.listing_count }}</span>
+                      </div>
+                    </td>
+
+                    {# Farmer count #}
+                    <td>
+                      <span class="region-row-value">{{ row.farmer_count }}</span>
+                    </td>
+
+                    {# Total volume #}
+                    <td>
+                      <span class="region-row-value">
+                        {% if row.total_kg %}
+                          {{ "{:,.0f}".format(row.total_kg | float) }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </span>
+                    </td>
+
+                    {# Avg quality score with colour pill #}
+                    <td>
+                      {% if row.avg_quality %}
+                        {% set q = row.avg_quality | float | round | int %}
+                        <span class="pill
+                          {% if q >= 75 %}pill-verified
+                          {% elif q >= 50 %}pill-pending
+                          {% else %}pill-offline{% endif %}">
+                          {{ q }}/100
+                        </span>
+                      {% else %}
+                        <span class="dt-email">—</span>
+                      {% endif %}
+                    </td>
+
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.6"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6"  y1="20" x2="6"  y2="14"/>
+                </svg>
+              </div>
+              <div class="empty-title">No data yet</div>
+              <div class="empty-sub">
+                Regional data will appear once farmers register farms and create listings.
+              </div>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+
+      {# ════ RIGHT: Top crops + platform notes ═══════════════ #}
+      <div>
+
+        {# Top crops card #}
+        <div class="card card-mb">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Top Crop Types</div>
+              <div class="card-sub">By active listing count</div>
+            </div>
+          </div>
+
+          {% if crop_data %}
+            {% set max_crop = crop_data[0].count if crop_data else 1 %}
+            {% for row in crop_data %}
+              <div class="feed-item">
+
+                {# Rank number #}
+                <div class="feed-icon feed-icon-green" aria-hidden="true">
+                  <span class="kpi-label">{{ loop.index }}</span>
+                </div>
+
+                <div class="feed-body">
+                  <div class="feed-msg">
+                    <strong>{{ row.crop_type }}</strong>
+                  </div>
+
+                  {# Mini bar #}
+                  {% set crop_pct = ((row.count / max_crop) * 100) | int %}
+                  <div class="report-bar-wrap report-bar-wrap--mt">
+                    <div class="report-bar" role="presentation" aria-hidden="true">
+                      <div class="report-bar-fill rb-teal"
+                           style="width: {{ crop_pct }}%"></div>
+                    </div>
+                    <span class="report-bar-val">{{ row.count }}</span>
+                  </div>
+
+                </div>
+
+                {# Avg quality badge #}
+                {% if row.avg_quality %}
+                  {% set q = row.avg_quality | float | round | int %}
+                  <span class="pill
+                    {% if q >= 75 %}pill-verified
+                    {% elif q >= 50 %}pill-pending
+                    {% else %}pill-offline{% endif %}"
+                    title="Average quality score">
+                    {{ q }}
+                  </span>
+                {% endif %}
+
+              </div>
+            {% endfor %}
+
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.6"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+                </svg>
+              </div>
+              <div class="empty-title">No listings yet</div>
+              <div class="empty-sub">Crop data appears when farmers post active listings.</div>
+            </div>
+          {% endif %}
+
+        </div>
+
+        {# Platform health card #}
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Platform Health</div>
+              <div class="card-sub">Quick diagnostic summary</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon feed-icon-green" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="feed-body">
+              <div class="feed-msg">
+                <strong>{{ total_farmers }}</strong>
+                farmer{{ 's' if total_farmers != 1 else '' }} registered
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon feed-icon-blue" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="feed-body">
+              <div class="feed-msg">
+                <strong>{{ total_buyers }}</strong>
+                buyer{{ 's' if total_buyers != 1 else '' }} registered
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon feed-icon-teal" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="feed-body">
+              <div class="feed-msg">
+                <strong>{{ active_listings }}</strong>
+                active listing{{ 's' if active_listings != 1 else '' }} in marketplace
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon feed-icon-slate" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="feed-body">
+              <div class="feed-msg">
+                <strong>{{ total_txns }}</strong>
+                completed transaction{{ 's' if total_txns != 1 else '' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon feed-icon-{% if region_data %}teal{% else %}amber{% endif %}"
+                 aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                {% if region_data %}
+                  <polyline points="20 6 9 17 4 12"/>
+                {% else %}
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8"  x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                {% endif %}
+              </svg>
+            </div>
+            <div class="feed-body">
+              <div class="feed-msg">
+                {% if region_data %}
+                  <strong>{{ region_data | length }}</strong>
+                  region{{ 's' if region_data | length != 1 else '' }} with registered farms
+                {% else %}
+                  No farms registered yet
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+
+    {# ── Export row ────────────────────────────────────────── #}
+    <div class="export-row" role="region" aria-label="Export options">
+      <span class="export-label">Export:</span>
+      <button type="button" class="btn-secondary" onclick="window.print()"
+              aria-label="Print this report">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Print Report
+      </button>
+    </div>
+
+  </main>
+</div>
+
+
+{# ════ SCRIPTS ═══════════════════════════════════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  /* Auto-dismiss flash messages */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 200);
+    }, 4000);
+  });
+
+  /* Animate all report bars on load */
+  document.querySelectorAll('.report-bar-fill').forEach(function (bar) {
+    var target = bar.style.width;
+    bar.style.width = '0%';
+    bar.style.transition = 'none';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        bar.style.transition = 'width 0.85s ease';
+        bar.style.width = target;
+      });
+    });
+  });
+
+}());
+</script>
+
+</body>
+</html>
