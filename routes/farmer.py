@@ -161,11 +161,11 @@ def dashboard():
           or (farms[0] if farms else None)
 
     lr  = (SensorReading.query.filter_by(farm_id=sf.id)
-           .order_by(SensorReading.timestamp.desc()).first()
+           .order_by(SensorReading.recorded_at.desc()).first()
            if sf else None)
 
     ss  = sensor_status(lr)
-    ago = _ago(lr.timestamp) if lr else 'never'
+    ago = _ago(lr.recorded_at) if lr else 'never'
     qs  = sf.current_quality_score if sf else None
     qd  = quality_detail(lr)
     sr  = sensor_rows(lr)
@@ -228,7 +228,7 @@ def farms():
     for farm in farm_list:
         lr = (SensorReading.query
               .filter_by(farm_id=farm.id)
-              .order_by(SensorReading.timestamp.desc())
+              .order_by(SensorReading.recorded_at.desc())
               .first())
 
         listing_count = (ProduceListing.query
@@ -246,7 +246,7 @@ def farms():
         elif qs > 0:   q_css = 'fcv-danger'
         else:          q_css = ''
 
-        last_seen = lr.timestamp.strftime('%d %b \u00b7 %H:%M') if lr else None
+        last_seen = lr.recorded_at.strftime('%d %b \u00b7 %H:%M') if lr else None
 
         farms_data.append({
             'farm':              farm,
@@ -337,7 +337,7 @@ def edit_farm(farm_id):
         return redirect(url_for('farmer.farms'))
 
     lr  = (SensorReading.query.filter_by(farm_id=farm.id)
-           .order_by(SensorReading.timestamp.desc()).first())
+           .order_by(SensorReading.recorded_at.desc()).first())
     ss  = sensor_status(lr)
     ctx = _sidebar(current_user)
 
@@ -908,7 +908,7 @@ def profile():
     farms_data = []
     for farm in farm_list:
         lr = (SensorReading.query.filter_by(farm_id=farm.id)
-              .order_by(SensorReading.timestamp.desc()).first())
+              .order_by(SensorReading.recorded_at.desc()).first())
         ss = sensor_status(lr) if lr else 'no-data'
         qs = farm.current_quality_score or 0
         if qs >= 70:   q_css = 'fcv-green'

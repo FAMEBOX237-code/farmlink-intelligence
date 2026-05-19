@@ -11,8 +11,9 @@
 #
 # TABLE LIST:
 #   User            — all accounts (farmer / buyer / admin)
-#   Farm            — farms owned by farmers
-#   SensorReading   — IoT sensor readings per farm
+#   Farm            — farms owned by farmers (+ IoT hardware identity fields)
+#   SensorReading   — IoT sensor readings per farm (merged web + hardware schema)
+#   IrrigationLog   — per-event irrigation records from hardware schema
 #   HarvestForecast — ML-style harvest window predictions
 #   ProduceListing  — marketplace listings
 #   Transaction     — completed buyer-farmer deals
@@ -76,6 +77,14 @@ class User(UserMixin, db.Model):
 # FARM
 # Each farmer can own multiple farms. Each farm is linked
 # to exactly one IoT sensor node via sensor_node_id.
+#
+# Hardware identity fields (added in merged schema):
+#   hardware_farm_id  — the VARCHAR key used by the Arduino sketch
+#                       e.g. "FARM-MARK-001"; the Python bridge uses
+#                       this to join web rows to IoT rows
+#   farmer_name       — human-readable node identity (Arduino FARM_ID)
+#   farmer_phone      — contact info stored alongside the hardware node
+#   is_active         — hardware schema flag (1 = active, 0 = inactive)
 # ══════════════════════════════════════════════════════════════
 class Farm(db.Model):
     __tablename__ = 'farms'
@@ -90,40 +99,106 @@ class Farm(db.Model):
     latitude              = db.Column(db.Numeric(9, 6))
     longitude             = db.Column(db.Numeric(9, 6))
     sensor_node_id        = db.Column(db.String(50), unique=True, index=True)
-    current_quality_score = db.Column(db.Integer, default=0)
+    # ── Hardware identity fields ──────────────────────────────
+    hardware_farm_id      = db.Column(db.String(50), unique=True)   # e.g. "FARM-MARK-001"
+    farmer_name           = db.Column(db.String(100))
+    farmer_phone          = db.Column(db.String(20))
+    # ── Quality & status ──────────────────────────────────────
+    current_quality_score = db.Column(db.Integer, default=0, nullable=False)
+    is_active             = db.Column(db.Integer, default=1, nullable=False)  # TINYINT(1)
     notes                 = db.Column(db.Text)
     created_at            = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at            = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    readings  = db.relationship('SensorReading', backref='farm', lazy='dynamic',
-                                cascade='all, delete-orphan')
-    forecasts = db.relationship('HarvestForecast', backref='farm', lazy='dynamic',
-                                cascade='all, delete-orphan')
+    readings      = db.relationship('SensorReading', backref='farm', lazy='dynamic',
+                                    cascade='all, delete-orphan')
+    forecasts     = db.relationship('HarvestForecast', backref='farm', lazy='dynamic',
+                                    cascade='all, delete-orphan')
+    irrigation_events = db.relationship('IrrigationLog', backref='farm', lazy='dynamic',
+                                        cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Farm {self.name} [{self.sensor_node_id}]>'
 
 
 # ══════════════════════════════════════════════════════════════
-# SENSOR READING
-# One row per 30-minute reading from an IoT node.
-# sync_status tracks whether Firebase has confirmed receipt.
+# SENSOR READING  (merged web + hardware schema)
+#
+# Web schema had: id, farm_id, sensor values, timestamp,
+#                 sync_status('synced'|'pending'), created_at
+#
+# Hardware schema added:
+#   reading_id     — Arduino-generated globally unique ID (hardware PK)
+#   recorded_at    — DS3231 RTC hardware clock (replaces 'timestamp')
+#   inserted_at    — when the row entered MySQL (hardware concept)
+#   rain_intensity — analog rain sensor value
+#   heat_stress_flag / irrigation_active — automation flags
+#   quality_score  — populated automatically by the MySQL trigger
+#                    calculate_quality_score (AFTER INSERT)
+#   sync_status    — enum extended to cover hardware vocabulary:
+#                    'LIVE' | 'BUFFERED' | 'SYNCED' (in addition to
+#                    the web values 'synced' | 'pending')
+#
+# NOTE: 'timestamp' has been renamed to 'recorded_at' to match
+# the SQL schema. Update any code that accessed .timestamp to
+# use .recorded_at instead.
 # ══════════════════════════════════════════════════════════════
 class SensorReading(db.Model):
     __tablename__ = 'sensor_readings'
 
-    id            = db.Column(db.Integer, primary_key=True)
-    farm_id       = db.Column(db.Integer, db.ForeignKey('farms.id', ondelete='CASCADE'), nullable=False, index=True)
-    soil_moisture = db.Column(db.Numeric(5, 2))
-    temperature   = db.Column(db.Numeric(5, 2))
-    humidity      = db.Column(db.Numeric(5, 2))
+    # ── Primary key (web app style) ───────────────────────────
+    id              = db.Column(db.Integer, primary_key=True)
+    # ── Hardware reading identifier (Arduino-generated) ───────
+    reading_id      = db.Column(db.String(30), unique=True)
+    # ── Farm reference ────────────────────────────────────────
+    farm_id         = db.Column(db.Integer, db.ForeignKey('farms.id', ondelete='CASCADE'),
+                                nullable=False, index=True)
+    # ── Timestamps ────────────────────────────────────────────
+    recorded_at     = db.Column(db.DateTime, nullable=False, index=True)   # DS3231 hardware clock
+    inserted_at     = db.Column(db.DateTime, default=datetime.utcnow)       # when row entered MySQL
+    # ── Core sensor values ────────────────────────────────────
+    temperature     = db.Column(db.Numeric(5, 2))
+    humidity        = db.Column(db.Numeric(5, 2))
+    soil_moisture   = db.Column(db.Numeric(5, 2))
     light_intensity = db.Column(db.Numeric(8, 2))
-    is_raining    = db.Column(db.Boolean, default=False)
-    timestamp     = db.Column(db.DateTime, nullable=False, index=True)
-    sync_status   = db.Column(db.Enum('synced', 'pending'), default='synced')
-    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    # ── Rain sensor ───────────────────────────────────────────
+    is_raining      = db.Column(db.Integer, default=0, nullable=False)      # TINYINT(1)
+    rain_intensity  = db.Column(db.Integer, default=0, nullable=False)
+    # ── Automation flags ──────────────────────────────────────
+    heat_stress_flag  = db.Column(db.Integer, default=0, nullable=False)    # TINYINT(1)
+    irrigation_active = db.Column(db.Integer, default=0, nullable=False)    # TINYINT(1)
+    # ── Quality score (written by MySQL trigger) ──────────────
+    quality_score   = db.Column(db.Numeric(5, 2))
+    # ── Sync status (web + hardware vocabulary combined) ──────
+    sync_status     = db.Column(
+                          db.Enum('synced', 'pending', 'LIVE', 'BUFFERED', 'SYNCED'),
+                          default='BUFFERED', nullable=False
+                      )
 
     def __repr__(self):
-        return f'<Reading farm={self.farm_id} @ {self.timestamp}>'
+        return f'<Reading farm={self.farm_id} @ {self.recorded_at}>'
+
+
+# ══════════════════════════════════════════════════════════════
+# IRRIGATION LOG  (new — from hardware schema)
+# Records each complete irrigation event triggered by the
+# Arduino (AUTO) or manually via the web app (MANUAL).
+# One row per irrigation event, not per sensor reading.
+# ══════════════════════════════════════════════════════════════
+class IrrigationLog(db.Model):
+    __tablename__ = 'irrigation_log'
+
+    event_id         = db.Column(db.Integer, primary_key=True)
+    farm_id          = db.Column(db.Integer, db.ForeignKey('farms.id', ondelete='CASCADE'),
+                                 nullable=False, index=True)
+    started_at       = db.Column(db.DateTime, nullable=False, index=True)
+    duration_seconds = db.Column(db.Integer)
+    trigger_moisture = db.Column(db.Numeric(5, 2))
+    trigger_type     = db.Column(db.Enum('AUTO', 'MANUAL'), default='AUTO', nullable=False)
+    notes            = db.Column(db.String(200))
+
+    def __repr__(self):
+        return f'<IrrigationLog farm={self.farm_id} @ {self.started_at} [{self.trigger_type}]>'
 
 
 # ══════════════════════════════════════════════════════════════

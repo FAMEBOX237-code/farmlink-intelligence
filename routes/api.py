@@ -358,7 +358,7 @@ def listing_detail(listing_id):
 
     latest = (SensorReading.query
               .filter_by(farm_id=listing.farm_id)
-              .order_by(SensorReading.timestamp.desc())
+              .order_by(SensorReading.recorded_at.desc())
               .first())
 
     sensor = None
@@ -369,7 +369,7 @@ def listing_detail(listing_id):
             'humidity'       : float(latest.humidity        or 0),
             'light_intensity': float(latest.light_intensity or 0),
             'is_raining'     : bool(latest.is_raining),
-            'recorded_ago'   : _ago(latest.timestamp),
+            'recorded_ago'   : _ago(latest.recorded_at),
             'sync_status'    : latest.sync_status,
         }
 

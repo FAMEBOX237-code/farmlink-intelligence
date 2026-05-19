@@ -36,7 +36,7 @@ from extensions import db
 
 # Import all models so SQLAlchemy knows about them
 from models.models import (
-    User, Farm, SensorReading, HarvestForecast,
+    User, Farm, SensorReading, IrrigationLog, HarvestForecast,
     ProduceListing, Transaction, Rating,
     BuyerAlert, Notification, ContactRequest
 )
@@ -80,14 +80,17 @@ def create_database_if_missing():
         print(f"  Create it manually: CREATE DATABASE {db_name};")
 
 
-def drop_contact_requests():
+def drop_legacy_tables():
     """
-    Drops the contact_requests table so it can be recreated
-    with the new column structure (sender_id, recipient_id,
-    context_type, reply_message, replied_at).
+    Drops tables whose column structure changed in the merged
+    web + hardware schema so they can be recreated cleanly.
 
-    SAFE: Only drops contact_requests. Every other table is
-    left completely untouched.
+    Tables dropped (only if they exist):
+      sensor_readings — column 'timestamp' renamed to 'recorded_at';
+                        many new hardware columns added
+      irrigation_log  — new table; drop is a no-op if absent
+
+    ALL OTHER TABLES are left completely untouched.
     """
     app = create_app()
     with app.app_context():
@@ -95,12 +98,13 @@ def drop_contact_requests():
         inspector = inspect(db.engine)
         existing  = inspector.get_table_names()
 
-        if 'contact_requests' in existing:
-            db.session.execute(text('DROP TABLE IF EXISTS contact_requests;'))
-            db.session.commit()
-            print("  ✓ Old contact_requests table dropped.")
-        else:
-            print("  ✓ contact_requests did not exist yet — nothing to drop.")
+        for table in ('sensor_readings', 'irrigation_log'):
+            if table in existing:
+                db.session.execute(text(f'DROP TABLE IF EXISTS `{table}`;'))
+                db.session.commit()
+                print(f'  ✓ Old {table} table dropped — will be recreated.')
+            else:
+                print(f'  ✓ {table} did not exist yet — nothing to drop.')
 
 
 def create_all_tables():
@@ -125,5 +129,5 @@ if __name__ == '__main__':
     print("FarmLink Intelligence — Database Setup")
     print("=" * 40)
     create_database_if_missing()
-    drop_contact_requests()
+    drop_legacy_tables()
     create_all_tables()

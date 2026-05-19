@@ -222,7 +222,7 @@ def listing_detail(listing_id):
     # ── Latest sensor reading ─────────────────────────────────
     latest_reading = (SensorReading.query
                       .filter_by(farm_id=farm.id)
-                      .order_by(SensorReading.timestamp.desc())
+                      .order_by(SensorReading.recorded_at.desc())
                       .first())
 
     sensor = None
@@ -233,7 +233,7 @@ def listing_detail(listing_id):
             'humidity'       : float(latest_reading.humidity      or 0),
             'light_intensity': float(latest_reading.light_intensity or 0),
             'is_raining'     : latest_reading.is_raining,
-            'timestamp'      : latest_reading.timestamp,
+            'timestamp'      : latest_reading.recorded_at,
         }
 
     # ── Total sensor readings on this farm ────────────────────
