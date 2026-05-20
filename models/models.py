@@ -257,16 +257,134 @@ class Notification(db.Model):
 
 
 # ══════════════════════════════════════════════════════════════
-# CONTACT REQUEST — buyer sends message to farmer via listing
+# CONTACT REQUEST — any user sends a message to any other user
+#
+# OOP DESIGN NOTE:
+#   This class is responsible for everything a contact request
+#   knows and can decide about itself. Routes and templates
+#   never compute message logic — they ask the object.
+#
+# context_type values:
+#   'listing_enquiry'  — buyer messaging farmer about a listing
+#   'farmer_profile'   — buyer messaging farmer about their profile
+#   'farmer_to_farmer' — farmer messaging another farmer
+#
+# ENCAPSULATION:
+#   can_reply()       — object decides if a user may reply
+#   is_unread_for()   — object decides if message is unread
+#   context_label     — object builds its own human-readable label
 # ══════════════════════════════════════════════════════════════
 class ContactRequest(db.Model):
     __tablename__ = 'contact_requests'
 
-    id         = db.Column(db.Integer, primary_key=True)
-    listing_id = db.Column(db.Integer, db.ForeignKey('produce_listings.id', ondelete='CASCADE'), nullable=False)
-    buyer_id   = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    farmer_id  = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    message    = db.Column(db.Text, nullable=False)
-    status     = db.Column(db.Enum('sent', 'read', 'replied', 'converted_to_transaction'), default='sent')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id           = db.Column(db.Integer, primary_key=True)
+
+    # ── Who is talking to whom ────────────────────────────────
+    sender_id    = db.Column(
+                       db.Integer,
+                       db.ForeignKey('users.id', ondelete='CASCADE'),
+                       nullable=False,
+                       index=True
+                   )
+    recipient_id = db.Column(
+                       db.Integer,
+                       db.ForeignKey('users.id', ondelete='CASCADE'),
+                       nullable=False,
+                       index=True
+                   )
+
+    # ── What the message is about ─────────────────────────────
+    context_type = db.Column(
+                       db.Enum(
+                           'listing_enquiry',
+                           'farmer_profile',
+                           'farmer_to_farmer'
+                       ),
+                       nullable=False,
+                       default='listing_enquiry'
+                   )
+    listing_id   = db.Column(
+                       db.Integer,
+                       db.ForeignKey('produce_listings.id', ondelete='SET NULL'),
+                       nullable=True   # only filled for listing_enquiry
+                   )
+
+    # ── The conversation ──────────────────────────────────────
+    message       = db.Column(db.Text, nullable=False)
+    reply_message = db.Column(db.Text, nullable=True)   # one reply allowed
+
+    # ── Lifecycle state ───────────────────────────────────────
+    status     = db.Column(
+                     db.Enum('sent', 'read', 'replied'),
+                     nullable=False,
+                     default='sent'
+                 )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     read_at    = db.Column(db.DateTime, nullable=True)
+    replied_at = db.Column(db.DateTime, nullable=True)
+
+    # ── Relationships — give direct access to sender/recipient ─
+    sender    = db.relationship('User', foreign_keys=[sender_id],
+                                backref=db.backref('sent_enquiries', lazy='dynamic'))
+    recipient = db.relationship('User', foreign_keys=[recipient_id],
+                                backref=db.backref('received_enquiries', lazy='dynamic'))
+    listing   = db.relationship('ProduceListing', foreign_keys=[listing_id],
+                                backref=db.backref('enquiries', lazy='dynamic'))
+
+    # ══════════════════════════════════════════════════════════
+    # ENCAPSULATED BEHAVIOUR — the object decides, not the route
+    # ══════════════════════════════════════════════════════════
+
+    def can_reply(self, user):
+        """
+        Returns True only when:
+          1. The given user IS the recipient of this message, AND
+          2. The message has not already been replied to.
+
+        The route calls this — it never computes the logic itself.
+        This is encapsulation: the rule lives inside the object.
+        """
+        return (
+            user is not None
+            and self.recipient_id == user.id
+            and self.status != 'replied'
+        )
+
+    def is_unread_for(self, user):
+        """
+        Returns True when the given user is the recipient
+        and the message status is still 'sent' (never opened).
+        Used by the sidebar badge counter.
+        """
+        return (
+            user is not None
+            and self.recipient_id == user.id
+            and self.status == 'sent'
+        )
+
+    @property
+    def context_label(self):
+        """
+        Returns a human-readable string describing what
+        this message is about. Templates never build this string
+        themselves — they ask the object for it.
+
+        Examples:
+          'Listing enquiry'
+          'Profile message'
+          'Farmer message'
+        """
+        labels = {
+            'listing_enquiry':  'Listing enquiry',
+            'farmer_profile':   'Profile message',
+            'farmer_to_farmer': 'Farmer message',
+        }
+        return labels.get(self.context_type, 'Message')
+
+    def __repr__(self):
+        return (
+            f'<ContactRequest '
+            f'from=user:{self.sender_id} '
+            f'to=user:{self.recipient_id} '
+            f'[{self.context_type}] [{self.status}]>'
+        )

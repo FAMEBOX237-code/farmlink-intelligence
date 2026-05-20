@@ -1,0 +1,753 @@
+{# ============================================================
+   templates/farmer/enquiries.html — FarmLink Intelligence
+   Farmer Enquiries Inbox
+
+   Shows all messages received by this farmer.
+   Three tabs: All / Listing enquiries / Profile messages / Farmer messages
+   Each card has a reply form (one reply per message).
+
+   CSS:    public.css → partials.css → farmer.css
+   Route:  GET/POST /farmer/enquiries
+
+   Context:
+     enquiries   list of dicts   — filtered by active tab
+     counts      dict            — tab badge counts
+     active_tab  str             — 'all'|'listing'|'profile'|'farmer'
+     active_page str             — 'enquiries'
+     unread_notifs int
+     unread_enquiries int
+     active_forecast
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>Enquiries · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+</head>
+<body class="portal-body">
+
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Farmer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('farmer.notifications') }}"
+       class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ current_user.full_name }}</span>
+    {% if current_user.profile_photo_url %}
+      <div class="topbar-avatar-photo" aria-hidden="true">
+        <img src="{{ url_for('static', filename=current_user.profile_photo_url) }}"
+             alt="{{ current_user.full_name }}">
+      </div>
+    {% else %}
+      <div class="topbar-avatar" aria-hidden="true">
+        {{ current_user.full_name[:2].upper() }}
+      </div>
+    {% endif %}
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+
+{# Flash messages #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ════ PORTAL LAYOUT ════════════════════════════════════════ #}
+<div class="portal-layout">
+  {% include 'partials/sidebar_farmer.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header ─────────────────────────────────────── #}
+    <div class="enq-page-header">
+      <div>
+        <h1 class="enq-page-title">Enquiries</h1>
+        <p class="enq-page-sub">
+          Messages received from buyers and other farmers
+        </p>
+      </div>
+      <div class="enq-total-badge">
+        {{ counts.all }} total
+      </div>
+    </div>
+
+
+    {# ── Tab bar ─────────────────────────────────────────── #}
+    <div class="enq-tabs" role="tablist" aria-label="Filter enquiries by type">
+
+      <a href="{{ url_for('farmer.enquiries') }}?tab=all"
+         class="enq-tab {% if active_tab == 'all' %}enq-tab-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'all' else 'false' }}">
+        All
+        {% if counts.all > 0 %}
+          <span class="enq-tab-count">{{ counts.all }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{{ url_for('farmer.enquiries') }}?tab=listing"
+         class="enq-tab {% if active_tab == 'listing' %}enq-tab-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'listing' else 'false' }}">
+        Listing enquiries
+        {% if counts.listing > 0 %}
+          <span class="enq-tab-count">{{ counts.listing }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{{ url_for('farmer.enquiries') }}?tab=profile"
+         class="enq-tab {% if active_tab == 'profile' %}enq-tab-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'profile' else 'false' }}">
+        Profile messages
+        {% if counts.profile > 0 %}
+          <span class="enq-tab-count">{{ counts.profile }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{{ url_for('farmer.enquiries') }}?tab=farmer"
+         class="enq-tab {% if active_tab == 'farmer' %}enq-tab-active{% endif %}"
+         role="tab"
+         aria-selected="{{ 'true' if active_tab == 'farmer' else 'false' }}">
+        Farmer messages
+        {% if counts.farmer > 0 %}
+          <span class="enq-tab-count">{{ counts.farmer }}</span>
+        {% endif %}
+      </a>
+
+    </div>
+
+
+    {# ── Enquiry cards ────────────────────────────────────── #}
+    {% if enquiries %}
+      <div class="enq-list" role="list">
+
+        {% for enq in enquiries %}
+          <article class="enq-card enq-status-{{ enq.status }}"
+                   role="listitem"
+                   id="enq-{{ enq.id }}">
+
+            {# ── Card header ───────────────────────────────── #}
+            <div class="enq-card-header">
+
+              {# Sender avatar + identity #}
+              <div class="enq-sender-row">
+                <div class="enq-avatar" aria-hidden="true">
+                  {{ enq.sender_name[:2].upper() }}
+                </div>
+                <div class="enq-sender-info">
+                  <div class="enq-sender-name">{{ enq.sender_name }}</div>
+                  <div class="enq-sender-meta">
+                    <span class="enq-role-pill enq-role-{{ enq.sender_role }}">
+                      {{ enq.sender_role | capitalize }}
+                    </span>
+                    <span class="enq-context-label">{{ enq.context_label }}</span>
+                    {% if enq.listing_label %}
+                      <span class="enq-listing-ref">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8"/>
+                        </svg>
+                        {{ enq.listing_label }}
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+              {# Status pill + timestamp #}
+              <div class="enq-card-meta">
+                <span class="enq-status-pill enq-s-{{ enq.status }}">
+                  {% if enq.status == 'sent' %}New
+                  {% elif enq.status == 'read' %}Read
+                  {% else %}Replied{% endif %}
+                </span>
+                <span class="enq-time">{{ enq.created_ago }}</span>
+              </div>
+
+            </div>{# /enq-card-header #}
+
+
+            {# ── Message body ──────────────────────────────── #}
+            <div class="enq-message-body">
+              <p class="enq-message-text">{{ enq.message }}</p>
+            </div>
+
+
+            {# ── Reply section ─────────────────────────────── #}
+            {% if enq.status == 'replied' and enq.reply_message %}
+              {# Show the existing reply #}
+              <div class="enq-reply-display">
+                <div class="enq-reply-label">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 17 4 12 9 7"/>
+                    <path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                  </svg>
+                  Your reply
+                  {% if enq.replied_ago %}
+                    <span class="enq-reply-time">· {{ enq.replied_ago }}</span>
+                  {% endif %}
+                </div>
+                <p class="enq-reply-text">{{ enq.reply_message }}</p>
+              </div>
+
+            {% elif enq.can_reply %}
+              {# Show the reply form — collapsed by default, expanded on click #}
+              <div class="enq-reply-wrap" id="reply-wrap-{{ enq.id }}">
+
+                <button type="button"
+                        class="enq-reply-toggle"
+                        onclick="toggleReply({{ enq.id }})"
+                        aria-expanded="false"
+                        aria-controls="reply-form-{{ enq.id }}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 17 4 12 9 7"/>
+                    <path d="M20 18v-2a4 4 0 0 0-4-4H4"/>
+                  </svg>
+                  Reply
+                </button>
+
+                <div class="enq-reply-form-wrap"
+                     id="reply-form-{{ enq.id }}"
+                     hidden>
+                  <form method="POST"
+                        action="{{ url_for('farmer.enquiries') }}"
+                        class="enq-reply-form">
+                    <input type="hidden" name="csrf_token"    value="{{ csrf_token() }}">
+                    <input type="hidden" name="action"        value="reply">
+                    <input type="hidden" name="enquiry_id"    value="{{ enq.id }}">
+
+                    <label class="enq-reply-label-text"
+                           for="reply-{{ enq.id }}">
+                      Your reply
+                      <span class="enq-char-count" id="cc-{{ enq.id }}">0 / 1000</span>
+                    </label>
+                    <textarea id="reply-{{ enq.id }}"
+                              name="reply_message"
+                              class="enq-reply-textarea"
+                              rows="4"
+                              maxlength="1000"
+                              placeholder="Type your reply to {{ enq.sender_name.split()[0] }}..."
+                              required
+                              oninput="updateCount(this, 'cc-{{ enq.id }}')"></textarea>
+
+                    <div class="enq-reply-actions">
+                      <button type="button"
+                              class="btn-ghost enq-cancel-btn"
+                              onclick="toggleReply({{ enq.id }})">
+                        Cancel
+                      </button>
+                      <button type="submit" class="btn-farmer-primary enq-send-btn">
+                        Send reply
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            {% endif %}
+
+          </article>
+        {% endfor %}
+
+      </div>{# /enq-list #}
+
+    {% else %}
+
+      {# ── Empty state ───────────────────────────────────── #}
+      <div class="enq-empty" role="status">
+        <div class="enq-empty-icon" aria-hidden="true">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="enq-empty-title">
+          {% if active_tab == 'all' %}
+            No enquiries yet
+          {% elif active_tab == 'listing' %}
+            No listing enquiries yet
+          {% elif active_tab == 'profile' %}
+            No profile messages yet
+          {% else %}
+            No farmer messages yet
+          {% endif %}
+        </div>
+        <p class="enq-empty-sub">
+          {% if active_tab == 'all' %}
+            When buyers or other farmers message you, their messages will appear here.
+          {% else %}
+            No messages of this type yet.
+            <a href="{{ url_for('farmer.enquiries') }}?tab=all">View all messages</a>
+          {% endif %}
+        </p>
+      </div>
+
+    {% endif %}
+
+  </main>
+</div>{# /portal-layout #}
+
+
+{# ════════════════════════════════════════════════════════════
+   CSS — all prefixed .enq-*
+   ════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── Page header ────────────────────────────────────────────── */
+.enq-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.enq-page-title {
+  font-size: 22px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.enq-page-sub {
+  font-size: 13px;
+  color: var(--gray-mid);
+}
+.enq-total-badge {
+  font-size: 12px;
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+/* ── Tab bar ────────────────────────────────────────────────── */
+.enq-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: var(--border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.enq-tabs::-webkit-scrollbar { display: none; }
+
+.enq-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 10px;
+  font-size: 13px;
+  color: var(--gray-mid);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s;
+  margin-bottom: -1px;
+}
+.enq-tab:hover { color: var(--black); }
+.enq-tab-active {
+  color: var(--black);
+  font-weight: var(--fw-medium);
+  border-bottom-color: var(--green-mid);
+}
+.enq-tab-count {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: 1px 6px;
+  color: var(--gray-mid);
+}
+.enq-tab-active .enq-tab-count {
+  background: var(--green-bg);
+  border-color: var(--green-light);
+  color: var(--green-mid);
+}
+
+/* ── Enquiry card ───────────────────────────────────────────── */
+.enq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.enq-card {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.enq-card:hover { box-shadow: var(--shadow-sm); }
+
+/* New/unread card gets a left accent */
+.enq-status-sent {
+  border-left: 3px solid var(--green-mid);
+}
+.enq-status-read  { border-left: 3px solid transparent; }
+.enq-status-replied {
+  border-left: 3px solid var(--teal-light);
+  opacity: 0.85;
+}
+
+/* Card header */
+.enq-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: var(--border);
+  flex-wrap: wrap;
+}
+
+/* Sender row */
+.enq-sender-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.enq-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  border: 0.5px solid var(--green-light);
+  color: var(--green-mid);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.enq-sender-info { flex: 1; min-width: 0; }
+.enq-sender-name {
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.enq-sender-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.enq-role-pill {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+}
+.enq-role-buyer {
+  background: var(--teal-bg);
+  color: var(--teal-mid);
+  border: 0.5px solid var(--teal-light);
+}
+.enq-role-farmer {
+  background: var(--green-bg);
+  color: var(--green-mid);
+  border: 0.5px solid var(--green-light);
+}
+.enq-context-label {
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+.enq-listing-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+}
+
+/* Status + time */
+.enq-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.enq-status-pill {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+.enq-s-sent {
+  background: var(--green-bg);
+  color: var(--green-mid);
+  border: 0.5px solid var(--green-light);
+}
+.enq-s-read {
+  background: var(--gray-bg);
+  color: var(--gray-mid);
+  border: var(--border);
+}
+.enq-s-replied {
+  background: var(--teal-bg);
+  color: var(--teal-mid);
+  border: 0.5px solid var(--teal-light);
+}
+.enq-time {
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+
+/* Message body */
+.enq-message-body {
+  padding: 14px 18px;
+}
+.enq-message-text {
+  font-size: 13px;
+  color: var(--black);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Reply display (already replied) */
+.enq-reply-display {
+  padding: 12px 18px 16px;
+  border-top: var(--border);
+  background: var(--teal-bg);
+}
+.enq-reply-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  margin-bottom: 6px;
+}
+.enq-reply-time { font-weight: 400; color: var(--gray-mid); }
+.enq-reply-text {
+  font-size: 13px;
+  color: var(--teal-dark, #1a4a3c);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Reply toggle button */
+.enq-reply-wrap {
+  padding: 10px 18px 14px;
+  border-top: var(--border);
+}
+.enq-reply-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.enq-reply-toggle:hover {
+  background: var(--green-bg);
+  color: var(--green-mid);
+  border-color: var(--green-light);
+}
+.enq-reply-toggle[aria-expanded="true"] {
+  background: var(--green-bg);
+  color: var(--green-mid);
+  border-color: var(--green-light);
+}
+
+/* Reply form */
+.enq-reply-form-wrap { margin-top: 12px; }
+.enq-reply-form { display: flex; flex-direction: column; gap: 8px; }
+.enq-reply-label-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+}
+.enq-char-count { font-weight: 400; color: var(--gray-mid); }
+.enq-reply-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--black);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 90px;
+  background: var(--white);
+  transition: border-color 0.15s;
+}
+.enq-reply-textarea:focus {
+  outline: none;
+  border-color: var(--green-mid);
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.07);
+}
+.enq-reply-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.enq-cancel-btn { font-size: 12px; padding: 7px 14px; }
+.enq-send-btn   { font-size: 12px; padding: 7px 16px; }
+
+/* ── Empty state ────────────────────────────────────────────── */
+.enq-empty {
+  text-align: center;
+  padding: 64px 24px;
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+}
+.enq-empty-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--gray-bg);
+  border: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px;
+  color: var(--gray-mid);
+}
+.enq-empty-title {
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  margin-bottom: 8px;
+}
+.enq-empty-sub {
+  font-size: 13px;
+  color: var(--gray-mid);
+  line-height: 1.6;
+}
+.enq-empty-sub a {
+  color: var(--green-mid);
+  text-decoration: none;
+}
+.enq-empty-sub a:hover { text-decoration: underline; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .enq-card-header { flex-direction: column; }
+  .enq-card-meta   { flex-direction: row; align-items: center; }
+  .enq-page-header { flex-direction: column; gap: 8px; }
+}
+</style>
+
+
+{# ── JS: reply toggle + char counter + flash dismiss ─────────── #}
+<script>
+(function () {
+  'use strict';
+
+  /* Toggle reply form open/closed */
+  window.toggleReply = function (id) {
+    var btn  = document.querySelector('[aria-controls="reply-form-' + id + '"]');
+    var form = document.getElementById('reply-form-' + id);
+    if (!btn || !form) return;
+
+    var isOpen = btn.getAttribute('aria-expanded') === 'true';
+    if (isOpen) {
+      btn.setAttribute('aria-expanded', 'false');
+      form.hidden = true;
+    } else {
+      btn.setAttribute('aria-expanded', 'true');
+      form.hidden = false;
+      var ta = form.querySelector('textarea');
+      if (ta) setTimeout(function () { ta.focus(); }, 40);
+    }
+  };
+
+  /* Character counter */
+  window.updateCount = function (el, counterId) {
+    var counter = document.getElementById(counterId);
+    if (counter) counter.textContent = el.value.length + ' / 1000';
+  };
+
+  /* Flash auto-dismiss */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4000);
+  });
+
+}());
+</script>
+
+</body>
+</html>

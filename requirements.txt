@@ -5,7 +5,7 @@
 #   pip install -r requirements.txt
 #
 # After installing, initialise the database with:
-#   python create_tables.py
+#   python scripts/create_tables.py
 # ============================================================
 
 # ── Flask core ───────────────────────────────────────────────
@@ -32,6 +32,9 @@ Flask-Limiter==3.7.0
 
 # ── Environment variables ─────────────────────────────────────
 python-dotenv==1.0.1
+
+# ── API documentation (Swagger UI) ───────────────────────────
+flasgger==0.9.7.1
 
 # ── Development utilities ─────────────────────────────────────
 # (safe to remove in production)

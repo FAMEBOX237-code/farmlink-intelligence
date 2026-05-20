@@ -19,7 +19,7 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -32,16 +32,16 @@ from models.models import User
 # ── Admin credentials ─────────────────────────────────────────
 # Change these in .env before running in production.
 # Do NOT hardcode real passwords here.
-ADMIN_EMAIL    = os.getenv('ADMIN_EMAIL',    'admin@farmlink.cm')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'AdminFarmLink2026!')
+ADMIN_EMAIL    = os.getenv('ADMIN_EMAIL')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 ADMIN_NAME     = os.getenv('ADMIN_NAME',     'FarmLink Administrator')
 
 # ── Test accounts (development only) ─────────────────────────
 TEST_FARMER_EMAIL    = 'farmer@farmlink.cm'
-TEST_FARMER_PASSWORD = 'Farmer2026!'
+TEST_FARMER_PASSWORD = os.getenv('TEST_FARMER_PASSWORD', 'Farmer2026!')
 
 TEST_BUYER_EMAIL     = 'buyer@farmlink.cm'
-TEST_BUYER_PASSWORD  = 'Buyer2026!'
+TEST_BUYER_PASSWORD  = os.getenv('TEST_BUYER_PASSWORD', 'Buyer2026!')
 
 
 def create_user_if_missing(full_name, email, password, role, **kwargs):
@@ -72,6 +72,12 @@ def run_seed():
     with app.app_context():
         print('\nFarmLink Intelligence — Database Seed')
         print('=' * 40)
+
+        # Safety check — refuse to run without real admin credentials
+        if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+            print('\n  ERROR: ADMIN_EMAIL and ADMIN_PASSWORD must be set in your .env file.')
+            print('  Add them and try again. Never hardcode credentials.')
+            return
 
         print('\n[1] Admin account')
         create_user_if_missing(

@@ -1,0 +1,251 @@
+{# templates/partials/sidebar_admin.html
+   Include: {% include 'partials/sidebar_admin.html' %}
+   Requires: current_user, active_page, unread_notifs
+   active_page values: 'dashboard', 'accounts', 'sensor_monitor',
+                       'reports', 'notifications' #}
+
+<aside class="sidebar" id="admin-sidebar" role="complementary" aria-label="Admin panel navigation">
+
+  {# ── Logo ─────────────────────────────────────────────────── #}
+  <div class="sidebar-top">
+    <a href="{{ url_for('public.landing') }}" class="sidebar-logo" aria-label="FarmLink home">
+      <div class="sidebar-logo-mark" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="rgba(148,163,184,0.85)" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="sidebar-logo-name">FarmLink</span>
+    </a>
+  </div>
+
+  {# ── Admin identity ────────────────────────────────────────── #}
+  <div class="sidebar-identity">
+    <div class="sidebar-identity-name">{{ current_user.full_name }}</div>
+    <div class="sidebar-identity-role">Administrator · Platform</div>
+  </div>
+
+  {# ── Navigation ────────────────────────────────────────────── #}
+  <nav class="sidebar-nav" aria-label="Admin navigation">
+
+    <div class="sidebar-section-label">Overview</div>
+
+    <a href="{{ url_for('admin.dashboard') }}"
+       class="sidebar-link {% if active_page == 'dashboard' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'dashboard' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      </span>
+      Dashboard
+    </a>
+
+    <div class="sidebar-section-label">Management</div>
+
+    <a href="{{ url_for('admin.accounts') }}"
+       class="sidebar-link {% if active_page == 'accounts' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'accounts' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </span>
+      Accounts
+    </a>
+
+    <a href="{{ url_for('admin.sensor_monitor') }}"
+       class="sidebar-link {% if active_page == 'sensor_monitor' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'sensor_monitor' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </span>
+      Sensor monitor
+    </a>
+
+    <a href="{{ url_for('admin.reports') }}"
+       class="sidebar-link {% if active_page == 'reports' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'reports' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6"  y1="20" x2="6"  y2="14"/>
+        </svg>
+      </span>
+      Reports
+    </a>
+
+    <div class="sidebar-section-label">Alerts</div>
+
+    <a href="{{ url_for('admin.notifications') }}"
+       class="sidebar-link {% if active_page == 'notifications' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'notifications' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+      </span>
+      Notifications
+      {% if unread_notifs and unread_notifs > 0 %}
+      <span class="sidebar-badge" aria-label="{{ unread_notifs }} unread">
+        {{ unread_notifs if unread_notifs <= 99 else '99+' }}
+      </span>
+      {% endif %}
+    </a>
+
+  </nav>
+
+  {# ── Footer ───────────────────────────────────────────────── #}
+  <div class="sidebar-footer">
+    <div class="sidebar-divider" aria-hidden="true"></div>
+
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-link is-logout">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </span>
+      Log out
+    </a>
+  </div>
+
+</aside>
+
+{# ══════════════════════════════════════════════════════════════
+   SIDEBAR TOGGLE — appended to sidebar partial
+   Identical toggle logic as sidebar_farmer, just targets
+   #admin-sidebar via the shared .sidebar selector.
+   ══════════════════════════════════════════════════════════════ #}
+
+<button class="sb-backdrop" id="sb-backdrop"
+        aria-label="Close navigation" tabindex="-1"></button>
+
+<script>
+(function () {
+  'use strict';
+
+  var sidebar  = document.querySelector('.sidebar');
+  var backdrop = document.getElementById('sb-backdrop');
+
+  if (!sidebar || !backdrop) return;
+
+  /* Build toggle button */
+  var wrap = document.createElement('div');
+  wrap.className = 'sb-btn-wrap';
+
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'sb-toggle';
+  btn.setAttribute('aria-label', 'Toggle navigation menu');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.setAttribute('aria-controls', 'admin-sidebar');
+  btn.innerHTML =
+    '<span class="sb-bars" aria-hidden="true">' +
+      '<span></span><span></span><span></span>' +
+    '</span>';
+
+  wrap.appendChild(btn);
+
+  /* Inject button after .topbar-vr */
+  function injectButton() {
+    var vr = document.querySelector('.topbar-vr');
+    if (vr && vr.parentNode) {
+      vr.parentNode.insertBefore(wrap, vr.nextSibling);
+    }
+  }
+
+  function openSidebar() {
+    sidebar.classList.remove('sb-hidden');
+    sidebar.classList.add('sb-open');
+    backdrop.classList.add('sb-backdrop-visible');
+    btn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSidebar() {
+    sidebar.classList.add('sb-hidden');
+    sidebar.classList.remove('sb-open');
+    backdrop.classList.remove('sb-backdrop-visible');
+    btn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  function isMobile() { return window.innerWidth <= 768; }
+
+  function applyInitialState() {
+    if (isMobile()) {
+      sidebar.classList.add('sb-hidden');
+      sidebar.classList.remove('sb-open');
+      btn.setAttribute('aria-expanded', 'false');
+    } else {
+      sidebar.classList.remove('sb-hidden', 'sb-open');
+      backdrop.classList.remove('sb-backdrop-visible');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function toggle() {
+    if (sidebar.classList.contains('sb-hidden')) { openSidebar(); }
+    else { closeSidebar(); }
+  }
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (!isMobile()) {
+        sidebar.classList.remove('sb-hidden', 'sb-open');
+        backdrop.classList.remove('sb-backdrop-visible');
+        document.body.style.overflow = '';
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        if (!sidebar.classList.contains('sb-hidden') &&
+            !sidebar.classList.contains('sb-open')) {
+          sidebar.classList.add('sb-hidden');
+        }
+      }
+    }, 80);
+  });
+
+  btn.addEventListener('click', toggle);
+  backdrop.addEventListener('click', function () {
+    if (!sidebar.classList.contains('sb-hidden')) closeSidebar();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && sidebar.classList.contains('sb-open')) {
+      closeSidebar();
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      injectButton();
+      applyInitialState();
+    });
+  } else {
+    injectButton();
+    applyInitialState();
+  }
+
+}());
+</script>

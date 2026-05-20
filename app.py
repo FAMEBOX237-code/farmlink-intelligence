@@ -22,6 +22,35 @@
 from flask import Flask
 from config import Config
 from extensions import db, bcrypt, login_manager, mail, csrf, limiter
+from flasgger import Swagger
+
+
+# ── Swagger / Flasgger configuration ────────────────────────
+SWAGGER_CONFIG = {
+    'title'      : 'FarmLink Intelligence API',
+    'uiversion'  : 3,
+    'version'    : '1.0.0',
+    'description': (
+        'REST API for FarmLink Intelligence — IoT-verified smart agricultural '
+        'marketplace for Cameroonian smallholder farmers.\n\n'
+        'Built with Flask + SQLAlchemy. OOP design patterns: Observer, '
+        'Strategy, Template Method.\n\n'
+        '**Authentication**: Session-based (log in via /login first, '
+        'then use authenticated endpoints).\n\n'
+        '**Base URL**: http://127.0.0.1:5000'
+    ),
+    'termsOfService': '',
+    'specs_route'   : '/api/docs/',
+    'specs': [{
+        'endpoint'   : 'apispec',
+        'route'      : '/api/docs/apispec.json',
+        'rule_filter': lambda rule: rule.endpoint.startswith('api'),
+        'model_filter': lambda tag: True,
+    }],
+    'static_url_path': '/flasgger_static',
+    'swagger_ui'     : True,
+    'headers'        : [],
+}
 
 
 def create_app(config_class=Config):
@@ -35,6 +64,14 @@ def create_app(config_class=Config):
     mail.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    Swagger(app, config=SWAGGER_CONFIG, merge=True)
+
+    # ── Exempt API routes from CSRF ──────────────────────────
+    # API endpoints receive JSON, not HTML forms.
+    # CSRF protection is form-based and does not apply here.
+    # API security is handled by session authentication instead.
+    from routes.api import api_bp as _api_bp
+    csrf.exempt(_api_bp)
 
     # ── User loader for Flask-Login ──────────────────────────
     # Flask-Login calls this on every request to load the
@@ -52,12 +89,14 @@ def create_app(config_class=Config):
         from routes.farmer  import farmer_bp
         from routes.buyer   import buyer_bp
         from routes.admin   import admin_bp
+        from routes.api     import api_bp
 
         app.register_blueprint(public_bp)
         app.register_blueprint(auth_bp)
         app.register_blueprint(farmer_bp)
         app.register_blueprint(buyer_bp)
         app.register_blueprint(admin_bp)
+        app.register_blueprint(api_bp)
 
     # ── Prevent back-button from showing stale authenticated pages ──
     # Without these headers, clicking the browser back button after

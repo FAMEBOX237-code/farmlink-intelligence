@@ -1,0 +1,422 @@
+<!--  ============================================================
+   templates/admin/notifications.html — FarmLink Intelligence
+
+   CSS load order: public.css → admin.css → partials.css
+   Zero <style> blocks. Zero inline styles.
+   Zero ORM calls. All data from route context.
+
+   Context variables from routes/admin.py → notifications():
+     admin          User
+     active_page    str        — 'notifications'
+     unread_notifs  int
+     tab            str        — 'all'|'unread'|'system'|'sensor'
+     counts         dict       — {all, unread, system, sensor}
+     notifs         list[Notification]
+                    fields: id, type, title, message,
+                            is_read, sent_at, channel
+
+   Notification types handled:
+     harvest_alert, sensor_offline, quality_change,
+     account_verified, account_suspended, listing_published,
+     transaction_completed, buyer_enquiry, system
+   ============================================================  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Notifications · Admin Panel · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="portal-body">
+
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Admin Panel</span>
+  </div>
+
+  <div class="topbar-right">
+    <a href="{{ url_for('admin.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ admin.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true" title="{{ admin.full_name }}">
+      {{ admin.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+
+{# ════ FLASH ═════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ════ LAYOUT ════════════════════════════════════════════════ #}
+<div class="portal-layout">
+
+  {% include 'partials/sidebar_admin.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header + mark all read ──────────────────────── #}
+    <div class="notif-page-hd">
+      <div>
+        <h1 class="page-title">Notifications</h1>
+        <p class="page-subtitle">
+          Sensor alerts, account events, and platform system messages.
+        </p>
+      </div>
+
+      {% if counts.unread > 0 %}
+        <form method="POST" action="{{ url_for('admin.notifications') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="mark_all_read">
+          <button type="submit" class="notif-mark-all"
+                  aria-label="Mark all notifications as read">
+            Mark all as read
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    {# ── Summary strip ─────────────────────────────────────── #}
+    {% if counts.unread > 0 or counts.sensor > 0 %}
+      <div class="stats-strip" role="status" aria-live="polite">
+
+        <div class="ss-item">
+          <div class="ss-value {% if counts.unread > 0 %}ss-value-danger{% endif %}">
+            {{ counts.unread }}
+          </div>
+          <div class="ss-label">Unread</div>
+        </div>
+        <div class="ss-divider" aria-hidden="true"></div>
+
+        <div class="ss-item">
+          <div class="ss-value {% if counts.sensor > 0 %}ss-value-amber{% endif %}">
+            {{ counts.sensor }}
+          </div>
+          <div class="ss-label">Sensor Alerts</div>
+        </div>
+        <div class="ss-divider" aria-hidden="true"></div>
+
+        <div class="ss-item">
+          <div class="ss-value">{{ counts.system }}</div>
+          <div class="ss-label">System</div>
+        </div>
+        <div class="ss-divider" aria-hidden="true"></div>
+
+        <div class="ss-item">
+          <div class="ss-value">{{ counts.all }}</div>
+          <div class="ss-label">Total</div>
+        </div>
+
+      </div>
+    {% endif %}
+
+    {# ── Tab bar ───────────────────────────────────────────── #}
+    <div class="tabs-bar" role="tablist" aria-label="Filter notifications">
+
+      <a href="{{ url_for('admin.notifications', tab='all') }}"
+         class="tab-link {% if tab == 'all' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'all' else 'false' }}">
+        All
+        <span class="tab-count">{{ counts.all }}</span>
+      </a>
+
+      <a href="{{ url_for('admin.notifications', tab='unread') }}"
+         class="tab-link {% if tab == 'unread' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'unread' else 'false' }}">
+        Unread
+        <span class="tab-count
+          {% if counts.unread > 0 and tab != 'unread' %}tab-count-urgent{% endif %}">
+          {{ counts.unread }}
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin.notifications', tab='sensor') }}"
+         class="tab-link {% if tab == 'sensor' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'sensor' else 'false' }}">
+        Sensor Alerts
+        <span class="tab-count
+          {% if counts.sensor > 0 and tab != 'sensor' %}tab-count-urgent{% endif %}">
+          {{ counts.sensor }}
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin.notifications', tab='system') }}"
+         class="tab-link {% if tab == 'system' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'system' else 'false' }}">
+        System
+        <span class="tab-count">{{ counts.system }}</span>
+      </a>
+
+    </div>
+
+
+    {# ── Notification list ─────────────────────────────────── #}
+    {% if notifs %}
+
+      <div class="notif-list" role="list" aria-label="Notifications">
+
+        {% for n in notifs %}
+          <article class="notif-item {% if not n.is_read %}is-unread{% endif %}"
+                   role="listitem"
+                   aria-label="{{ n.title }}{% if not n.is_read %} — unread{% endif %}">
+
+            {# ── Icon — colour and shape by type ── #}
+            <div class="notif-icon
+              {% if n.type == 'sensor_offline' %}notif-icon-sensor
+              {% elif n.type == 'account_verified' or n.type == 'account_suspended' %}notif-icon-verify
+              {% elif n.type == 'quality_change' %}notif-icon-trust
+              {% elif n.type == 'harvest_alert' %}notif-icon-listing
+              {% elif n.type == 'transaction_completed' %}notif-icon-verify
+              {% elif n.type == 'listing_published' %}notif-icon-listing
+              {% else %}notif-icon-system{% endif %}"
+              aria-hidden="true">
+
+              {% if n.type == 'sensor_offline' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="1"  y1="1"  x2="23" y2="23"/>
+                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                  <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                  <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+                  <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                  <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                  <line x1="12" y1="20" x2="12.01" y2="20"/>
+                </svg>
+
+              {% elif n.type == 'harvest_alert' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+                </svg>
+
+              {% elif n.type == 'account_verified' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+
+              {% elif n.type == 'account_suspended' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+
+              {% elif n.type == 'quality_change' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+
+              {% elif n.type == 'transaction_completed' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+
+              {% elif n.type == 'listing_published' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8"  y1="6"  x2="21" y2="6"/>
+                  <line x1="8"  y1="12" x2="21" y2="12"/>
+                  <line x1="8"  y1="18" x2="21" y2="18"/>
+                  <line x1="3"  y1="6"  x2="3.01" y2="6"/>
+                  <line x1="3"  y1="12" x2="3.01" y2="12"/>
+                  <line x1="3"  y1="18" x2="3.01" y2="18"/>
+                </svg>
+
+              {% elif n.type == 'buyer_enquiry' %}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+
+              {% else %}
+                {# system / fallback #}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8"  x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              {% endif %}
+
+            </div>
+
+            {# ── Body ── #}
+            <div class="notif-body">
+
+              <div class="notif-title">{{ n.title }}</div>
+              <div class="notif-text">{{ n.message }}</div>
+
+              <div class="notif-meta">
+
+                {# Timestamp #}
+                <span>
+                  {{ n.sent_at.strftime('%d %b %Y · %H:%M') if n.sent_at else '—' }}
+                </span>
+
+                {# Channel pill #}
+                <span class="pill pill-no-data">
+                  {{ n.channel | upper if n.channel else 'WEB' }}
+                </span>
+
+                {# Type label #}
+                <span class="pill
+                  {% if n.type == 'sensor_offline' %}pill-offline
+                  {% elif n.type in ('account_verified', 'transaction_completed') %}pill-verified
+                  {% elif n.type in ('account_suspended', 'quality_change') %}pill-pending
+                  {% elif n.type == 'harvest_alert' %}pill-online
+                  {% else %}pill-unverified{% endif %}">
+                  {{ n.type | replace('_', ' ') | title }}
+                </span>
+
+                {# Quick links when relevant #}
+                {% if n.type == 'account_suspended' or n.type == 'account_verified' %}
+                  <a href="{{ url_for('admin.accounts') }}" class="notif-action">
+                    View accounts ↗
+                  </a>
+                {% elif n.type == 'sensor_offline' %}
+                  <a href="{{ url_for('admin.sensor_monitor', tab='offline') }}"
+                     class="notif-action">
+                    View node ↗
+                  </a>
+                {% elif n.type == 'harvest_alert' %}
+                  <a href="{{ url_for('admin.reports') }}" class="notif-action">
+                    View reports ↗
+                  </a>
+                {% endif %}
+
+              </div>
+            </div>
+
+            {# ── Unread pip ── #}
+            {% if not n.is_read %}
+              <div class="notif-unread-pip" aria-hidden="true"></div>
+            {% endif %}
+
+          </article>
+        {% endfor %}
+
+      </div>
+
+    {% else %}
+
+      {# ── Empty state ──────────────────────────────────────── #}
+      <div class="card">
+        <div class="notif-empty">
+          <div class="notif-empty-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+
+          {% if tab == 'unread' %}
+            <div class="notif-empty-title">You're all caught up</div>
+            <div class="notif-empty-sub">No unread notifications.</div>
+          {% elif tab == 'sensor' %}
+            <div class="notif-empty-title">No sensor alerts</div>
+            <div class="notif-empty-sub">
+              Sensor alerts appear here when nodes go offline or produce abnormal readings.
+            </div>
+          {% elif tab == 'system' %}
+            <div class="notif-empty-title">No system notifications</div>
+            <div class="notif-empty-sub">
+              System messages appear here for platform events and configuration changes.
+            </div>
+          {% else %}
+            <div class="notif-empty-title">No notifications yet</div>
+            <div class="notif-empty-sub">
+              Platform activity — sensor events, account actions, and transactions —
+              will appear here as the platform grows.
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+    {% endif %}
+
+  </main>
+</div>
+
+
+{# ════ SCRIPTS ═══════════════════════════════════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  /* Auto-dismiss flash messages */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 200);
+    }, 4500);
+  });
+
+}());
+</script>
+
+</body>
+</html>

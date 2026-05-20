@@ -1,0 +1,570 @@
+<!-- {# ============================================================
+   templates/farmer/profile_registered.html — FarmLink Intelligence
+   WF17 — Farmer Profile (Registered/Logged-in User View)
+
+   CSS:    public.css → farmer.css
+   Route:  GET /farmer/<farmer_id>/profile
+   Access: Login required — any role
+
+   Context: subject_farmer, farms_data, active_listings,
+            trust_ctx, active_page, unread_notifs, active_forecast
+
+   CHANGES FROM ORIGINAL:
+   - Cover photo section completely removed
+   - Profile photo enlarged (140px) and redesigned as focal point
+   - "View public profile" links removed
+   ============================================================ #} -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>{{ subject_farmer.full_name }} · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/farmer.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+</head>
+<body class="portal-body">
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">
+      {% if current_user.role == 'buyer' %}Buyer Portal
+      {% elif current_user.role == 'admin' %}Admin Panel
+      {% else %}Farmer Portal{% endif %}
+    </span>
+  </div>
+  <div class="topbar-right">
+    {% if unread_notifs is defined %}
+      <a href="{{ url_for('farmer.notifications') if current_user.role == 'farmer' else url_for('buyer.notifications') }}"
+         class="topbar-notif" aria-label="Notifications">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {% if unread_notifs and unread_notifs > 0 %}
+          <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
+        {% endif %}
+      </a>
+    {% endif %}
+    <span class="topbar-username">{{ current_user.full_name }}</span>
+
+    {# Show current user's real photo in topbar if they have one #}
+    {% if current_user.profile_photo_url %}
+      <div class="topbar-avatar-photo" title="{{ current_user.full_name }}" aria-hidden="true">
+        <img src="{{ url_for('static', filename=current_user.profile_photo_url) }}"
+             alt="{{ current_user.full_name }}">
+      </div>
+    {% else %}
+      <div class="topbar-avatar" title="{{ current_user.full_name }}" aria-hidden="true">
+        {{ current_user.full_name[:2].upper() }}
+      </div>
+    {% endif %}
+
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+<div class="prof-standalone-layout">
+  <main class="prof-standalone-main" id="main" role="main">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="{{ url_for('buyer.marketplace') }}">Marketplace</a>
+      <span class="breadcrumb-sep" aria-hidden="true">›</span>
+      <span class="breadcrumb-cur">{{ subject_farmer.full_name }}</span>
+    </nav>
+
+    
+
+    {# ════ PROFILE HERO CARD ════ #}
+    <div class="prof-hero-card">
+
+      {# ── Large profile photo — read only on this view ── #}
+      <div class="prof-photo-section">
+        <div class="prof-photo-ring">
+          <div class="prof-photo-circle">
+            {% if subject_farmer.profile_photo_url %}
+              <img src="{{ url_for('static', filename=subject_farmer.profile_photo_url) }}"
+                   alt="{{ subject_farmer.full_name }}">
+            {% else %}
+              {{ subject_farmer.full_name[:2].upper() }}
+            {% endif %}
+          </div>
+          {# No edit button here — this is not the farmer's own view #}
+        </div>
+      </div>
+
+      {# ── Hero info ── #}
+      <div class="prof-hero-info">
+        <div class="prof-hero-text">
+          <div class="prof-hero-name">{{ subject_farmer.full_name }}</div>
+          <div class="prof-hero-meta">
+            Farmer · {{ subject_farmer.region or 'Cameroon' }} · Member since {{ subject_farmer.created_at.strftime('%b %Y') }}
+          </div>
+          <div class="prof-badge-row">
+            {% if subject_farmer.is_verified %}
+              <span class="prof-badge prof-badge-green">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Verified farmer
+              </span>
+            {% else %}
+              <span class="prof-badge prof-badge-amber">Unverified</span>
+            {% endif %}
+            {% if trust_ctx and trust_ctx.transaction_count %}
+              <span class="prof-badge">{{ trust_ctx.transaction_count }} transactions</span>
+            {% endif %}
+            {% if subject_farmer.primary_crop %}
+              <span class="prof-badge">{{ subject_farmer.primary_crop }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="prof-hero-actions">
+          {% if current_user.is_farmer() and current_user.id != subject_farmer.id %}
+            {# Farmer viewing another farmer — direct message #}
+            <button type="button"
+                    class="btn-primary"
+                    style="font-size:12px"
+                    onclick="openContactModal()"
+                    aria-haspopup="dialog">
+              Send message ↗
+            </button>
+          {% elif current_user.is_buyer() %}
+            {# Buyer viewing a farmer — contact + listings #}
+            <button type="button"
+                    class="btn-primary"
+                    style="font-size:12px"
+                    onclick="openContactModal()"
+                    aria-haspopup="dialog">
+              Contact farmer ↗
+            </button>
+            <a href="{{ url_for('buyer.marketplace') }}?farmer={{ subject_farmer.id }}"
+               class="btn-ghost" style="font-size:12px">
+              View listings
+            </a>
+          {% else %}
+            {# Admin — listings link only #}
+            <a href="{{ url_for('buyer.marketplace') }}?farmer={{ subject_farmer.id }}"
+               class="btn-primary" style="font-size:12px">View listings ↗</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="prof-stats-strip">
+        <div class="prof-stat">
+          <div class="prof-stat-val prof-stat-val-green">
+            {% if trust_ctx and trust_ctx.score_display %}{{ trust_ctx.score_display }}{% else %}—{% endif %}
+          </div>
+          <div class="prof-stat-label">Trust score</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ farms_data | length }}</div>
+          <div class="prof-stat-label">Farms</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ active_listings | length }}</div>
+          <div class="prof-stat-label">Active listings</div>
+        </div>
+        <div class="prof-stat">
+          <div class="prof-stat-val">{{ trust_ctx.transaction_count if trust_ctx else 0 }}</div>
+          <div class="prof-stat-label">Transactions</div>
+        </div>
+      </div>
+    </div>
+
+    {# Redacted notice #}
+    <div class="prof-redacted" role="note">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Email · Phone · Earnings · Sensor readings · Draft listings · Account settings — private
+    </div>
+
+    {# Trust score — full breakdown #}
+    <section class="card" aria-label="Trust score breakdown">
+      <div class="card-hd">
+        <div>
+          <div class="card-title">Trust score</div>
+          <div class="card-sub">Full breakdown — assess this farmer's reliability before buying</div>
+        </div>
+      </div>
+      {% if trust_ctx and trust_ctx.score_display %}
+        <div class="prof-trust-hero">
+          <div class="prof-trust-ring">
+            <span class="prof-trust-num">{{ trust_ctx.score_display }}</span>
+            <span class="prof-trust-denom">/ 5.0</span>
+          </div>
+          <p class="prof-trust-desc">
+            Based on {{ trust_ctx.transaction_count or 0 }} transactions.
+            Use the four factors below to judge reliability before making contact.
+          </p>
+        </div>
+        {% for row in trust_ctx.bar_rows %}
+          <div class="prof-trust-row">
+            <span class="prof-trust-label">{{ row.label }}</span>
+            <div class="prof-trust-bar-wrap" role="meter"
+                 aria-valuenow="{{ row.pct }}" aria-valuemin="0" aria-valuemax="100">
+              <div class="prof-trust-bar" style="width:{{ row.pct }}%"></div>
+            </div>
+            <span class="prof-trust-val">{{ row.display }}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-sub" style="padding:16px 0;text-align:center">
+          Trust score not yet available — no completed transactions.
+        </p>
+      {% endif %}
+    </section>
+
+    {# Registered farms #}
+    <section class="card" aria-label="Registered farms">
+      <div class="card-hd">
+        <div class="card-title">Registered farms</div>
+        <div class="card-sub">Approximate locations — no GPS or sensor data shown</div>
+      </div>
+      {% if farms_data %}
+        {% for fd in farms_data %}
+          <div class="prof-farm-row">
+            <div>
+              <div class="prof-farm-name">{{ fd.farm.name }}</div>
+              <div class="prof-farm-meta">
+                {{ fd.farm.region }}{% if fd.farm.town %}, {{ fd.farm.town }}{% endif %}
+                · {{ fd.farm.crop_type }}
+                {% if fd.size_display %} · {{ fd.size_display }}{% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-sub" style="padding:14px 0;text-align:center">No farms listed.</p>
+      {% endif %}
+    </section>
+
+    {# Active listings #}
+    <section class="card" aria-label="Active listings">
+      <div class="card-hd">
+        <div class="card-title">Active listings</div>
+        <div class="card-sub">Currently available produce</div>
+      </div>
+      {% if active_listings %}
+        {% for l in active_listings %}
+          <div class="prof-listing-row">
+            <div class="prof-listing-info">
+              <div class="prof-listing-crop">{{ l.crop }} — {{ l.quantity }}</div>
+              <div class="prof-listing-meta">
+                {{ l.price }}
+                {% if l.q_live %} · Quality {{ l.q_live }}{% endif %}
+                {% if l.has_forecast %}
+                  <span class="tag tag-forecast" style="margin-left:4px">Forecast</span>
+                {% endif %}
+              </div>
+            </div>
+            <a href="{{ url_for('buyer.listing_detail', listing_id=l.id) }}" class="btn-sm btn-sm-primary">View ↗</a>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty-sub" style="padding:14px 0;text-align:center">No active listings right now.</p>
+      {% endif %}
+    </section>
+
+    {# Contact CTA — context-aware #}
+    <div class="prof-cta-box">
+      {% if current_user.is_farmer() and current_user.id != subject_farmer.id %}
+        <div class="prof-cta-title">
+          Work with {{ subject_farmer.full_name.split()[0] }}?
+        </div>
+        <p class="prof-cta-desc">
+          Send a direct message to discuss produce, pricing, or collaboration.
+          They will be notified and can reply from their dashboard.
+        </p>
+        <div class="prof-cta-actions">
+          <button type="button"
+                  class="btn-primary"
+                  onclick="openContactModal()">
+            Send message ↗
+          </button>
+        </div>
+      {% elif current_user.is_buyer() %}
+        <div class="prof-cta-title">
+          Interested in {{ subject_farmer.full_name.split()[0] }}'s produce?
+        </div>
+        <p class="prof-cta-desc">
+          Send a direct message about availability, pricing, or custom orders.
+          Or browse their active listings directly.
+        </p>
+        <div class="prof-cta-actions">
+          <button type="button"
+                  class="btn-primary"
+                  onclick="openContactModal()">
+            Contact farmer ↗
+          </button>
+          <a href="{{ url_for('buyer.marketplace') }}?farmer={{ subject_farmer.id }}"
+             class="btn-ghost">
+            View listings
+          </a>
+        </div>
+      {% else %}
+        <div class="prof-cta-title">
+          Ready to work with {{ subject_farmer.full_name.split()[0] }}?
+        </div>
+        <p class="prof-cta-desc">
+          Browse their active listings to see prices, quality scores,
+          and availability.
+        </p>
+        <div class="prof-cta-actions">
+          <a href="{{ url_for('buyer.marketplace') }}?farmer={{ subject_farmer.id }}"
+             class="btn-primary">
+            Browse listings ↗
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════
+   CONTACT MODAL — farmer messages another farmer
+   Only rendered when a farmer views another farmer's profile.
+   ══════════════════════════════════════════════════════════ #}
+{% if (current_user.is_farmer() and current_user.id != subject_farmer.id) or current_user.is_buyer() %}
+<div id="contact-modal-overlay"
+     class="modal-overlay"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="contact-modal-title"
+     style="display:none">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="contact-modal-title">
+          {% if current_user.is_buyer() %}
+            Contact {{ subject_farmer.full_name.split()[0] }}
+          {% else %}
+            Message {{ subject_farmer.full_name.split()[0] }}
+          {% endif %}
+        </div>
+        <div class="modal-sub">
+          {% if current_user.is_buyer() %}About their profile or produce
+          {% else %}Farmer to farmer{% endif %}
+        </div>
+      </div>
+      <button type="button"
+              class="modal-close"
+              onclick="closeContactModal()"
+              aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    {# Route and context_type differ by role #}
+    {% if current_user.is_buyer() %}
+      <form method="POST"
+            action="{{ url_for('buyer.contact_send') }}"
+            class="modal-form">
+        <input type="hidden" name="csrf_token"    value="{{ csrf_token() }}">
+        <input type="hidden" name="recipient_id"  value="{{ subject_farmer.id }}">
+        <input type="hidden" name="context_type"  value="farmer_profile">
+        <input type="hidden" name="redirect_back" value="{{ request.url }}">
+    {% else %}
+      <form method="POST"
+            action="{{ url_for('farmer.farmer_contact_send') }}"
+            class="modal-form">
+        <input type="hidden" name="csrf_token"    value="{{ csrf_token() }}">
+        <input type="hidden" name="recipient_id"  value="{{ subject_farmer.id }}">
+        <input type="hidden" name="redirect_back" value="{{ request.url }}">
+    {% endif %}
+
+      <label class="modal-label" for="contact-message">
+        Your message
+        <span class="modal-char-count" id="modal-char-count">0 / 1000</span>
+      </label>
+      <textarea id="contact-message"
+                name="message"
+                class="modal-textarea"
+                rows="5"
+                maxlength="1000"
+                placeholder="Hi {{ subject_farmer.full_name.split()[0] }}, I wanted to reach out about..."
+                required
+                oninput="updateCharCount(this)"></textarea>
+
+      <div class="modal-farmer-note">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ subject_farmer.full_name }} will be notified and can reply from their enquiries inbox.
+      </div>
+
+      <div class="modal-actions">
+        <button type="button"
+                class="btn-ghost modal-cancel"
+                onclick="closeContactModal()">Cancel</button>
+        <button type="submit"
+                class="btn-primary modal-submit">Send message</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endif %}
+
+
+{# ── Shared modal CSS ─────────────────────────────────────────── #}
+<style>
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 900; padding: 20px;
+}
+.modal-box {
+  background: var(--white, #fff);
+  border-radius: var(--radius-lg, 10px);
+  border: 1px solid var(--gray-light, #e5e5e5);
+  width: 100%; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--gray-light, #e5e5e5);
+}
+.modal-title {
+  font-size: 15px; font-weight: 500;
+  color: var(--black, #111); margin-bottom: 3px;
+}
+.modal-sub { font-size: 12px; color: var(--gray-mid, #777); }
+.modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--gray-mid, #777); padding: 2px;
+  border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--black, #111); }
+.modal-form { padding: 20px; }
+.modal-label {
+  display: flex; justify-content: space-between;
+  font-size: 12px; font-weight: 500;
+  color: var(--black, #111); margin-bottom: 6px;
+}
+.modal-char-count { font-weight: 400; color: var(--gray-mid, #777); }
+.modal-textarea {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid var(--gray-light, #e5e5e5);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; color: var(--black, #111);
+  font-family: inherit; resize: vertical;
+  min-height: 110px; background: var(--white, #fff);
+  transition: border-color 0.15s;
+}
+.modal-textarea:focus {
+  outline: none;
+  border-color: var(--green-mid, #2d6a4f);
+}
+.modal-farmer-note {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 11px; color: var(--gray-mid, #777);
+  margin: 10px 0 18px; line-height: 1.5;
+}
+.modal-farmer-note svg { flex-shrink: 0; margin-top: 1px; }
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+</style>
+
+
+{# ── JS: trust bar animation + modal ─────────────────────────── #}
+<script>
+(function () {
+  'use strict';
+
+  /* Trust bar entrance animation */
+  document.querySelectorAll('.prof-trust-bar').forEach(function (bar) {
+    var target = bar.style.width;
+    bar.style.width = '0%';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { bar.style.width = target; });
+    });
+  });
+
+  /* Modal open / close */
+  window.openContactModal = function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    var ta = document.getElementById('contact-message');
+    if (ta) setTimeout(function () { ta.focus(); }, 60);
+  };
+
+  window.closeContactModal = function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  window.updateCharCount = function (el) {
+    var counter = document.getElementById('modal-char-count');
+    if (counter) counter.textContent = el.value.length + ' / 1000';
+  };
+
+  /* Close on backdrop click */
+  document.addEventListener('DOMContentLoaded', function () {
+    var overlay = document.getElementById('contact-modal-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) window.closeContactModal();
+      });
+    }
+  });
+
+  /* Close on Escape */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.closeContactModal();
+  });
+
+}());
+</script>
+
+</body>
+</html>

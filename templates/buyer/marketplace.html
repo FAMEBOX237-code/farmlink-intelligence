@@ -1,0 +1,1260 @@
+{# ============================================================
+   templates/buyer/marketplace.html — FarmLink Intelligence
+   WF19 — Public Marketplace (Browse Listings)
+
+   Public — accessible without login.
+   Logged-in buyers see their sidebar. Anonymous visitors
+   see the public navbar instead.
+
+   CSS:    public.css → buyer.css
+   Route:  GET /marketplace
+
+   Context:
+     listings_display  list[dict] — pre-computed listing rows
+     total_count       int        — total results count
+     crop_filter       str        — active crop filter
+     region_filter     str        — active region filter
+     sort_by           str        — active sort key
+     min_quality       str        — active min quality filter
+     has_forecast      str        — '1' if forecast filter active
+     regions           list[str]  — distinct regions for dropdown
+     active_nav        str        — 'marketplace' (for navbar)
+     active_page       str        — 'marketplace' (for sidebar)
+     unread_notifs     int        — buyer unread count
+     active_alerts     int        — buyer active alerts count
+   ============================================================ #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+        content="Browse IoT-verified produce listings from Cameroonian smallholder farmers. Every listing carries a live sensor quality score and farmer trust rating.">
+  <title>Marketplace · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buyer.css') }}">
+</head>
+
+{# Body class switches between portal layout (logged-in buyer)
+   and public layout (anonymous / farmer / admin visiting) #}
+<body class="{% if current_user.is_authenticated and current_user.is_buyer() %}portal-body{% else %}mkt-public-body{% endif %}">
+
+
+{# ══════════════════════════════════════════════════════════════
+   HEADER — portal topbar for buyers, public navbar for everyone else
+   ══════════════════════════════════════════════════════════════ #}
+
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+
+  {# ── Buyer portal topbar ──────────────────────────────────── #}
+  {% include 'partials/navbar_buyer.html' %}
+
+{% else %}
+
+  {# ── Public navbar for anonymous / farmer / admin visitors ─── #}
+  {% include 'partials/navbar_public.html' %}
+
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   FLASH MESSAGES
+   ══════════════════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   Portal layout (sidebar) for buyers, simple wrapper for others
+   ══════════════════════════════════════════════════════════════ #}
+
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+  <div class="portal-layout">
+    {% include 'partials/sidebar_buyer.html' %}
+    <main class="portal-main" id="main" role="main">
+{% else %}
+    <main class="mkt-public-main" id="main" role="main">
+{% endif %}
+
+
+      {# ════════════════════════════════════════════════════════
+         HERO STRIP — marketplace intro + trust signals
+         Only shown to non-logged-in visitors
+         ════════════════════════════════════════════════════════ #}
+      {% if not (current_user.is_authenticated and current_user.is_buyer()) %}
+        <section class="mkt-hero-strip" aria-label="Marketplace introduction">
+          <div class="mkt-hero-inner">
+            <div class="mkt-hero-text">
+              <div class="mkt-hero-eyebrow">
+                <span class="mkt-iot-dot" aria-hidden="true"></span>
+                IoT-Verified · Live sensor data · Cameroon
+              </div>
+              <h1 class="mkt-hero-title">
+                Farm produce you can trust.<br>
+                Quality measured, not claimed.
+              </h1>
+              <p class="mkt-hero-sub">
+                Every listing on FarmLink carries a live sensor quality score
+                computed from soil moisture, temperature, and humidity readings
+                collected every 30 minutes directly from the farm.
+              </p>
+            </div>
+            <div class="mkt-hero-trust-row" aria-label="Platform statistics">
+              <div class="mkt-trust-item">
+                <div class="mkt-trust-num">{{ total_count }}</div>
+                <div class="mkt-trust-label">Active listings</div>
+              </div>
+              <div class="mkt-trust-divider" aria-hidden="true"></div>
+              <div class="mkt-trust-item">
+                <div class="mkt-trust-num">30 min</div>
+                <div class="mkt-trust-label">Sensor cycle</div>
+              </div>
+              <div class="mkt-trust-divider" aria-hidden="true"></div>
+              <div class="mkt-trust-item">
+                <div class="mkt-trust-num">10 regions</div>
+                <div class="mkt-trust-label">Coverage</div>
+              </div>
+              <div class="mkt-trust-divider" aria-hidden="true"></div>
+              <div class="mkt-trust-item">
+                <div class="mkt-trust-num">0 FCFA</div>
+                <div class="mkt-trust-label">Middleman fees</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+
+      {# ════════════════════════════════════════════════════════
+         PAGE HEADER (buyer portal view only — replaces hero)
+         ════════════════════════════════════════════════════════ #}
+      {% if current_user.is_authenticated and current_user.is_buyer() %}
+        <div class="page-header">
+          <div class="page-header-inner">
+            <div>
+              <h1 class="page-title">Marketplace</h1>
+              <p class="page-subtitle">
+                Browse IoT-verified produce from Cameroonian farmers.
+                Every score is computed from live sensor data.
+              </p>
+            </div>
+            <div class="page-header-actions">
+              <a href="{{ url_for('buyer.alerts') }}" class="btn-buyer-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                My harvest alerts
+                {% if active_alerts and active_alerts > 0 %}
+                  <span class="buyer-badge-amber" style="margin-left:4px;font-size:10px;
+                    padding:1px 6px;border-radius:999px;
+                    background:rgba(250,199,117,.2);color:var(--amber-dark)">
+                    {{ active_alerts }}
+                  </span>
+                {% endif %}
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+
+      {# ════════════════════════════════════════════════════════
+         FILTER BAR — sticky, collapses on mobile
+         ════════════════════════════════════════════════════════ #}
+      <form method="GET" action="{{ url_for('buyer.marketplace') }}"
+            class="filter-bar" role="search" aria-label="Filter marketplace listings"
+            id="filter-form">
+
+        {# Crop search #}
+        <div class="filter-group">
+          <label class="filter-label" for="filter-crop">Crop</label>
+          <div class="filter-input-wrap">
+            <svg class="filter-input-icon" width="13" height="13" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="filter-crop" name="crop"
+                   class="filter-input filter-input-has-icon"
+                   placeholder="e.g. Tomatoes, Maize…"
+                   value="{{ crop_filter }}"
+                   autocomplete="off">
+          </div>
+        </div>
+
+        {# Region dropdown #}
+        <div class="filter-group">
+          <label class="filter-label" for="filter-region">Region</label>
+          <div class="filter-select-wrap">
+            <select id="filter-region" name="region" class="filter-select">
+              <option value="">All regions</option>
+              {% for r in regions %}
+                <option value="{{ r }}"
+                  {% if r == region_filter %}selected{% endif %}>
+                  {{ r }}
+                </option>
+              {% endfor %}
+            </select>
+            <svg class="filter-select-chevron" width="11" height="11" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+
+        {# Min quality score #}
+        <div class="filter-group filter-group-sm">
+          <label class="filter-label" for="filter-quality">Min quality</label>
+          <div class="filter-select-wrap">
+            <select id="filter-quality" name="min_quality" class="filter-select">
+              <option value=""  {% if not min_quality %}selected{% endif %}>Any</option>
+              <option value="25" {% if min_quality == '25' %}selected{% endif %}>25+</option>
+              <option value="50" {% if min_quality == '50' %}selected{% endif %}>50+</option>
+              <option value="70" {% if min_quality == '70' %}selected{% endif %}>70+</option>
+              <option value="85" {% if min_quality == '85' %}selected{% endif %}>85+</option>
+            </select>
+            <svg class="filter-select-chevron" width="11" height="11" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+
+        {# Sort #}
+        <div class="filter-group filter-group-sm">
+          <label class="filter-label" for="filter-sort">Sort by</label>
+          <div class="filter-select-wrap">
+            <select id="filter-sort" name="sort" class="filter-select">
+              <option value="newest"     {% if sort_by == 'newest'     %}selected{% endif %}>Newest first</option>
+              <option value="quality"    {% if sort_by == 'quality'    %}selected{% endif %}>Highest quality</option>
+              <option value="trust"      {% if sort_by == 'trust'      %}selected{% endif %}>Most trusted</option>
+              <option value="price_asc"  {% if sort_by == 'price_asc'  %}selected{% endif %}>Price: low → high</option>
+              <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price: high → low</option>
+            </select>
+            <svg class="filter-select-chevron" width="11" height="11" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+
+        {# Forecast toggle #}
+        <div class="filter-group filter-group-toggle">
+          <label class="filter-label">Forecast only</label>
+          <label class="filter-toggle" aria-label="Show only listings with harvest forecasts">
+            <input type="checkbox" name="forecast" value="1"
+                   {% if has_forecast == '1' %}checked{% endif %}
+                   onchange="this.form.submit()">
+            <span class="filter-toggle-track" aria-hidden="true">
+              <span class="filter-toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        {# Actions #}
+        <div class="filter-actions">
+          <button type="submit" class="btn-buyer-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Search
+          </button>
+          {% if crop_filter or region_filter or min_quality or has_forecast %}
+            <a href="{{ url_for('buyer.marketplace') }}" class="btn-ghost"
+               aria-label="Clear all filters">
+              Clear
+            </a>
+          {% endif %}
+          {# Bridge to global search — finds farmers & buyers too #}
+          <a href="{{ url_for('public.search', q=crop_filter if crop_filter else '') }}"
+             class="btn-ghost mkt-people-search-btn"
+             title="Search for farmers and buyers by name or region"
+             aria-label="Search for people — farmers and buyers">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Search people
+          </a>
+        </div>
+
+      </form>
+
+
+      {# ════════════════════════════════════════════════════════
+         RESULTS HEADER — count + active filter chips
+         ════════════════════════════════════════════════════════ #}
+      <div class="mkt-results-hd" role="status" aria-live="polite">
+        <div class="mkt-results-count">
+          {% if total_count == 0 %}
+            No listings found
+          {% elif total_count == 1 %}
+            1 listing
+          {% else %}
+            {{ total_count }} listings
+          {% endif %}
+          {# Active filter summary #}
+          {% if crop_filter or region_filter or min_quality or has_forecast == '1' %}
+            <span class="mkt-filter-summary">matching</span>
+          {% endif %}
+        </div>
+
+        {# Active filter chips (clickable to remove each one) #}
+        {% if crop_filter or region_filter or min_quality or has_forecast == '1' %}
+          <div class="mkt-chip-row" aria-label="Active filters">
+            {% if crop_filter %}
+              <a class="mkt-chip"
+                 href="{{ url_for('buyer.marketplace', region=region_filter, sort=sort_by, min_quality=min_quality, forecast=has_forecast) }}"
+                 aria-label="Remove crop filter: {{ crop_filter }}">
+                Crop: {{ crop_filter }}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if region_filter %}
+              <a class="mkt-chip"
+                 href="{{ url_for('buyer.marketplace', crop=crop_filter, sort=sort_by, min_quality=min_quality, forecast=has_forecast) }}"
+                 aria-label="Remove region filter: {{ region_filter }}">
+                Region: {{ region_filter }}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if min_quality %}
+              <a class="mkt-chip"
+                 href="{{ url_for('buyer.marketplace', crop=crop_filter, region=region_filter, sort=sort_by, forecast=has_forecast) }}"
+                 aria-label="Remove quality filter">
+                Quality: {{ min_quality }}+
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if has_forecast == '1' %}
+              <a class="mkt-chip"
+                 href="{{ url_for('buyer.marketplace', crop=crop_filter, region=region_filter, sort=sort_by, min_quality=min_quality) }}"
+                 aria-label="Remove forecast filter">
+                With forecast
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+
+      {# ════════════════════════════════════════════════════════
+         LISTINGS GRID
+         ════════════════════════════════════════════════════════ #}
+      {% if listings_display %}
+
+        <div class="listings-grid" role="list"
+             aria-label="Produce listings — {{ total_count }} results">
+
+          {% for lst in listings_display %}
+            <a href="{{ url_for('buyer.listing_detail', listing_id=lst.id) }}"
+               class="listing-card" role="listitem"
+               aria-label="{{ lst.crop }} from {{ lst.farm_region }} — {{ lst.price | int }} FCFA/kg — Quality {{ lst.q_live }}">
+
+              {# ── Card photo / icon header ──────────────────── #}
+              <div class="listing-card-photo">
+                {% if lst.photo_url %}
+                  <img src="{{ url_for('static', filename=lst.photo_url) }}"
+                       alt="{{ lst.crop }} produce photo"
+                       loading="lazy">
+                {% else %}
+                  {# Illustrated placeholder — crop-type coloured icon #}
+                  <div class="listing-card-photo-placeholder">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  </div>
+                {% endif %}
+
+                {# Forecast ribbon overlaid on photo #}
+                {% if lst.has_forecast %}
+                  <div class="listing-forecast-badge" aria-label="Harvest forecast available">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Forecast available
+                  </div>
+                {% endif %}
+
+                {# Quality score overlay — top right #}
+                <div class="listing-q-overlay listing-q-{{ lst.q_css }}"
+                     aria-label="Quality score {{ lst.q_live }}">
+                  <span class="listing-q-num">{{ lst.q_live }}</span>
+                  <span class="listing-q-label">Quality</span>
+                </div>
+              </div>
+
+              {# ── Card body ─────────────────────────────────── #}
+              <div class="listing-card-body">
+
+                {# Crop name + location #}
+                <div class="listing-card-top">
+                  <div>
+                    <div class="listing-crop-name">{{ lst.crop }}</div>
+                    <div class="listing-location">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                           stroke="currentColor" stroke-width="2"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      {{ lst.farm_town or lst.farm_region }} · {{ lst.farm_region }}
+                    </div>
+                  </div>
+                </div>
+
+                {# Price + quantity row #}
+                <div class="listing-card-meta">
+                  <div class="listing-price-block">
+                    <span class="listing-price">{{ "{:,.0f}".format(lst.price | float) }}</span>
+                    <span class="listing-price-unit">FCFA/kg</span>
+                  </div>
+                  <div class="listing-qty-block">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    {{ lst.quantity | int }} kg available
+                    {% if lst.min_order %}
+                      <span class="listing-min-order">· {{ lst.min_order | int }} kg min.</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# Score row #}
+                <div class="listing-card-scores">
+                  {# Quality badge #}
+                  <span class="score-badge score-badge-quality"
+                        aria-label="Quality score {{ lst.q_live }} out of 100">
+                    <span class="score-dot score-dot-{{ lst.q_css }}" aria-hidden="true"></span>
+                    Q {{ lst.q_live }}/100
+                  </span>
+
+                  {# Trust badge #}
+                  <span class="score-badge score-badge-trust"
+                        aria-label="Farmer trust score {{ lst.trust }} out of 5">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    Trust {{ lst.trust }}/5
+                  </span>
+
+                  {# Inquiry count if non-zero #}
+                  {% if lst.inquiry_count and lst.inquiry_count > 0 %}
+                    <span class="listing-inquiry-chip"
+                          aria-label="{{ lst.inquiry_count }} buyer enquiries">
+                      {{ lst.inquiry_count }} enquir{{ 'y' if lst.inquiry_count == 1 else 'ies' }}
+                    </span>
+                  {% endif %}
+                </div>
+
+              </div>{# /listing-card-body #}
+
+              {# ── Card footer — farmer strip ────────────────── #}
+              <div class="listing-card-farmer">
+                <div class="listing-farmer-avatar" aria-hidden="true">
+                  {{ lst.farmer_initials }}
+                </div>
+                <div class="listing-farmer-info">
+                  <span class="listing-farmer-name">{{ lst.farmer_name }}</span>
+                  <span class="listing-farmer-farm">{{ lst.farm_name }}</span>
+                </div>
+                <div class="listing-card-arrow" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </div>
+              </div>
+
+            </a>{# /listing-card #}
+          {% endfor %}
+
+        </div>{# /listings-grid #}
+
+
+        {# ── Pagination placeholder (Sprint 7) ──────────────── #}
+        {% if total_count > 20 %}
+          <div class="mkt-pagination" aria-label="Pagination">
+            <span class="mkt-pagination-info">
+              Showing all {{ total_count }} results
+            </span>
+          </div>
+        {% endif %}
+
+
+      {% else %}
+
+        {# ════════════════════════════════════════════════════
+           EMPTY STATE
+           ════════════════════════════════════════════════════ #}
+        <div class="empty-state" role="status">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </div>
+          {% if crop_filter or region_filter or min_quality or has_forecast %}
+            <h2 class="empty-title">No listings match your filters</h2>
+            <p class="empty-text">
+              Try widening your search — remove one or more filters
+              to see more produce.
+            </p>
+            <a href="{{ url_for('buyer.marketplace') }}" class="btn-buyer-primary">
+              Clear all filters
+            </a>
+          {% else %}
+            <h2 class="empty-title">No listings yet</h2>
+            <p class="empty-text">
+              FarmLink is growing. Check back soon — new IoT-verified
+              listings are added as farmers onboard their sensor nodes.
+            </p>
+            {% if not current_user.is_authenticated %}
+              <a href="{{ url_for('auth.register') }}" class="btn-buyer-primary">
+                Join as a farmer
+              </a>
+            {% endif %}
+          {% endif %}
+        </div>
+
+      {% endif %}{# listings_display #}
+
+
+      {# ════════════════════════════════════════════════════════
+         TRUST EXPLAINER STRIP — anonymous visitors only
+         Teaches buyers WHY the scores matter
+         ════════════════════════════════════════════════════════ #}
+      {% if not (current_user.is_authenticated and current_user.is_buyer()) %}
+        <section class="mkt-explainer-strip" aria-label="How quality scores work">
+          <h2 class="mkt-explainer-title">How we verify quality</h2>
+          <div class="mkt-explainer-grid">
+
+            <div class="mkt-explainer-item">
+              <div class="mkt-explainer-icon mkt-icon-teal" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+              </div>
+              <div class="mkt-explainer-item-title">Live sensor data</div>
+              <div class="mkt-explainer-item-text">
+                A physical IoT node on every farm reads soil moisture,
+                temperature, humidity, and light every 30 minutes.
+              </div>
+            </div>
+
+            <div class="mkt-explainer-item">
+              <div class="mkt-explainer-icon mkt-icon-green" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 11 12 14 22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </div>
+              <div class="mkt-explainer-item-title">Automated scoring</div>
+              <div class="mkt-explainer-item-text">
+                The QualityScoreEngine converts raw sensor readings into
+                a 0–100 score. No farmer types their own score.
+              </div>
+            </div>
+
+            <div class="mkt-explainer-icon-wrap">
+              <div class="mkt-explainer-item">
+                <div class="mkt-explainer-icon mkt-icon-amber" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="1.8"
+                       stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <div class="mkt-explainer-item-title">Harvest forecasting</div>
+                <div class="mkt-explainer-item-text">
+                  After 28 days of data, the system predicts the harvest
+                  window. Register an alert to know before it's listed.
+                </div>
+              </div>
+            </div>
+
+            <div class="mkt-explainer-item">
+              <div class="mkt-explainer-icon mkt-icon-teal" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div class="mkt-explainer-item-title">Farmer trust scores</div>
+              <div class="mkt-explainer-item-text">
+                Every farmer earns a trust score from transaction history,
+                on-time delivery, and verified buyer ratings.
+              </div>
+            </div>
+
+          </div>
+          {% if not current_user.is_authenticated %}
+            <div class="mkt-explainer-cta">
+              <a href="{{ url_for('auth.register') }}" class="btn-buyer-primary">
+                Create a free buyer account
+              </a>
+              <a href="{{ url_for('public.how_it_works') }}" class="btn-ghost">
+                How it works →
+              </a>
+            </div>
+          {% endif %}
+        </section>
+      {% endif %}
+
+
+    </main>
+
+{% if current_user.is_authenticated and current_user.is_buyer() %}
+  </div>{# /portal-layout #}
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════
+   MARKETPLACE-SPECIFIC CSS
+   All new classes prefixed .mkt-* to avoid conflicts.
+   ══════════════════════════════════════════════════════════════ #}
+<style>
+
+/* ── Public body (non-buyer visitors) ──────────────────────── */
+.mkt-public-body {
+  font-family: var(--font-sans);
+  background: var(--gray-bg);
+  color: var(--black);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mkt-public-main {
+  max-width: var(--max-width, 1100px);
+  margin: 0 auto;
+  padding: calc(var(--nav-height, 64px) + 0px) 28px 80px;
+}
+
+/* ── Hero strip (anonymous visitors) ───────────────────────── */
+.mkt-hero-strip {
+  background: linear-gradient(135deg, var(--green-dark) 0%, #0d3d08 100%);
+  border-radius: var(--radius-lg);
+  padding: 40px 40px 32px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mkt-hero-strip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.mkt-hero-inner { position: relative; z-index: 1; }
+
+.mkt-hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-light);
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.mkt-iot-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal-light);
+  animation: mkt-pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes mkt-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.8); }
+}
+
+.mkt-hero-title {
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+}
+
+.mkt-hero-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.65;
+  max-width: 600px;
+  margin-bottom: 28px;
+}
+
+.mkt-hero-trust-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  padding-top: 24px;
+  border-top: 0.5px solid rgba(255,255,255,0.1);
+}
+
+.mkt-trust-item {
+  padding: 0 24px 0 0;
+  flex-shrink: 0;
+}
+.mkt-trust-item:first-child { padding-left: 0; }
+
+.mkt-trust-num {
+  font-size: 20px;
+  font-weight: var(--fw-medium);
+  color: var(--white);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+.mkt-trust-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}
+
+.mkt-trust-divider {
+  width: 0.5px;
+  height: 28px;
+  background: rgba(255,255,255,0.15);
+  margin: 0 24px 0 0;
+  flex-shrink: 0;
+}
+
+/* ── Results header ─────────────────────────────────────────── */
+.mkt-results-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.mkt-results-count {
+  font-size: 13px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-dark);
+}
+
+.mkt-filter-summary {
+  font-weight: var(--fw-regular);
+  color: var(--gray-mid);
+}
+
+/* Active filter chips */
+.mkt-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mkt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  color: var(--teal-mid);
+  background: var(--teal-bg);
+  border: 0.5px solid var(--teal-light);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  text-decoration: none;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.mkt-chip:hover {
+  background: #C7EEE3;
+}
+
+/* ── Filter bar enhancements ────────────────────────────────── */
+.filter-input-wrap,
+.filter-select-wrap {
+  position: relative;
+}
+
+.filter-input-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-mid);
+  pointer-events: none;
+}
+
+.filter-input-has-icon {
+  padding-left: 32px !important;
+}
+
+.filter-select-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-mid);
+  pointer-events: none;
+}
+
+.filter-select {
+  padding-right: 28px !important;
+  cursor: pointer;
+}
+
+/* Forecast toggle switch */
+.filter-group-toggle {
+  flex: 0;
+  min-width: auto;
+  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.filter-toggle input { display: none; }
+
+.filter-toggle-track {
+  width: 36px;
+  height: 20px;
+  background: var(--gray-light);
+  border-radius: var(--radius-pill);
+  position: relative;
+  transition: background 0.15s;
+  display: block;
+}
+
+.filter-toggle input:checked + .filter-toggle-track {
+  background: var(--teal-mid);
+}
+
+.filter-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: var(--white);
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.filter-toggle input:checked ~ .filter-toggle-track .filter-toggle-thumb {
+  transform: translateX(16px);
+}
+
+.filter-toggle input:checked + .filter-toggle-track .filter-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* ── Listing card photo header ──────────────────────────────── */
+.listing-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+.listing-card-photo {
+  position: relative;
+  height: 160px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.listing-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listing-card-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--green-bg);
+  color: var(--green-light);
+}
+
+/* Forecast badge overlaid on photo */
+.listing-forecast-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--amber-dark);
+  background: var(--amber-bg);
+  border: 0.5px solid var(--amber-light);
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+  backdrop-filter: blur(4px);
+}
+
+/* Quality score overlay — top right corner of photo */
+.listing-q-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+}
+
+.listing-q-overlay.listing-q-high {
+  background: rgba(15, 110, 86, 0.88);
+  color: var(--white);
+}
+.listing-q-overlay.listing-q-medium {
+  background: rgba(133, 79, 11, 0.88);
+  color: var(--white);
+}
+.listing-q-overlay.listing-q-low {
+  background: rgba(163, 45, 45, 0.88);
+  color: var(--white);
+}
+
+.listing-q-num {
+  font-size: 15px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+}
+
+.listing-q-label {
+  font-size: 8px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 1px;
+}
+
+/* Card body */
+.listing-card-body {
+  padding: 16px 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.listing-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--gray-mid);
+  margin-top: 2px;
+}
+
+.listing-price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.listing-qty-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gray-mid);
+  margin-top: 3px;
+}
+
+.listing-min-order {
+  color: var(--gray-mid);
+}
+
+.listing-inquiry-chip {
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  color: var(--gray-mid);
+  background: var(--gray-bg);
+  border: var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* Card farmer footer */
+.listing-card-farmer {
+  padding: 10px 18px 14px;
+  border-top: var(--border);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.listing-farmer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.listing-farmer-name {
+  display: block;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listing-farmer-farm {
+  display: block;
+  font-size: 11px;
+  color: var(--gray-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listing-card-arrow {
+  color: var(--gray-light);
+  flex-shrink: 0;
+  transition: color 0.12s, transform 0.12s;
+}
+
+.listing-card:hover .listing-card-arrow {
+  color: var(--teal-mid);
+  transform: translateX(2px);
+}
+
+/* Override listing-card to add flex direction column */
+.listing-card {
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Pagination ─────────────────────────────────────────────── */
+.mkt-pagination {
+  text-align: center;
+  padding: 32px 0 0;
+}
+
+.mkt-pagination-info {
+  font-size: 13px;
+  color: var(--gray-mid);
+}
+
+/* ── Explainer strip (bottom of page for anonymous) ─────────── */
+.mkt-explainer-strip {
+  background: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  margin-top: 48px;
+}
+
+.mkt-explainer-title {
+  font-size: 18px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+  letter-spacing: -0.015em;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.mkt-explainer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+.mkt-explainer-icon-wrap { display: contents; }
+
+.mkt-explainer-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mkt-explainer-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mkt-icon-teal  { background: var(--teal-bg);  color: var(--teal-mid);  }
+.mkt-icon-green { background: var(--green-bg); color: var(--green-mid); }
+.mkt-icon-amber { background: var(--amber-bg); color: var(--amber-mid); }
+
+.mkt-explainer-item-title {
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  color: var(--black);
+}
+
+.mkt-explainer-item-text {
+  font-size: 13px;
+  color: var(--gray-mid);
+  line-height: 1.6;
+}
+
+.mkt-explainer-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 28px;
+  border-top: var(--border);
+  flex-wrap: wrap;
+}
+
+/* ── Search people bridge button ────────────────────────── */
+.mkt-people-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--gray-dark);
+  font-size: var(--fs-sm, 13px);
+}
+
+.mkt-people-search-btn:hover {
+  color: var(--teal-mid);
+  border-color: var(--teal-light);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .mkt-hero-strip { padding: 28px 24px; }
+  .mkt-explainer-strip { padding: 28px 24px; }
+}
+
+@media (max-width: 768px) {
+  .mkt-public-main { padding: 80px 16px 48px; }
+  .mkt-trust-divider { display: none; }
+  .mkt-trust-item { padding: 0 16px 0 0; }
+  .filter-group-toggle { flex-direction: row; align-items: center; }
+}
+
+@media (max-width: 480px) {
+  .mkt-hero-strip { padding: 22px 18px; }
+  .mkt-hero-title { font-size: 20px; }
+  .listing-card-photo { height: 130px; }
+}
+</style>
+
+
+{# ══════════════════════════════════════════════════════════════
+   JS — Auto-submit filter form on select change
+       Flash message auto-dismiss
+   ══════════════════════════════════════════════════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  /* Auto-submit on select change (region, quality, sort) */
+  var form = document.getElementById('filter-form');
+  if (form) {
+    var selects = form.querySelectorAll('select');
+    selects.forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        form.submit();
+      });
+    });
+  }
+
+  /* Auto-dismiss flash messages after 4 seconds */
+  var flashes = document.querySelectorAll('.flash');
+  flashes.forEach(function (el) {
+    setTimeout(function () {
+      el.style.transition = 'opacity 0.4s ease';
+      el.style.opacity = '0';
+      setTimeout(function () {
+        el.remove();
+      }, 400);
+    }, 4000);
+  });
+
+}());
+</script>
+
+</body>
+</html>

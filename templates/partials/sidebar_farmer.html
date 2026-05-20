@@ -72,6 +72,25 @@
       My listings
     </a>
 
+    {# ── Enquiries — shows unread badge when messages are waiting ── #}
+    {% set unread_enquiries = unread_enquiries if unread_enquiries is defined else 0 %}
+    <a href="{{ url_for('farmer.enquiries') }}"
+       class="sidebar-link {% if active_page == 'enquiries' %}is-active{% endif %}"
+       aria-current="{% if active_page == 'enquiries' %}page{% endif %}">
+      <span class="sidebar-icon" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </span>
+      Enquiries
+      {% if unread_enquiries > 0 %}
+        <span class="sidebar-badge" aria-label="{{ unread_enquiries }} unread">
+          {{ unread_enquiries if unread_enquiries <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+
     <a href="{% if active_forecast %}{{ url_for('farmer.forecast_detail', forecast_id=active_forecast.id) }}{% else %}{{ url_for('farmer.forecasts') }}{% endif %}"
        class="sidebar-link {% if active_page == 'forecasts' %}is-active{% endif %}"
        aria-current="{% if active_page == 'forecasts' %}page{% endif %}">
