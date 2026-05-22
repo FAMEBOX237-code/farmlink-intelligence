@@ -1,22 +1,27 @@
 # ============================================================
-# create_tables.py — FarmLink Intelligence
+# scripts/create_tables.py — FarmLink Intelligence
 #
 # ONE-TIME setup script. Run this ONCE after cloning the
 # project to create all database tables.
 #
 # HOW TO RUN:
-#   python create_tables.py
+#   python scripts/create_tables.py
+#   (from the project root)
 #
 # WHAT IT DOES:
 #   1. Reads DATABASE_URL from your .env file
-#   2. Connects to MySQL
-#   3. Creates the 'farmlink' database if it does not exist
+#   2. Creates the 'farmlink' database if it does not exist
+#   3. Drops sensor_readings / irrigation_log if they exist
+#      with the old column structure (safe — no user data yet)
 #   4. Creates every table defined in models/models.py
-#   5. Prints a confirmation for each table
+#   5. Installs the calculate_quality_score MySQL trigger
+#   6. Prints a confirmation for each step
 #
 # SAFE TO RE-RUN:
 #   Uses CREATE TABLE IF NOT EXISTS — will not overwrite
 #   existing tables or delete any data.
+#   The trigger is dropped and recreated each run to stay
+#   in sync with any formula changes.
 #
 # AFTER RUNNING THIS:
 #   Run seed.py to create the admin account.
@@ -34,7 +39,7 @@ load_dotenv()
 from app import create_app
 from extensions import db
 
-# Import all models so SQLAlchemy knows about them
+# Import all models so SQLAlchemy knows about every table
 from models.models import (
     User, Farm, SensorReading, IrrigationLog, HarvestForecast,
     ProduceListing, Transaction, Rating,
@@ -42,11 +47,114 @@ from models.models import (
 )
 
 
+# ── The quality-score trigger ────────────────────────────────
+# Fires AFTER every INSERT into sensor_readings.
+# Calculates a weighted quality score (0–100) and writes it
+# back to sensor_readings.quality_score, then updates
+# farms.current_quality_score with a rolling average of the
+# last 10 readings for that farm.
+#
+# Formula weights:
+#   Soil moisture  40 %
+#   Temperature    30 %
+#   Humidity       20 %
+#   Heat-stress    10 %  (penalty flag from Arduino)
+QUALITY_SCORE_TRIGGER = """
+CREATE TRIGGER calculate_quality_score
+AFTER INSERT ON sensor_readings
+FOR EACH ROW
+BEGIN
+    DECLARE v_soil_score     DECIMAL(5,2);
+    DECLARE v_temp_score     DECIMAL(5,2);
+    DECLARE v_humidity_score DECIMAL(5,2);
+    DECLARE v_heat_penalty   DECIMAL(5,2);
+    DECLARE v_final_score    DECIMAL(5,2);
+
+    IF NEW.soil_moisture IS NOT NULL
+       AND NEW.temperature IS NOT NULL
+       AND NEW.humidity    IS NOT NULL
+    THEN
+
+        -- FACTOR 1: SOIL MOISTURE (weight 40%)
+        SET v_soil_score =
+            CASE
+                WHEN NEW.soil_moisture BETWEEN 40.0 AND 70.0 THEN 100.0
+                WHEN NEW.soil_moisture BETWEEN 70.0 AND 85.0 THEN  80.0
+                WHEN NEW.soil_moisture BETWEEN 30.0 AND 40.0 THEN  70.0
+                WHEN NEW.soil_moisture > 85.0                THEN  50.0
+                WHEN NEW.soil_moisture < 30.0                THEN  40.0
+                ELSE 50.0
+            END;
+
+        -- FACTOR 2: TEMPERATURE (weight 30%)
+        SET v_temp_score =
+            CASE
+                WHEN NEW.temperature BETWEEN 20.0 AND 30.0 THEN 100.0
+                WHEN NEW.temperature BETWEEN 15.0 AND 20.0 THEN  80.0
+                WHEN NEW.temperature BETWEEN 30.0 AND 35.0 THEN  75.0
+                WHEN NEW.temperature > 35.0                THEN  40.0
+                WHEN NEW.temperature < 15.0                THEN  50.0
+                ELSE 60.0
+            END;
+
+        -- FACTOR 3: HUMIDITY (weight 20%)
+        SET v_humidity_score =
+            CASE
+                WHEN NEW.humidity BETWEEN 50.0 AND 80.0 THEN 100.0
+                WHEN NEW.humidity BETWEEN 40.0 AND 50.0 THEN  75.0
+                WHEN NEW.humidity BETWEEN 80.0 AND 90.0 THEN  70.0
+                WHEN NEW.humidity < 40.0                 THEN  50.0
+                WHEN NEW.humidity > 90.0                 THEN  55.0
+                ELSE 60.0
+            END;
+
+        -- FACTOR 4: HEAT STRESS PENALTY (weight 10%)
+        SET v_heat_penalty =
+            CASE
+                WHEN NEW.heat_stress_flag = 1 THEN  30.0
+                ELSE                               100.0
+            END;
+
+        -- WEIGHTED FINAL SCORE
+        SET v_final_score = ROUND(
+            (v_soil_score     * 0.40) +
+            (v_temp_score     * 0.30) +
+            (v_humidity_score * 0.20) +
+            (v_heat_penalty   * 0.10),
+            2
+        );
+
+        -- Write score to the newly inserted sensor_reading row
+        UPDATE sensor_readings
+            SET quality_score = v_final_score
+        WHERE id = NEW.id;
+
+        -- Update farms.current_quality_score (rolling avg last 10)
+        UPDATE farms
+            SET current_quality_score = (
+                SELECT ROUND(AVG(quality_score), 0)
+                FROM (
+                    SELECT quality_score
+                    FROM sensor_readings
+                    WHERE farm_id = NEW.farm_id
+                      AND quality_score IS NOT NULL
+                    ORDER BY recorded_at DESC
+                    LIMIT 10
+                ) AS recent
+            )
+        WHERE id = NEW.farm_id;
+
+    END IF;
+
+END
+"""
+
+
 def create_database_if_missing():
     """
-    Attempts to create the MySQL database itself if it doesn't
-    exist yet. This handles the case where MySQL is fresh and
-    the 'farmlink' database has never been created.
+    Connects directly to MySQL (no database selected) and
+    creates the farmlink database if it does not exist yet.
+    Handles a completely fresh MySQL installation.
     """
     import pymysql
     from urllib.parse import urlparse
@@ -54,10 +162,10 @@ def create_database_if_missing():
     db_url = os.getenv('DATABASE_URL')
     if not db_url:
         print("  ERROR: DATABASE_URL is not set in your .env file.")
-        print("  Cannot create database. Add DATABASE_URL to .env and try again.")
+        print("  Add it and try again. Example:")
+        print("  DATABASE_URL=mysql+pymysql://root:password@localhost/farmlink")
         sys.exit(1)
 
-    # Parse the URL to extract components
     parsed   = urlparse(db_url.replace('mysql+pymysql://', 'mysql://'))
     host     = parsed.hostname or 'localhost'
     port     = parsed.port or 3306
@@ -74,60 +182,166 @@ def create_database_if_missing():
         )
         conn.commit()
         conn.close()
-        print(f"✓ Database '{db_name}' is ready.")
+        print(f"  ✓ Database '{db_name}' is ready.")
     except Exception as e:
         print(f"  Could not auto-create database: {e}")
-        print(f"  Create it manually: CREATE DATABASE {db_name};")
+        print(f"  Create it manually:  CREATE DATABASE {db_name};")
+        sys.exit(1)
 
 
-def drop_legacy_tables():
+def drop_legacy_tables(app):
     """
     Drops tables whose column structure changed in the merged
-    web + hardware schema so they can be recreated cleanly.
+    web + hardware schema so they are recreated cleanly.
 
-    Tables dropped (only if they exist):
-      sensor_readings — column 'timestamp' renamed to 'recorded_at';
-                        many new hardware columns added
+    Dropped only if they exist:
+      sensor_readings — 'timestamp' renamed to 'recorded_at';
+                        many hardware columns added
       irrigation_log  — new table; drop is a no-op if absent
 
-    ALL OTHER TABLES are left completely untouched.
+    ALL other tables are left completely untouched.
     """
-    app = create_app()
     with app.app_context():
         from sqlalchemy import inspect, text
         inspector = inspect(db.engine)
-        existing  = inspector.get_table_names()
+        existing  = set(inspector.get_table_names())
 
         for table in ('sensor_readings', 'irrigation_log'):
             if table in existing:
                 db.session.execute(text(f'DROP TABLE IF EXISTS `{table}`;'))
                 db.session.commit()
-                print(f'  ✓ Old {table} table dropped — will be recreated.')
+                print(f'  ✓ Old {table} dropped — will be recreated with correct columns.')
             else:
-                print(f'  ✓ {table} did not exist yet — nothing to drop.')
+                print(f'  - {table} did not exist yet.')
 
 
-def create_all_tables():
-    app = create_app()
+def create_all_tables(app):
+    """
+    Calls db.create_all() which creates every table that does
+    not already exist, using the ORM model definitions as the
+    source of truth for column names, types, and constraints.
+    """
     with app.app_context():
-        print("\nCreating all tables...\n")
         db.create_all()
 
-        # List what was created
         from sqlalchemy import inspect
+        tables = sorted(inspect(db.engine).get_table_names())
+
+        for table in tables:
+            print(f'  ✓ {table}')
+
+        print(f'\n  {len(tables)} table(s) present in the database.')
+
+
+def install_trigger(app):
+    """
+    Installs the calculate_quality_score trigger.
+
+    db.create_all() only creates tables — it never creates
+    triggers, views, or stored procedures. This function fills
+    that gap by running the trigger DDL directly via the engine.
+
+    The trigger is dropped first so this function is safe to
+    re-run (e.g. after updating the formula weights).
+    """
+    with app.app_context():
+        from sqlalchemy import text
+
+        # Drop the old trigger if it exists
+        db.session.execute(text('DROP TRIGGER IF EXISTS calculate_quality_score;'))
+        db.session.commit()
+
+        # Create the trigger
+        # Note: SQLAlchemy executes one statement at a time so we
+        # pass the trigger body directly (no DELIMITER needed here).
+        db.session.execute(text(QUALITY_SCORE_TRIGGER))
+        db.session.commit()
+
+        print('  ✓ calculate_quality_score trigger installed.')
+
+
+def verify(app):
+    """
+    Post-install sanity check.
+    Verifies that every expected table exists and that the
+    farms table has all required columns (including the hardware
+    identity columns added in the web+IoT schema merge).
+    """
+    with app.app_context():
+        from sqlalchemy import inspect, text
+
         inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
+        existing  = set(inspector.get_table_names())
 
-        for table in sorted(tables):
-            print(f"  ✓ {table}")
+        expected_tables = [
+            'users', 'farms', 'sensor_readings', 'irrigation_log',
+            'harvest_forecasts', 'produce_listings', 'transactions',
+            'ratings', 'buyer_alerts', 'notifications', 'contact_requests',
+        ]
 
-        print(f"\n{len(tables)} table(s) ready in the database.")
-        print("\nNext step: run   python seed.py   to create the admin account.")
+        all_ok = True
+        for t in expected_tables:
+            if t not in existing:
+                print(f'  ✗ MISSING table: {t}')
+                all_ok = False
+
+        # Verify farms has all expected columns
+        farms_cols = {c['name'] for c in inspector.get_columns('farms')}
+        required   = {
+            'id', 'owner_id', 'name', 'region', 'town', 'crop_type',
+            'size_hectares', 'latitude', 'longitude', 'sensor_node_id',
+            'hardware_farm_id', 'farmer_name', 'farmer_phone',
+            'current_quality_score', 'is_active', 'notes',
+            'created_at', 'updated_at',
+        }
+        missing_cols = required - farms_cols
+        if missing_cols:
+            print(f'  ✗ farms table is missing columns: {sorted(missing_cols)}')
+            all_ok = False
+        else:
+            print('  ✓ farms columns verified.')
+
+        # Verify trigger exists
+        result = db.session.execute(
+            text("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS "
+                 "WHERE TRIGGER_SCHEMA = DATABASE() "
+                 "AND TRIGGER_NAME = 'calculate_quality_score';")
+        ).fetchone()
+        if result:
+            print('  ✓ calculate_quality_score trigger present.')
+        else:
+            print('  ✗ calculate_quality_score trigger NOT found.')
+            all_ok = False
+
+        return all_ok
 
 
 if __name__ == '__main__':
-    print("FarmLink Intelligence — Database Setup")
-    print("=" * 40)
+    print('\nFarmLink Intelligence — Database Setup')
+    print('=' * 42)
+
+    print('\n[1/5] Checking database...')
     create_database_if_missing()
-    drop_legacy_tables()
-    create_all_tables()
+
+    app = create_app()
+
+    # print('\n[2/5] Dropping legacy tables (sensor_readings, irrigation_log)...')
+    # drop_legacy_tables(app)
+    print('\n[2/5] Skipping legacy table drop — preserving existing data.')
+
+    print('\n[3/5] Creating all tables from models...')
+    create_all_tables(app)
+
+    print('\n[4/5] Installing MySQL trigger...')
+    install_trigger(app)
+
+    print('\n[5/5] Verifying installation...')
+    ok = verify(app)
+
+    print('\n' + '=' * 42)
+    if ok:
+        print('  Database is fully set up and matches the codebase.')
+        print('  Next step: run   python scripts/seed.py   to create the admin account.')
+    else:
+        print('  Setup completed with warnings. Review the errors above.')
+    print()
