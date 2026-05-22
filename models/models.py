@@ -171,7 +171,7 @@ class SensorReading(db.Model):
     quality_score   = db.Column(db.Numeric(5, 2))
     # ── Sync status (web + hardware vocabulary combined) ──────
     sync_status     = db.Column(
-                          db.Enum('synced', 'pending', 'LIVE', 'BUFFERED', 'SYNCED'),
+                          db.Enum('pending', 'LIVE', 'BUFFERED', 'SYNCED'),
                           default='BUFFERED', nullable=False
                       )
 
