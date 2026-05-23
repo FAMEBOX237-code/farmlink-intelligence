@@ -51,6 +51,110 @@ def _unread_notifs():
     except Exception:
         return 0
 
+@admin_bp.route('/dashboard')
+@login_required
+@admin_required
+def dashboard():
+    """
+    Platform overview:
+    - 8 KPI metric tiles
+    - 3 quick action shortcuts
+    - Recent activity feed
+    - Pending verifications list
+    - Offline nodes list
+    """
+    now = datetime.utcnow()
+    offline_threshold = now - timedelta(minutes=60)
+
+    # ── KPI counts ────────────────────────────────────────────
+    total_farmers   = User.query.filter_by(role='farmer').count()
+    total_buyers    = User.query.filter_by(role='buyer').count()
+    pending_verify  = User.query.filter_by(
+                          role='farmer', is_verified=False, is_suspended=False
+                      ).count()
+    active_listings = ProduceListing.query.filter_by(status='active').count()
+    total_forecasts = HarvestForecast.query.filter_by(is_active=True).count()
+    total_txns      = Transaction.query.filter_by(status='completed').count()
+
+    # ── Sensor node status ────────────────────────────────────
+    # A farm is "online" if its latest reading is within 60 min
+    all_farms = Farm.query.all()
+    total_nodes = len(all_farms)
+
+    online_nodes  = 0
+    offline_nodes = 0
+    no_data_nodes = 0
+
+    for farm in all_farms:
+        latest = (SensorReading.query
+                  .filter_by(farm_id=farm.id)
+                  .order_by(SensorReading.timestamp.desc())
+                  .first())
+        if latest is None:
+            no_data_nodes += 1
+        elif latest.timestamp >= offline_threshold:
+            online_nodes += 1
+        else:
+            offline_nodes += 1
+
+    # ── Pending verification list (up to 5 for dashboard) ────
+    pending_users = (User.query
+                     .filter_by(role='farmer', is_verified=False, is_suspended=False)
+                     .order_by(User.created_at.asc())
+                     .limit(5)
+                     .all())
+
+    # ── Offline nodes list (up to 5 for dashboard) ───────────
+    offline_farm_list = []
+    for farm in all_farms:
+        latest = (SensorReading.query
+                  .filter_by(farm_id=farm.id)
+                  .order_by(SensorReading.timestamp.desc())
+                  .first())
+        if latest and latest.timestamp < offline_threshold:
+            diff    = now - latest.timestamp
+            hours   = int(diff.total_seconds() // 3600)
+            minutes = int((diff.total_seconds() % 3600) // 60)
+            since   = f"{hours}h {minutes}m ago" if hours else f"{minutes}m ago"
+            offline_farm_list.append({
+                'farm':        farm,
+                'owner_name':  farm.owner.full_name if farm.owner else '—',
+                'last_seen':   since,
+            })
+        if len(offline_farm_list) >= 5:
+            break
+
+    # ── Recent activity feed (last 8 notifications) ──────────
+    recent_activity = (Notification.query
+                       .order_by(Notification.sent_at.desc())
+                       .limit(8)
+                       .all())
+
+    return render_template(
+        'admin/dashboard.html',
+        # identity
+        admin            = current_user,
+        now              = now,
+        active_page      = 'dashboard',
+        unread_notifs    = _unread_notifs(),
+        # KPIs
+        total_farmers    = total_farmers,
+        total_buyers     = total_buyers,
+        pending_verify   = pending_verify,
+        active_listings  = active_listings,
+        total_forecasts  = total_forecasts,
+        total_txns       = total_txns,
+        total_nodes      = total_nodes,
+        online_nodes     = online_nodes,
+        offline_nodes    = offline_nodes,
+        no_data_nodes    = no_data_nodes,
+        # Lists
+        pending_users    = pending_users,
+        offline_farm_list= offline_farm_list,
+        recent_activity  = recent_activity,
+    )
+
+
 # ══════════════════════════════════════════════════════════════
 # ACCOUNTS MANAGEMENT  —  /admin/accounts
 # ══════════════════════════════════════════════════════════════
