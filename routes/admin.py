@@ -129,6 +129,96 @@ def accounts():
     )
 
 # ══════════════════════════════════════════════════════════════
+# SENSOR MONITOR  —  /admin/sensor_monitor
+# ══════════════════════════════════════════════════════════════
+@admin_bp.route('/sensor_monitor')
+@login_required
+@admin_required
+def sensor_monitor():
+    """
+    All farms with sensor status: online / offline / intermittent / no-data.
+    Tabs: All / Online / Offline / No Sensor.
+    """
+    now               = datetime.utcnow()
+    offline_threshold = now - timedelta(minutes=60)
+    warn_threshold    = now - timedelta(minutes=35)
+
+    tab = request.args.get('tab', 'all')
+
+    farms = Farm.query.order_by(Farm.created_at.desc()).all()
+
+    farm_data   = []
+    cnt_online  = 0
+    cnt_offline = 0
+    cnt_warn    = 0
+    cnt_nodata  = 0
+
+    for farm in farms:
+        latest = (SensorReading.query
+                  .filter_by(farm_id=farm.id)
+                  .order_by(SensorReading.timestamp.desc())
+                  .first())
+
+        if latest is None:
+            status = 'no-data'
+            cnt_nodata += 1
+            last_seen  = '—'
+            uptime_pct = 0
+        elif latest.timestamp >= warn_threshold:
+            status = 'online'
+            cnt_online += 1
+            diff       = now - latest.timestamp
+            mins       = int(diff.total_seconds() // 60)
+            last_seen  = f"{mins}m ago" if mins else "just now"
+            uptime_pct = 97
+        elif latest.timestamp >= offline_threshold:
+            status = 'intermittent'
+            cnt_warn += 1
+            diff       = now - latest.timestamp
+            mins       = int(diff.total_seconds() // 60)
+            last_seen  = f"{mins}m ago"
+            uptime_pct = 60
+        else:
+            status = 'offline'
+            cnt_offline += 1
+            diff       = now - latest.timestamp
+            hours      = int(diff.total_seconds() // 3600)
+            mins       = int((diff.total_seconds() % 3600) // 60)
+            last_seen  = f"{hours}h {mins}m ago" if hours else f"{mins}m ago"
+            uptime_pct = 0
+
+        farm_data.append({
+            'farm':       farm,
+            'owner':      farm.owner,
+            'status':     status,
+            'last_seen':  last_seen,
+            'uptime_pct': uptime_pct,
+            'latest':     latest,
+        })
+
+    # Filter by tab
+    if tab == 'online':
+        farm_data = [f for f in farm_data if f['status'] in ('online', 'intermittent')]
+    elif tab == 'offline':
+        farm_data = [f for f in farm_data if f['status'] == 'offline']
+    elif tab == 'no_sensor':
+        farm_data = [f for f in farm_data if f['status'] == 'no-data']
+
+    return render_template(
+        'admin/sensor_monitor.html',
+        admin         = current_user,
+        active_page   = 'sensor_monitor',
+        unread_notifs = _unread_notifs(),
+        tab           = tab,
+        farm_data     = farm_data,
+        cnt_online    = cnt_online,
+        cnt_offline   = cnt_offline,
+        cnt_warn      = cnt_warn,
+        cnt_nodata    = cnt_nodata,
+        total_nodes   = len(farms),
+    )
+
+# ══════════════════════════════════════════════════════════════
 # REPORTS  —  /admin/reports
 # ══════════════════════════════════════════════════════════════
 @admin_bp.route('/reports')
