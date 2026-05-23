@@ -52,6 +52,83 @@ def _unread_notifs():
         return 0
 
 # ══════════════════════════════════════════════════════════════
+# ACCOUNTS MANAGEMENT  —  /admin/accounts
+# ══════════════════════════════════════════════════════════════
+@admin_bp.route('/accounts', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def accounts():
+    """
+    Tabs: All / Pending / Farmers / Buyers / Suspended.
+    POST actions: verify, suspend, reinstate.
+    """
+    # ── Handle POST actions ───────────────────────────────────
+    if request.method == 'POST':
+        action  = request.form.get('action')
+        user_id = request.form.get('user_id', type=int)
+        target  = User.query.get(user_id) if user_id else None
+
+        if target and target.role != 'admin':
+            if action == 'verify':
+                target.is_verified  = True
+                target.is_suspended = False
+                db.session.commit()
+                flash(f'{target.full_name} has been verified.', 'success')
+            elif action == 'suspend':
+                target.is_suspended = True
+                db.session.commit()
+                flash(f'{target.full_name} has been suspended.', 'warning')
+            elif action == 'reinstate':
+                target.is_suspended = False
+                db.session.commit()
+                flash(f'{target.full_name} has been reinstated.', 'success')
+        return redirect(url_for('admin.accounts', tab=request.form.get('tab', 'all')))
+
+    # ── GET: build tab counts and filtered list ───────────────
+    tab = request.args.get('tab', 'all')
+
+    counts = {
+        'all':       User.query.filter(User.role != 'admin').count(),
+        'pending':   User.query.filter_by(role='farmer', is_verified=False, is_suspended=False).count(),
+        'farmers':   User.query.filter_by(role='farmer').count(),
+        'buyers':    User.query.filter_by(role='buyer').count(),
+        'suspended': User.query.filter_by(is_suspended=True).count(),
+    }
+
+    base = User.query.filter(User.role != 'admin')
+    if tab == 'pending':
+        users = base.filter_by(is_verified=False, is_suspended=False, role='farmer')
+    elif tab == 'farmers':
+        users = base.filter_by(role='farmer')
+    elif tab == 'buyers':
+        users = base.filter_by(role='buyer')
+    elif tab == 'suspended':
+        users = base.filter_by(is_suspended=True)
+    else:
+        users = base
+
+    # Search
+    q = request.args.get('q', '').strip()
+    if q:
+        users = users.filter(
+            (User.full_name.ilike(f'%{q}%')) |
+            (User.email.ilike(f'%{q}%'))
+        )
+
+    users = users.order_by(User.created_at.desc()).all()
+
+    return render_template(
+        'admin/accounts.html',
+        admin         = current_user,
+        active_page   = 'accounts',
+        unread_notifs = _unread_notifs(),
+        tab           = tab,
+        counts        = counts,
+        users         = users,
+        search_query  = q,
+    )
+
+# ══════════════════════════════════════════════════════════════
 # REPORTS  —  /admin/reports
 # ══════════════════════════════════════════════════════════════
 @admin_bp.route('/reports')
