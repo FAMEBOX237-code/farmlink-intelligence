@@ -1,0 +1,439 @@
+<!--  ============================================================
+   templates/admin/accounts.html — FarmLink Intelligence
+
+   CSS load order: public.css → admin.css → partials.css
+   Zero <style> blocks. Zero inline styles.
+   Zero ORM calls. All data from route context.
+
+   Context variables from routes/admin.py → accounts():
+     admin          User
+     active_page    str   — 'accounts'
+     unread_notifs  int
+     tab            str   — 'all'|'pending'|'farmers'|'buyers'|'suspended'
+     counts         dict  — {all, pending, farmers, buyers, suspended}
+     users          list[User]
+     search_query   str
+   ============================================================  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Accounts · Admin Panel · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="portal-body">
+
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Admin Panel</span>
+  </div>
+
+  <div class="topbar-right">
+    <a href="{{ url_for('admin.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">
+          {{ unread_notifs if unread_notifs <= 9 else '9+' }}
+        </span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ admin.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true" title="{{ admin.full_name }}">
+      {{ admin.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+
+{# ════ FLASH ═════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ════ LAYOUT ════════════════════════════════════════════════ #}
+<div class="portal-layout">
+
+  {% include 'partials/sidebar_admin.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Page header ──────────────────────────────────────── #}
+    <div class="page-hd">
+      <div class="page-hd-left">
+        <h1 class="page-title">Accounts Management</h1>
+        <p class="page-subtitle">
+          Verify farmers, manage access, and monitor all platform users.
+        </p>
+      </div>
+    </div>
+
+    {# ── Stats strip ──────────────────────────────────────── #}
+    <div class="stats-strip" role="region" aria-label="Account summary">
+      <div class="ss-item">
+        <div class="ss-value">{{ counts.all }}</div>
+        <div class="ss-label">Total Users</div>
+      </div>
+      <div class="ss-divider" aria-hidden="true"></div>
+      <div class="ss-item">
+        <div class="ss-value ss-value-green">{{ counts.farmers }}</div>
+        <div class="ss-label">Farmers</div>
+      </div>
+      <div class="ss-divider" aria-hidden="true"></div>
+      <div class="ss-item">
+        <div class="ss-value ss-value-blue">{{ counts.buyers }}</div>
+        <div class="ss-label">Buyers</div>
+      </div>
+      <div class="ss-divider" aria-hidden="true"></div>
+      <div class="ss-item">
+        <div class="ss-value {% if counts.pending > 0 %}ss-value-amber{% endif %}">
+          {{ counts.pending }}
+        </div>
+        <div class="ss-label">Pending Verify</div>
+      </div>
+      <div class="ss-divider" aria-hidden="true"></div>
+      <div class="ss-item">
+        <div class="ss-value {% if counts.suspended > 0 %}ss-value-danger{% endif %}">
+          {{ counts.suspended }}
+        </div>
+        <div class="ss-label">Suspended</div>
+      </div>
+    </div>
+
+    {# ── Search + filter bar ───────────────────────────────── #}
+    <div class="filter-bar" role="search">
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <form method="GET" action="{{ url_for('admin.accounts') }}" id="search-form">
+          <input type="hidden" name="tab" value="{{ tab }}">
+          <input
+            class="search-input"
+            type="search"
+            name="q"
+            id="search-input"
+            value="{{ search_query }}"
+            placeholder="Search by name or email…"
+            aria-label="Search accounts"
+            autocomplete="off"
+          >
+        </form>
+      </div>
+
+      {% if search_query %}
+        <a href="{{ url_for('admin.accounts', tab=tab) }}"
+           class="btn-act btn-act-view" aria-label="Clear search">
+          ✕ Clear
+        </a>
+      {% endif %}
+
+      <span class="filter-result-count" aria-live="polite">
+        {{ users | length }} result{{ 's' if users | length != 1 else '' }}
+      </span>
+    </div>
+
+    {# ── Tab bar ───────────────────────────────────────────── #}
+    <div class="tabs-bar" role="tablist" aria-label="Filter accounts by type">
+
+      <a href="{{ url_for('admin.accounts', tab='all', q=search_query) }}"
+         class="tab-link {% if tab == 'all' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'all' else 'false' }}">
+        All
+        <span class="tab-count">{{ counts.all }}</span>
+      </a>
+
+      <a href="{{ url_for('admin.accounts', tab='pending', q=search_query) }}"
+         class="tab-link {% if tab == 'pending' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'pending' else 'false' }}">
+        Pending
+        <span class="tab-count {% if counts.pending > 0 and tab != 'pending' %}tab-count-urgent{% endif %}">
+          {{ counts.pending }}
+        </span>
+      </a>
+
+      <a href="{{ url_for('admin.accounts', tab='farmers', q=search_query) }}"
+         class="tab-link {% if tab == 'farmers' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'farmers' else 'false' }}">
+        Farmers
+        <span class="tab-count">{{ counts.farmers }}</span>
+      </a>
+
+      <a href="{{ url_for('admin.accounts', tab='buyers', q=search_query) }}"
+         class="tab-link {% if tab == 'buyers' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'buyers' else 'false' }}">
+        Buyers
+        <span class="tab-count">{{ counts.buyers }}</span>
+      </a>
+
+      <a href="{{ url_for('admin.accounts', tab='suspended', q=search_query) }}"
+         class="tab-link {% if tab == 'suspended' %}is-active{% endif %}"
+         role="tab" aria-selected="{{ 'true' if tab == 'suspended' else 'false' }}">
+        Suspended
+        <span class="tab-count {% if counts.suspended > 0 and tab != 'suspended' %}tab-count-urgent{% endif %}">
+          {{ counts.suspended }}
+        </span>
+      </a>
+
+    </div>
+
+
+    {# ── Accounts table ────────────────────────────────────── #}
+    {% if users %}
+
+      <div class="data-table-wrap" role="region" aria-label="Accounts list">
+        <table class="data-table" aria-label="Platform accounts">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Role</th>
+              <th scope="col">Region</th>
+              <th scope="col">Status</th>
+              <th scope="col">Joined</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+
+              {# ── User name + email ── #}
+              <td>
+                <div class="dt-user-cell">
+                  <div class="dt-avatar av-{{ user.role }}" aria-hidden="true">
+                    {{ user.full_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <div class="dt-name">{{ user.full_name }}</div>
+                    <div class="dt-email">{{ user.email }}</div>
+                  </div>
+                </div>
+              </td>
+
+              {# ── Role pill ── #}
+              <td>
+                <span class="pill pill-{{ user.role }}">
+                  {{ user.role | capitalize }}
+                </span>
+              </td>
+
+              {# ── Region ── #}
+              <td>
+                <span class="dt-email">
+                  {{ user.region or '—' }}
+                </span>
+              </td>
+
+              {# ── Verification status ── #}
+              <td>
+                {% if user.is_suspended %}
+                  <span class="pill pill-suspended">Suspended</span>
+                {% elif user.is_verified %}
+                  <span class="pill pill-verified">
+                    <span class="status-dot dot-online" aria-hidden="true"></span>
+                    Verified
+                  </span>
+                {% else %}
+                  <span class="pill pill-pending">Pending</span>
+                {% endif %}
+              </td>
+
+              {# ── Joined date ── #}
+              <td>
+                <span class="dt-email">
+                  {{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}
+                </span>
+              </td>
+
+              {# ── Actions ── #}
+              <td>
+                <div class="action-row">
+
+                  {# Verify — show only if unverified and not suspended #}
+                  {% if not user.is_verified and not user.is_suspended %}
+                    <form method="POST" action="{{ url_for('admin.accounts') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action"  value="verify">
+                      <input type="hidden" name="user_id" value="{{ user.id }}">
+                      <input type="hidden" name="tab"     value="{{ tab }}">
+                      <button type="submit" class="btn-act btn-act-verify"
+                              aria-label="Verify {{ user.full_name }}">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Verify
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  {# Suspend — show only if active (not already suspended) #}
+                  {% if not user.is_suspended %}
+                    <form method="POST" action="{{ url_for('admin.accounts') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action"  value="suspend">
+                      <input type="hidden" name="user_id" value="{{ user.id }}">
+                      <input type="hidden" name="tab"     value="{{ tab }}">
+                      <button type="submit" class="btn-act btn-act-suspend"
+                              aria-label="Suspend {{ user.full_name }}"
+                              onclick="return confirm('Suspend {{ user.full_name }}? They will not be able to log in.')">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                        </svg>
+                        Suspend
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  {# Reinstate — show only if suspended #}
+                  {% if user.is_suspended %}
+                    <form method="POST" action="{{ url_for('admin.accounts') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action"  value="reinstate">
+                      <input type="hidden" name="user_id" value="{{ user.id }}">
+                      <input type="hidden" name="tab"     value="{{ tab }}">
+                      <button type="submit" class="btn-act btn-act-reinstate"
+                              aria-label="Reinstate {{ user.full_name }}">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <polyline points="1 4 1 10 7 10"/>
+                          <path d="M3.51 15a9 9 0 1 0 .49-3.32"/>
+                        </svg>
+                        Reinstate
+                      </button>
+                    </form>
+                  {% endif %}
+
+                </div>
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {% else %}
+
+      {# ── Empty state ──────────────────────────────────────── #}
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          {% if search_query %}
+            <div class="empty-title">No results for "{{ search_query }}"</div>
+            <div class="empty-sub">
+              Try a different name or email, or
+              <a href="{{ url_for('admin.accounts', tab=tab) }}"
+                 class="notif-action">clear the search</a>.
+            </div>
+          {% else %}
+            <div class="empty-title">No accounts in this category</div>
+            <div class="empty-sub">
+              {% if tab == 'pending' %}
+                All farmers are verified. Nothing needs attention.
+              {% elif tab == 'suspended' %}
+                No accounts are currently suspended.
+              {% else %}
+                No users found in this category yet.
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    {% endif %}
+
+  </main>
+</div>
+
+
+{# ════ FLASH AUTO-DISMISS + SEARCH SUBMIT ═══════════════════ #}
+<script>
+(function () {
+  'use strict';
+
+  /* Auto-dismiss flash messages after 4 seconds */
+  document.querySelectorAll('.flash').forEach(function (el) {
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 200);
+    }, 4000);
+  });
+
+  /* Submit search form on Enter key — already handled by
+     browser default for input[type=search] inside a form.
+     Adding a small debounce so rapid typing doesn't fire
+     multiple requests. */
+  var searchInput = document.getElementById('search-input');
+  var searchForm  = document.getElementById('search-form');
+  if (searchInput && searchForm) {
+    var debounce;
+    searchInput.addEventListener('input', function () {
+      clearTimeout(debounce);
+      /* Only auto-submit if user pauses for 600ms — prevents
+         a request on every single keystroke */
+      debounce = setTimeout(function () {
+        searchForm.submit();
+      }, 600);
+    });
+  }
+
+}());
+</script>
+
+</body>
+</html>

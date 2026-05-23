@@ -1,0 +1,512 @@
+<!--  ============================================================
+   templates/admin/dashboard.html — FarmLink Intelligence
+
+   CSS load order:  public.css → admin.css → partials.css
+   Zero <style> blocks. Zero inline styles.
+   Zero ORM calls. Zero queries. All data from route context.
+
+   Context variables from routes/admin.py → dashboard():
+     admin              User
+     now                datetime
+     active_page        str  — 'dashboard'
+     unread_notifs      int
+     total_farmers      int
+     total_buyers       int
+     pending_verify     int
+     active_listings    int
+     total_forecasts    int
+     total_txns         int
+     total_nodes        int
+     online_nodes       int
+     offline_nodes      int
+     no_data_nodes      int
+     pending_users      list[User]
+     offline_farm_list  list[dict]  — farm, owner_name, last_seen
+     recent_activity    list[Notification]
+   ============================================================  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Dashboard · Admin Panel · FarmLink Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/partials.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="portal-body">
+
+
+{# ════ TOPBAR ════════════════════════════════════════════════ #}
+<header class="topbar" role="banner">
+  <div class="topbar-left">
+    <a href="{{ url_for('public.landing') }}" class="topbar-logo" aria-label="FarmLink home">
+      <div class="topbar-mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">FarmLink Intelligence</span>
+    </a>
+    <div class="topbar-vr" aria-hidden="true"></div>
+    <span class="topbar-portal-tag">Admin Panel</span>
+  </div>
+
+  <div class="topbar-right">
+    <a href="{{ url_for('admin.notifications') }}" class="topbar-notif"
+       aria-label="Notifications{% if unread_notifs %} — {{ unread_notifs }} unread{% endif %}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {% if unread_notifs and unread_notifs > 0 %}
+        <span class="notif-badge" aria-hidden="true">{{ unread_notifs if unread_notifs <= 9 else '9+' }}</span>
+      {% endif %}
+    </a>
+    <span class="topbar-username">{{ admin.full_name }}</span>
+    <div class="topbar-avatar" aria-hidden="true" title="{{ admin.full_name }}">
+      {{ admin.full_name[:2].upper() }}
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="topbar-logout">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Log out
+    </a>
+  </div>
+</header>
+
+
+{# ════ FLASH ═════════════════════════════════════════════════ #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-stack" role="alert" aria-live="polite">
+      {% for cat, msg in messages %}
+        <div class="flash flash-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+
+{# ════ LAYOUT ════════════════════════════════════════════════ #}
+<div class="portal-layout">
+
+  {% include 'partials/sidebar_admin.html' %}
+
+  <main class="portal-main" id="main" role="main">
+
+    {# ── Alerts ────────────────────────────────────────────── #}
+    {% if offline_nodes > 0 %}
+      <div class="banner bn-offline" role="alert">
+        <span>
+          <strong>{{ offline_nodes }} sensor node{{ 's' if offline_nodes > 1 else '' }} offline</strong>
+          — last readings missed. Farmers may not be aware.
+        </span>
+        <a href="{{ url_for('admin.sensor_monitor') }}">View nodes</a>
+      </div>
+    {% endif %}
+    {% if pending_verify > 0 %}
+      <div class="banner bn-info" role="alert">
+        <span>
+          <strong>{{ pending_verify }} farmer{{ 's' if pending_verify > 1 else '' }}</strong>
+          waiting for account verification.
+        </span>
+        <a href="{{ url_for('admin.accounts', tab='pending') }}">Review</a>
+      </div>
+    {% endif %}
+
+
+    {# ── Page header ──────────────────────────────────────── #}
+    <div class="page-hd">
+      <div class="page-hd-left">
+        <h1 class="page-title">Platform Overview</h1>
+        <p class="page-subtitle">
+          {{ now.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; FarmLink Intelligence Admin
+        </p>
+      </div>
+    </div>
+
+
+    {# ── KPI row 1: users + listings ──────────────────────── #}
+    <div class="kpi-row" role="region" aria-label="Platform statistics">
+
+      <div class="kpi kp-green">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Registered Farmers</div>
+        <div class="kpi-value kv-green">{{ total_farmers }}</div>
+        <div class="kpi-sub">on the platform</div>
+      </div>
+
+      <div class="kpi kp-blue">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Registered Buyers</div>
+        <div class="kpi-value kv-blue">{{ total_buyers }}</div>
+        <div class="kpi-sub">on the platform</div>
+      </div>
+
+      <div class="kpi {% if pending_verify > 0 %}kp-amber{% else %}kp-teal{% endif %}">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Pending Verification</div>
+        <div class="kpi-value {% if pending_verify > 0 %}kv-amber{% else %}kv-teal{% endif %}">
+          {{ pending_verify }}
+        </div>
+        <div class="kpi-sub">
+          {% if pending_verify > 0 %}needs review{% else %}all clear{% endif %}
+        </div>
+      </div>
+
+      <div class="kpi kp-indigo">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/>
+            <line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6"  x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/>
+            <line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Active Listings</div>
+        <div class="kpi-value">{{ active_listings }}</div>
+        <div class="kpi-sub">in the marketplace</div>
+      </div>
+
+    </div>
+
+
+    {# ── KPI row 2: IoT + intelligence ────────────────────── #}
+    <div class="kpi-row" role="region" aria-label="IoT and intelligence statistics">
+
+      <div class="kpi kp-teal">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Sensor Nodes Online</div>
+        <div class="kpi-value kv-teal">{{ online_nodes }}</div>
+        <div class="kpi-sub">of {{ total_nodes }} total nodes</div>
+      </div>
+
+      <div class="kpi {% if offline_nodes > 0 %}kp-danger{% else %}kp-slate{% endif %}">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+            <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <line x1="12" y1="20" x2="12.01" y2="20"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Nodes Offline</div>
+        <div class="kpi-value {% if offline_nodes > 0 %}kv-danger{% endif %}">{{ offline_nodes }}</div>
+        <div class="kpi-sub">
+          {% if offline_nodes > 0 %}requires attention{% else %}all nodes healthy{% endif %}
+        </div>
+      </div>
+
+      <div class="kpi kp-amber">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0 1.8-9.7A7 7 0 1 0 3 15z"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Active Forecasts</div>
+        <div class="kpi-value kv-amber">{{ total_forecasts }}</div>
+        <div class="kpi-sub">harvest windows predicted</div>
+      </div>
+
+      <div class="kpi kp-violet">
+        <div class="kpi-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+            <line x1="1" y1="10" x2="23" y2="10"/>
+          </svg>
+        </div>
+        <div class="kpi-label">Completed Transactions</div>
+        <div class="kpi-value">{{ total_txns }}</div>
+        <div class="kpi-sub">platform-wide total</div>
+      </div>
+
+    </div>
+
+
+    {# ── Quick actions ─────────────────────────────────────── #}
+    <div class="quick-actions-row" role="region" aria-label="Quick actions">
+
+      <a href="{{ url_for('admin.accounts', tab='pending') }}"
+         class="quick-action {% if pending_verify > 0 %}has-alert{% endif %}"
+         aria-label="Review pending verifications">
+        <div class="qa-icon qa-icon-amber" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div>
+          <div class="qa-label">Verify Accounts</div>
+          <div class="qa-sub">
+            {{ pending_verify }} pending{% if pending_verify == 0 %} · all clear{% endif %}
+          </div>
+        </div>
+      </a>
+
+      <a href="{{ url_for('admin.sensor_monitor', tab='offline') }}"
+         class="quick-action {% if offline_nodes > 0 %}has-alert{% endif %}"
+         aria-label="Check offline sensor nodes">
+        <div class="qa-icon {% if offline_nodes > 0 %}qa-icon-danger{% else %}qa-icon-teal{% endif %}" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div>
+          <div class="qa-label">Check Nodes</div>
+          <div class="qa-sub">{{ offline_nodes }} offline · {{ online_nodes }} online</div>
+        </div>
+      </a>
+
+      <a href="{{ url_for('admin.reports') }}" class="quick-action"
+         aria-label="Generate regional report">
+        <div class="qa-icon qa-icon-blue" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+        </div>
+        <div>
+          <div class="qa-label">Generate Report</div>
+          <div class="qa-sub">Regional & crop analysis</div>
+        </div>
+      </a>
+
+    </div>
+
+
+    {# ── Main content: activity + side panels ─────────────── #}
+    <div class="grid-main-aside">
+
+      {# ── Recent activity feed ────────────────────────────── #}
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Recent Activity</div>
+            <div class="card-sub">Latest platform events</div>
+          </div>
+          <a href="{{ url_for('admin.notifications') }}" class="card-link">View all →</a>
+        </div>
+
+        {% if recent_activity %}
+          {% for notif in recent_activity %}
+            <div class="feed-item">
+              {# Icon colour by notification type #}
+              {% if notif.type == 'harvest_alert' %}
+                <div class="feed-icon feed-icon-amber" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0 1.8-9.7A7 7 0 1 0 3 15z"/>
+                  </svg>
+                </div>
+              {% elif notif.type == 'sensor_offline' %}
+                <div class="feed-icon feed-icon-danger" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+              {% elif notif.type == 'account_verified' %}
+                <div class="feed-icon feed-icon-teal" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                </div>
+              {% elif notif.type == 'transaction_completed' %}
+                <div class="feed-icon feed-icon-green" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                </div>
+              {% else %}
+                <div class="feed-icon feed-icon-slate" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+              {% endif %}
+
+              <div class="feed-body">
+                <div class="feed-msg">{{ notif.title }}</div>
+                <div class="feed-time">
+                  {{ notif.sent_at.strftime('%d %b %Y · %H:%M') if notif.sent_at else '—' }}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="feed-empty">No recent activity to show.</div>
+        {% endif %}
+      </div>
+
+      {# ── Right side: pending + offline ───────────────────── #}
+      <div>
+
+        {# Pending verifications #}
+        <div class="card card-mb">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Pending Verifications</div>
+              <div class="card-sub">Farmers awaiting approval</div>
+            </div>
+            {% if pending_verify > 5 %}
+              <a href="{{ url_for('admin.accounts', tab='pending') }}" class="card-link">
+                +{{ pending_verify - 5 }} more →
+              </a>
+            {% endif %}
+          </div>
+
+          {% if pending_users %}
+            {% for user in pending_users %}
+              <div class="pending-item">
+                <div class="dt-avatar av-farmer" aria-hidden="true">
+                  {{ user.full_name[:2].upper() }}
+                </div>
+                <div class="pending-info">
+                  <div class="pending-name">{{ user.full_name }}</div>
+                  <div class="pending-email">{{ user.email }}</div>
+                </div>
+                <div class="pending-actions">
+                  <form method="POST" action="{{ url_for('admin.accounts') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action"  value="verify">
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <input type="hidden" name="tab"     value="pending">
+                    <button type="submit" class="btn-act btn-act-verify">Verify</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <div class="empty-title">All clear</div>
+              <div class="empty-sub">No pending verifications.</div>
+            </div>
+          {% endif %}
+        </div>
+
+        {# Offline nodes #}
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Offline Nodes</div>
+              <div class="card-sub">No readings in last 60 min</div>
+            </div>
+            {% if offline_nodes > 5 %}
+              <a href="{{ url_for('admin.sensor_monitor', tab='offline') }}" class="card-link">
+                +{{ offline_nodes - 5 }} more →
+              </a>
+            {% endif %}
+          </div>
+
+          {% if offline_farm_list %}
+            {% for item in offline_farm_list %}
+              <div class="offline-item">
+                <div class="offline-icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <div class="offline-info">
+                  <div class="offline-name">{{ item.farm.name }}</div>
+                  <div class="offline-since">Offline {{ item.last_seen }}</div>
+                  <div class="offline-farmer">{{ item.owner_name }}</div>
+                </div>
+                <a href="{{ url_for('admin.sensor_monitor') }}"
+                   class="btn-act btn-act-view">View</a>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </div>
+              <div class="empty-title">All nodes online</div>
+              <div class="empty-sub">No offline sensors detected.</div>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+
+{# ════ FLASH AUTO-DISMISS ════════════════════════════════════ #}
+<script>
+(function () {
+  var flashes = document.querySelectorAll('.flash');
+  flashes.forEach(function (el) {
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 200);
+    }, 4000);
+  });
+}());
+</script>
+
+</body>
+</html>
