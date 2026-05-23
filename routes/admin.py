@@ -35,7 +35,7 @@ def admin_required(f):
     """Ensures the logged-in user is an admin. Use AFTER @login_required."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not current_#user.is_authenticated or current_user.role != 'admin':
+        if not current_user.is_authenticated or current_user.role != 'admin':
             return redirect(url_for('public.forbidden_direct'))
         return f(*args, **kwargs)
     return decorated
@@ -51,6 +51,10 @@ def _unread_notifs():
     except Exception:
         return 0
 
+
+# ══════════════════════════════════════════════════════════════
+# ADMIN DASHBOARD  —  /admin/dashboard
+# ══════════════════════════════════════════════════════════════
 @admin_bp.route('/dashboard')
 @login_required
 @admin_required
@@ -232,6 +236,7 @@ def accounts():
         search_query  = q,
     )
 
+
 # ══════════════════════════════════════════════════════════════
 # SENSOR MONITOR  —  /admin/sensor_monitor
 # ══════════════════════════════════════════════════════════════
@@ -321,6 +326,7 @@ def sensor_monitor():
         cnt_nodata    = cnt_nodata,
         total_nodes   = len(farms),
     )
+
 
 # ══════════════════════════════════════════════════════════════
 # REPORTS  —  /admin/reports
