@@ -12,7 +12,7 @@
 # TABLE LIST:
 #   User            — all accounts (farmer / buyer / admin)
 #   Farm            — farms owned by farmers (+ IoT hardware identity fields)
-#   SensorReading   — IoT sensor readings per farm (merged web + hardware schema)
+#   SensorReading   — IoT sensor readings per farm (hardware schema)
 #   IrrigationLog   — per-event irrigation records from hardware schema
 #   HarvestForecast — ML-style harvest window predictions
 #   ProduceListing  — marketplace listings
@@ -21,6 +21,13 @@
 #   BuyerAlert      — standing alert criteria per buyer
 #   Notification    — in-app + email + SMS notifications
 #   ContactRequest  — buyer enquiry messages to farmers
+#
+# SENSOR_READINGS / IRRIGATION_LOG — hardware schema (Phase 5.3):
+#   reading_id      VARCHAR(30) PRIMARY KEY  (Arduino-generated)
+#   farm_id         VARCHAR(50) FK → farms.hardware_farm_id
+#   soil_moisture   DECIMAL(5,1)
+#   sync_status     ENUM('BUFFERED','LIVE','SYNCED')  — hardware only
+#   No light_intensity, no integer surrogate PK.
 # ============================================================
 
 from extensions import db
@@ -78,10 +85,10 @@ class User(UserMixin, db.Model):
 # Each farmer can own multiple farms. Each farm is linked
 # to exactly one IoT sensor node via sensor_node_id.
 #
-# Hardware identity fields (added in merged schema):
-#   hardware_farm_id  — the VARCHAR key used by the Arduino sketch
-#                       e.g. "FARM-MARK-001"; the Python bridge uses
-#                       this to join web rows to IoT rows
+# Hardware identity fields:
+#   hardware_farm_id  — VARCHAR(50) PK used by the Arduino sketch
+#                       e.g. "FARM-MARK-001". SensorReading and
+#                       IrrigationLog FK to this field.
 #   farmer_name       — human-readable node identity (Arduino FARM_ID)
 #   farmer_phone      — contact info stored alongside the hardware node
 #   is_active         — hardware schema flag (1 = active, 0 = inactive)
@@ -110,90 +117,94 @@ class Farm(db.Model):
     created_at            = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at            = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    readings      = db.relationship('SensorReading', backref='farm', lazy='dynamic',
-                                    cascade='all, delete-orphan')
-    forecasts     = db.relationship('HarvestForecast', backref='farm', lazy='dynamic',
-                                    cascade='all, delete-orphan')
-    irrigation_events = db.relationship('IrrigationLog', backref='farm', lazy='dynamic',
+    readings          = db.relationship('SensorReading', backref='farm', lazy='dynamic',
+                                        cascade='all, delete-orphan',
+                                        foreign_keys='SensorReading.farm_id')
+    forecasts         = db.relationship('HarvestForecast', backref='farm', lazy='dynamic',
                                         cascade='all, delete-orphan')
+    irrigation_events = db.relationship('IrrigationLog', backref='farm', lazy='dynamic',
+                                        cascade='all, delete-orphan',
+                                        foreign_keys='IrrigationLog.farm_id')
 
     def __repr__(self):
-        return f'<Farm {self.name} [{self.sensor_node_id}]>'
+        return f'<Farm {self.name} [{self.hardware_farm_id}]>'
 
 
 # ══════════════════════════════════════════════════════════════
-# SENSOR READING  (merged web + hardware schema)
+# SENSOR READING  (hardware schema — Phase 5.3)
 #
-# Web schema had: id, farm_id, sensor values, timestamp,
-#                 sync_status('synced'|'pending'), created_at
+# Matches farmlink_phase5 hardware schema exactly:
+#   reading_id      VARCHAR(30) PRIMARY KEY  (Arduino-generated)
+#   farm_id         VARCHAR(50) FK → farms.hardware_farm_id
+#   recorded_at     DATETIME    DS3231 RTC hardware clock
+#   inserted_at     DATETIME    when row entered MySQL
+#   temperature     DECIMAL(5,2)
+#   humidity        DECIMAL(5,2)
+#   soil_moisture   DECIMAL(5,1)  ← 1 decimal place (hardware precision)
+#   is_raining      TINYINT(1)
+#   rain_intensity  INT
+#   heat_stress_flag   TINYINT(1)
+#   irrigation_active  TINYINT(1)
+#   quality_score   DECIMAL(5,2)  written by MySQL trigger
+#   sync_status     ENUM('BUFFERED','LIVE','SYNCED')
 #
-# Hardware schema added:
-#   reading_id     — Arduino-generated globally unique ID (hardware PK)
-#   recorded_at    — DS3231 RTC hardware clock (replaces 'timestamp')
-#   inserted_at    — when the row entered MySQL (hardware concept)
-#   rain_intensity — analog rain sensor value
-#   heat_stress_flag / irrigation_active — automation flags
-#   quality_score  — populated automatically by the MySQL trigger
-#                    calculate_quality_score (AFTER INSERT)
-#   sync_status    — enum extended to cover hardware vocabulary:
-#                    'LIVE' | 'BUFFERED' | 'SYNCED' (in addition to
-#                    the web values 'synced' | 'pending')
-#
-# NOTE: 'timestamp' has been renamed to 'recorded_at' to match
-# the SQL schema. Update any code that accessed .timestamp to
-# use .recorded_at instead.
+# NOTE: light_intensity removed (not in hardware schema).
+#       No integer surrogate PK — reading_id is the PK.
 # ══════════════════════════════════════════════════════════════
 class SensorReading(db.Model):
     __tablename__ = 'sensor_readings'
 
-    # ── Primary key (web app style) ───────────────────────────
-    id              = db.Column(db.Integer, primary_key=True)
-    # ── Hardware reading identifier (Arduino-generated) ───────
-    reading_id      = db.Column(db.String(30), unique=True)
-    # ── Farm reference ────────────────────────────────────────
-    farm_id         = db.Column(db.Integer, db.ForeignKey('farms.id', ondelete='CASCADE'),
-                                nullable=False, index=True)
+    # ── Primary key (Arduino-generated hardware ID) ───────────
+    reading_id        = db.Column(db.String(30), primary_key=True)
+    # ── Farm reference → hardware_farm_id ─────────────────────
+    farm_id           = db.Column(db.String(50),
+                                  db.ForeignKey('farms.hardware_farm_id', ondelete='CASCADE'),
+                                  nullable=False, index=True)
     # ── Timestamps ────────────────────────────────────────────
-    recorded_at     = db.Column(db.DateTime, nullable=False, index=True)   # DS3231 hardware clock
-    inserted_at     = db.Column(db.DateTime, default=datetime.utcnow)       # when row entered MySQL
+    recorded_at       = db.Column(db.DateTime, nullable=False, index=True)
+    inserted_at       = db.Column(db.DateTime, default=datetime.utcnow)
     # ── Core sensor values ────────────────────────────────────
-    temperature     = db.Column(db.Numeric(5, 2))
-    humidity        = db.Column(db.Numeric(5, 2))
-    soil_moisture   = db.Column(db.Numeric(5, 2))
-    light_intensity = db.Column(db.Numeric(8, 2))
+    temperature       = db.Column(db.Numeric(5, 2))
+    humidity          = db.Column(db.Numeric(5, 2))
+    soil_moisture     = db.Column(db.Numeric(5, 1))   # DECIMAL(5,1) — hardware precision
     # ── Rain sensor ───────────────────────────────────────────
-    is_raining      = db.Column(db.Integer, default=0, nullable=False)      # TINYINT(1)
-    rain_intensity  = db.Column(db.Integer, default=0, nullable=False)
+    is_raining        = db.Column(db.Integer, default=0, nullable=False)    # TINYINT(1)
+    rain_intensity    = db.Column(db.Integer, default=0, nullable=False)
     # ── Automation flags ──────────────────────────────────────
     heat_stress_flag  = db.Column(db.Integer, default=0, nullable=False)    # TINYINT(1)
     irrigation_active = db.Column(db.Integer, default=0, nullable=False)    # TINYINT(1)
     # ── Quality score (written by MySQL trigger) ──────────────
-    quality_score   = db.Column(db.Numeric(5, 2))
-    # ── Sync status (web + hardware vocabulary combined) ──────
-    sync_status     = db.Column(
-                          db.Enum('pending', 'LIVE', 'BUFFERED', 'SYNCED'),
-                          default='BUFFERED', nullable=False
-                      )
+    quality_score     = db.Column(db.Numeric(5, 2))
+    # ── Sync status (hardware vocabulary only) ────────────────
+    sync_status       = db.Column(
+                            db.Enum('BUFFERED', 'LIVE', 'SYNCED'),
+                            default='BUFFERED', nullable=False
+                        )
 
     def __repr__(self):
-        return f'<Reading farm={self.farm_id} @ {self.recorded_at}>'
+        return f'<Reading {self.reading_id} farm={self.farm_id} @ {self.recorded_at}>'
 
 
 # ══════════════════════════════════════════════════════════════
-# IRRIGATION LOG  (new — from hardware schema)
+# IRRIGATION LOG  (hardware schema — Phase 5.3)
+#
 # Records each complete irrigation event triggered by the
 # Arduino (AUTO) or manually via the web app (MANUAL).
 # One row per irrigation event, not per sensor reading.
+#
+#   farm_id         VARCHAR(50) FK → farms.hardware_farm_id
+#   trigger_moisture DECIMAL(5,1)  ← 1 decimal place (hardware)
 # ══════════════════════════════════════════════════════════════
 class IrrigationLog(db.Model):
     __tablename__ = 'irrigation_log'
 
-    event_id         = db.Column(db.Integer, primary_key=True)
-    farm_id          = db.Column(db.Integer, db.ForeignKey('farms.id', ondelete='CASCADE'),
+    event_id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    farm_id          = db.Column(db.String(50),
+                                 db.ForeignKey('farms.hardware_farm_id', ondelete='CASCADE'),
                                  nullable=False, index=True)
     started_at       = db.Column(db.DateTime, nullable=False, index=True)
     duration_seconds = db.Column(db.Integer)
-    trigger_moisture = db.Column(db.Numeric(5, 2))
+    trigger_moisture = db.Column(db.Numeric(5, 1))   # DECIMAL(5,1) — hardware precision
     trigger_type     = db.Column(db.Enum('AUTO', 'MANUAL'), default='AUTO', nullable=False)
     notes            = db.Column(db.String(200))
 
@@ -415,9 +426,6 @@ class ContactRequest(db.Model):
         Returns True only when:
           1. The given user IS the recipient of this message, AND
           2. The message has not already been replied to.
-
-        The route calls this — it never computes the logic itself.
-        This is encapsulation: the rule lives inside the object.
         """
         return (
             user is not None
@@ -443,11 +451,6 @@ class ContactRequest(db.Model):
         Returns a human-readable string describing what
         this message is about. Templates never build this string
         themselves — they ask the object for it.
-
-        Examples:
-          'Listing enquiry'
-          'Profile message'
-          'Farmer message'
         """
         labels = {
             'listing_enquiry':  'Listing enquiry',

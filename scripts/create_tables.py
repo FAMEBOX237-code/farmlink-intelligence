@@ -11,11 +11,10 @@
 # WHAT IT DOES:
 #   1. Reads DATABASE_URL from your .env file
 #   2. Creates the 'farmlink' database if it does not exist
-#   3. Drops sensor_readings / irrigation_log if they exist
-#      with the old column structure (safe — no user data yet)
+#   3. Skips legacy table drop — existing data is preserved
 #   4. Creates every table defined in models/models.py
 #   5. Installs the calculate_quality_score MySQL trigger
-#   6. Prints a confirmation for each step
+#   6. Verifies all 11 tables and the trigger are present
 #
 # SAFE TO RE-RUN:
 #   Uses CREATE TABLE IF NOT EXISTS — will not overwrite
@@ -25,6 +24,19 @@
 #
 # AFTER RUNNING THIS:
 #   Run seed.py to create the admin account.
+#
+# TABLE LIST (11 tables):
+#   users, farms, sensor_readings, irrigation_log,
+#   harvest_forecasts, produce_listings, transactions,
+#   ratings, buyer_alerts, notifications, contact_requests
+#
+# HARDWARE SCHEMA NOTES (Phase 5.3):
+#   sensor_readings  — PK is reading_id VARCHAR(30) (Arduino-generated)
+#                      farm_id VARCHAR(50) → farms.hardware_farm_id
+#                      sync_status ENUM('BUFFERED','LIVE','SYNCED')
+#                      soil_moisture DECIMAL(5,1)
+#   irrigation_log   — farm_id VARCHAR(50) → farms.hardware_farm_id
+#                      trigger_moisture DECIMAL(5,1)
 # ============================================================
 
 import os
@@ -50,9 +62,10 @@ from models.models import (
 # ── The quality-score trigger ────────────────────────────────
 # Fires AFTER every INSERT into sensor_readings.
 # Calculates a weighted quality score (0–100) and writes it
-# back to sensor_readings.quality_score, then updates
-# farms.current_quality_score with a rolling average of the
-# last 10 readings for that farm.
+# back to sensor_readings.quality_score using reading_id (the
+# VARCHAR PK), then updates farms.current_quality_score with
+# a rolling average of the last 10 readings for that farm
+# (joined via farms.hardware_farm_id).
 #
 # Formula weights:
 #   Soil moisture  40 %
@@ -124,12 +137,13 @@ BEGIN
             2
         );
 
-        -- Write score to the newly inserted sensor_reading row
+        -- Write score back using reading_id (VARCHAR PK — no integer id)
         UPDATE sensor_readings
             SET quality_score = v_final_score
-        WHERE id = NEW.id;
+        WHERE reading_id = NEW.reading_id;
 
-        -- Update farms.current_quality_score (rolling avg last 10)
+        -- Update farms.current_quality_score (rolling avg last 10 readings)
+        -- farm_id in sensor_readings maps to farms.hardware_farm_id
         UPDATE farms
             SET current_quality_score = (
                 SELECT ROUND(AVG(quality_score), 0)
@@ -142,7 +156,7 @@ BEGIN
                     LIMIT 10
                 ) AS recent
             )
-        WHERE id = NEW.farm_id;
+        WHERE hardware_farm_id = NEW.farm_id;
 
     END IF;
 
@@ -189,37 +203,16 @@ def create_database_if_missing():
         sys.exit(1)
 
 
-def drop_legacy_tables(app):
-    """
-    Drops tables whose column structure changed in the merged
-    web + hardware schema so they are recreated cleanly.
-
-    Dropped only if they exist:
-      sensor_readings — 'timestamp' renamed to 'recorded_at';
-                        many hardware columns added
-      irrigation_log  — new table; drop is a no-op if absent
-
-    ALL other tables are left completely untouched.
-    """
-    with app.app_context():
-        from sqlalchemy import inspect, text
-        inspector = inspect(db.engine)
-        existing  = set(inspector.get_table_names())
-
-        for table in ('sensor_readings', 'irrigation_log'):
-            if table in existing:
-                db.session.execute(text(f'DROP TABLE IF EXISTS `{table}`;'))
-                db.session.commit()
-                print(f'  ✓ Old {table} dropped — will be recreated with correct columns.')
-            else:
-                print(f'  - {table} did not exist yet.')
-
-
 def create_all_tables(app):
     """
     Calls db.create_all() which creates every table that does
     not already exist, using the ORM model definitions as the
     source of truth for column names, types, and constraints.
+
+    Tables created (11 total):
+      users, farms, sensor_readings, irrigation_log,
+      harvest_forecasts, produce_listings, transactions,
+      ratings, buyer_alerts, notifications, contact_requests
     """
     with app.app_context():
         db.create_all()
@@ -243,6 +236,10 @@ def install_trigger(app):
 
     The trigger is dropped first so this function is safe to
     re-run (e.g. after updating the formula weights).
+
+    Key implementation details:
+      - Uses reading_id (VARCHAR PK) not id (no integer PK exists)
+      - Updates farms via hardware_farm_id not farms.id
     """
     with app.app_context():
         from sqlalchemy import text
@@ -251,9 +248,8 @@ def install_trigger(app):
         db.session.execute(text('DROP TRIGGER IF EXISTS calculate_quality_score;'))
         db.session.commit()
 
-        # Create the trigger
-        # Note: SQLAlchemy executes one statement at a time so we
-        # pass the trigger body directly (no DELIMITER needed here).
+        # Create the trigger (no DELIMITER needed — SQLAlchemy
+        # executes one statement at a time)
         db.session.execute(text(QUALITY_SCORE_TRIGGER))
         db.session.commit()
 
@@ -263,9 +259,9 @@ def install_trigger(app):
 def verify(app):
     """
     Post-install sanity check.
-    Verifies that every expected table exists and that the
-    farms table has all required columns (including the hardware
-    identity columns added in the web+IoT schema merge).
+    Verifies that all 11 expected tables exist, that key columns
+    are present in sensor_readings and farms, and that the
+    calculate_quality_score trigger is installed.
     """
     with app.app_context():
         from sqlalchemy import inspect, text
@@ -285,23 +281,55 @@ def verify(app):
                 print(f'  ✗ MISSING table: {t}')
                 all_ok = False
 
-        # Verify farms has all expected columns
+        # ── Verify farms has all expected columns ─────────────
         farms_cols = {c['name'] for c in inspector.get_columns('farms')}
-        required   = {
+        required_farms = {
             'id', 'owner_id', 'name', 'region', 'town', 'crop_type',
             'size_hectares', 'latitude', 'longitude', 'sensor_node_id',
             'hardware_farm_id', 'farmer_name', 'farmer_phone',
             'current_quality_score', 'is_active', 'notes',
             'created_at', 'updated_at',
         }
-        missing_cols = required - farms_cols
-        if missing_cols:
-            print(f'  ✗ farms table is missing columns: {sorted(missing_cols)}')
+        missing_farms = required_farms - farms_cols
+        if missing_farms:
+            print(f'  ✗ farms table is missing columns: {sorted(missing_farms)}')
             all_ok = False
         else:
             print('  ✓ farms columns verified.')
 
-        # Verify trigger exists
+        # ── Verify sensor_readings has hardware schema columns ─
+        if 'sensor_readings' in existing:
+            sr_cols = {c['name'] for c in inspector.get_columns('sensor_readings')}
+            required_sr = {
+                'reading_id', 'farm_id', 'recorded_at', 'inserted_at',
+                'temperature', 'humidity', 'soil_moisture',
+                'is_raining', 'rain_intensity',
+                'heat_stress_flag', 'irrigation_active',
+                'quality_score', 'sync_status',
+            }
+            missing_sr = required_sr - sr_cols
+            if missing_sr:
+                print(f'  ✗ sensor_readings missing columns: {sorted(missing_sr)}')
+                all_ok = False
+            else:
+                print('  ✓ sensor_readings columns verified.')
+
+        # ── Verify irrigation_log columns ─────────────────────
+        if 'irrigation_log' in existing:
+            il_cols = {c['name'] for c in inspector.get_columns('irrigation_log')}
+            required_il = {
+                'event_id', 'farm_id', 'started_at',
+                'duration_seconds', 'trigger_moisture',
+                'trigger_type', 'notes',
+            }
+            missing_il = required_il - il_cols
+            if missing_il:
+                print(f'  ✗ irrigation_log missing columns: {sorted(missing_il)}')
+                all_ok = False
+            else:
+                print('  ✓ irrigation_log columns verified.')
+
+        # ── Verify trigger exists ─────────────────────────────
         result = db.session.execute(
             text("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS "
                  "WHERE TRIGGER_SCHEMA = DATABASE() "
@@ -325,8 +353,6 @@ if __name__ == '__main__':
 
     app = create_app()
 
-    # print('\n[2/5] Dropping legacy tables (sensor_readings, irrigation_log)...')
-    # drop_legacy_tables(app)
     print('\n[2/5] Skipping legacy table drop — preserving existing data.')
 
     print('\n[3/5] Creating all tables from models...')
@@ -340,7 +366,7 @@ if __name__ == '__main__':
 
     print('\n' + '=' * 42)
     if ok:
-        print('  Database is fully set up and matches the codebase.')
+        print('  All 11 tables present. Trigger installed.')
         print('  Next step: run   python scripts/seed.py   to create the admin account.')
     else:
         print('  Setup completed with warnings. Review the errors above.')
