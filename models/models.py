@@ -13,6 +13,7 @@
 #   User            — all accounts (farmer / buyer / admin)
 #   Farm            — farms owned by farmers (+ IoT hardware identity fields)
 #   SensorReading   — IoT sensor readings per farm (hardware schema)
+#   Alert           — one row per alert event detected by the Python bridge
 #   IrrigationLog   — per-event irrigation records from hardware schema
 #   HarvestForecast — ML-style harvest window predictions
 #   ProduceListing  — marketplace listings
@@ -28,6 +29,10 @@
 #   soil_moisture   DECIMAL(5,1)
 #   sync_status     ENUM('BUFFERED','LIVE','SYNCED')  — hardware only
 #   No light_intensity, no integer surrogate PK.
+#
+# ALERTS — hardware schema (Phase 5.6):
+#   Written exclusively by the Python bridge.
+#   The website reads alerts; it never writes them.
 # ============================================================
 
 from extensions import db
@@ -181,8 +186,68 @@ class SensorReading(db.Model):
                             default='BUFFERED', nullable=False
                         )
 
+    # ── One reading can produce multiple alerts ───────────────
+    alerts = db.relationship('Alert', backref='reading', lazy='dynamic')
+
     def __repr__(self):
         return f'<Reading {self.reading_id} farm={self.farm_id} @ {self.recorded_at}>'
+
+
+# ══════════════════════════════════════════════════════════════
+# ALERT  (IoT hardware — Phase 5.6)
+#
+# One row per alert event detected by the Python bridge.
+# Written automatically by the bridge — never directly by
+# the website. The website only reads from this table
+# (e.g. to display alert history on a farm dashboard).
+#
+# WHY THIS IS SEPARATE FROM SensorReading:
+#   SensorReading already stores heat_stress_flag and
+#   irrigation_active as simple 0/1 flags. But those flags
+#   don't tell you WHEN an alert was raised, WHAT VALUE
+#   triggered it, or give you a queryable alert history.
+#   This table fills that gap — one row per alert event,
+#   with the exact sensor value that crossed the threshold.
+#
+# alert_type values:
+#   HEAT_STRESS        — temperature exceeded threshold
+#   CRITICAL_DROUGHT   — soil moisture dropped below 20 %
+#   IRRIGATION_TRIGGER — soil below 30 % and pump activated
+#
+# reading_id FK uses SET NULL on delete so that deleting
+# a sensor reading does NOT wipe out the alert history.
+# farm_id is stored directly (no FK constraint) so that
+# alert history survives even if a farm record is edited.
+# ══════════════════════════════════════════════════════════════
+class Alert(db.Model):
+    __tablename__ = 'alerts'
+
+    alert_id     = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    # ── Which reading triggered this alert ───────────────────
+    # SET NULL on delete: if the reading is deleted, the alert
+    # row survives with reading_id = NULL (history is kept).
+    reading_id   = db.Column(db.String(30),
+                             db.ForeignKey('sensor_readings.reading_id',
+                                           ondelete='SET NULL'),
+                             nullable=True,
+                             index=True)
+
+    # ── Which farm this alert belongs to ─────────────────────
+    # Stored as a plain string — no FK constraint — so alert
+    # history is never accidentally deleted via cascade.
+    # Matches farms.hardware_farm_id format e.g. "FARM-MARK-001"
+    farm_id      = db.Column(db.String(50), nullable=True, index=True)
+
+    # ── What kind of alert and what value triggered it ───────
+    alert_type   = db.Column(db.String(50))         # HEAT_STRESS / CRITICAL_DROUGHT / IRRIGATION_TRIGGER
+    alert_value  = db.Column(db.Numeric(8, 2))      # the exact sensor reading that crossed the line
+
+    # ── When the bridge detected and logged this alert ───────
+    triggered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Alert {self.alert_type} val={self.alert_value} reading={self.reading_id}>'
 
 
 # ══════════════════════════════════════════════════════════════
