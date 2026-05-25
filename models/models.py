@@ -201,8 +201,11 @@ class SensorReading(db.Model):
                         )
 
     # ── One reading can produce multiple alerts ───────────────
-    alerts = db.relationship('Alert', backref='reading', lazy='dynamic',
-                             foreign_keys='Alert.reading_id')
+    alerts = db.relationship('Alert',
+                         primaryjoin='SensorReading.reading_id == Alert.reading_id',
+                         foreign_keys='[Alert.reading_id]',
+                         backref='reading',
+                         lazy='dynamic')
 
     def __repr__(self):
         return f'<Reading id={self.id} farm={self.farm_id} @ {self.recorded_at}>'

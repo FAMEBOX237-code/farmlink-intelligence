@@ -22,7 +22,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 from models.models import (
-    ProduceListing, User, Farm, HarvestForecast,
+    ProduceListing, User, Farm,
     BuyerAlert, ContactRequest, Notification,
 )
 from extensions import db
@@ -604,7 +604,6 @@ def notifications():
             action_label = None
 
         # Time display
-        from datetime import datetime, timezone
         now  = datetime.utcnow()
         diff = now - n.sent_at
         if diff.days >= 7:
