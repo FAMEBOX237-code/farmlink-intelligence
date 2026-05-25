@@ -14,7 +14,7 @@
 #   3. Skips legacy table drop — existing data is preserved
 #   4. Creates every table defined in models/models.py
 #   5. Installs the calculate_quality_score MySQL trigger
-#   6. Verifies all 11 tables and the trigger are present
+#   6. Verifies all 12 tables and the trigger are present
 #
 # SAFE TO RE-RUN:
 #   Uses CREATE TABLE IF NOT EXISTS — will not overwrite
@@ -25,18 +25,19 @@
 # AFTER RUNNING THIS:
 #   Run seed.py to create the admin account.
 #
-# TABLE LIST (11 tables):
+# TABLE LIST (12 tables):
 #   users, farms, sensor_readings, irrigation_log,
 #   harvest_forecasts, produce_listings, transactions,
-#   ratings, buyer_alerts, notifications, contact_requests
+#   ratings, buyer_alerts, notifications, contact_requests,
+#   alerts
 #
-# HARDWARE SCHEMA NOTES (Phase 5.3):
-#   sensor_readings  — PK is reading_id VARCHAR(30) (Arduino-generated)
-#                      farm_id VARCHAR(50) → farms.hardware_farm_id
-#                      sync_status ENUM('BUFFERED','LIVE','SYNCED')
-#                      soil_moisture DECIMAL(5,1)
-#   irrigation_log   — farm_id VARCHAR(50) → farms.hardware_farm_id
-#                      trigger_moisture DECIMAL(5,1)
+# HARDWARE SCHEMA NOTES:
+#   sensor_readings  — PK is id INTEGER (auto-increment, website standard)
+#                      reading_id VARCHAR(36) UNIQUE (bridge idempotency key)
+#                      farm_id INTEGER → farms.id
+#                      light_intensity nullable
+#   irrigation_log   — farm_id INTEGER → farms.id
+#   alerts           — reading_id plain VARCHAR (no FK), farm_id plain INTEGER (no FK)
 # ============================================================
 
 import os
@@ -53,7 +54,7 @@ from extensions import db
 
 # Import all models so SQLAlchemy knows about every table
 from models.models import (
-    User, Farm, SensorReading, IrrigationLog, HarvestForecast,
+    User, Farm, SensorReading, Alert, IrrigationLog, HarvestForecast,
     ProduceListing, Transaction, Rating,
     BuyerAlert, Notification, ContactRequest
 )
@@ -137,13 +138,13 @@ BEGIN
             2
         );
 
-        -- Write score back using reading_id (VARCHAR PK — no integer id)
+        -- Write score back using integer id (the PK)
         UPDATE sensor_readings
             SET quality_score = v_final_score
-        WHERE reading_id = NEW.reading_id;
+        WHERE id = NEW.id;
 
         -- Update farms.current_quality_score (rolling avg last 10 readings)
-        -- farm_id in sensor_readings maps to farms.hardware_farm_id
+        -- farm_id in sensor_readings maps to farms.id (integer)
         UPDATE farms
             SET current_quality_score = (
                 SELECT ROUND(AVG(quality_score), 0)
@@ -156,7 +157,7 @@ BEGIN
                     LIMIT 10
                 ) AS recent
             )
-        WHERE hardware_farm_id = NEW.farm_id;
+        WHERE id = NEW.farm_id;
 
     END IF;
 
@@ -209,8 +210,8 @@ def create_all_tables(app):
     not already exist, using the ORM model definitions as the
     source of truth for column names, types, and constraints.
 
-    Tables created (11 total):
-      users, farms, sensor_readings, irrigation_log,
+    Tables created (12 total):
+      users, farms, sensor_readings, alerts, irrigation_log,
       harvest_forecasts, produce_listings, transactions,
       ratings, buyer_alerts, notifications, contact_requests
     """
@@ -259,9 +260,9 @@ def install_trigger(app):
 def verify(app):
     """
     Post-install sanity check.
-    Verifies that all 11 expected tables exist, that key columns
-    are present in sensor_readings and farms, and that the
-    calculate_quality_score trigger is installed.
+    Verifies that all 12 expected tables exist, that key columns
+    are present in sensor_readings, farms, and alerts, and that
+    the calculate_quality_score trigger is installed.
     """
     with app.app_context():
         from sqlalchemy import inspect, text
@@ -269,10 +270,12 @@ def verify(app):
         inspector = inspect(db.engine)
         existing  = set(inspector.get_table_names())
 
+        # ── 12 tables total — alerts added in Phase 5.6 ───────
         expected_tables = [
             'users', 'farms', 'sensor_readings', 'irrigation_log',
             'harvest_forecasts', 'produce_listings', 'transactions',
             'ratings', 'buyer_alerts', 'notifications', 'contact_requests',
+            'alerts',
         ]
 
         all_ok = True
@@ -297,12 +300,12 @@ def verify(app):
         else:
             print('  ✓ farms columns verified.')
 
-        # ── Verify sensor_readings has hardware schema columns ─
+        # ── Verify sensor_readings has correct columns ─────────
         if 'sensor_readings' in existing:
             sr_cols = {c['name'] for c in inspector.get_columns('sensor_readings')}
             required_sr = {
-                'reading_id', 'farm_id', 'recorded_at', 'inserted_at',
-                'temperature', 'humidity', 'soil_moisture',
+                'id', 'reading_id', 'farm_id', 'recorded_at', 'inserted_at',
+                'temperature', 'humidity', 'soil_moisture', 'light_intensity',
                 'is_raining', 'rain_intensity',
                 'heat_stress_flag', 'irrigation_active',
                 'quality_score', 'sync_status',
@@ -328,6 +331,20 @@ def verify(app):
                 all_ok = False
             else:
                 print('  ✓ irrigation_log columns verified.')
+
+        # ── Verify alerts table has expected columns ───────────
+        if 'alerts' in existing:
+            al_cols = {c['name'] for c in inspector.get_columns('alerts')}
+            required_al = {
+                'alert_id', 'reading_id', 'farm_id',
+                'alert_type', 'alert_value', 'triggered_at',
+            }
+            missing_al = required_al - al_cols
+            if missing_al:
+                print(f'  ✗ alerts missing columns: {sorted(missing_al)}')
+                all_ok = False
+            else:
+                print('  ✓ alerts columns verified.')
 
         # ── Verify trigger exists ─────────────────────────────
         result = db.session.execute(
@@ -366,7 +383,7 @@ if __name__ == '__main__':
 
     print('\n' + '=' * 42)
     if ok:
-        print('  All 11 tables present. Trigger installed.')
+        print('  All 12 tables present. Trigger installed.')
         print('  Next step: run   python scripts/seed.py   to create the admin account.')
     else:
         print('  Setup completed with warnings. Review the errors above.')
