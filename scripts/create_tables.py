@@ -31,16 +31,13 @@
 #   ratings, buyer_alerts, notifications, contact_requests,
 #   alerts
 #
-# HARDWARE SCHEMA NOTES (Phase 5.3 / 5.6):
-#   sensor_readings  — PK is reading_id VARCHAR(30) (Arduino-generated)
-#                      farm_id VARCHAR(50) → farms.hardware_farm_id
-#                      sync_status ENUM('BUFFERED','LIVE','SYNCED')
-#                      soil_moisture DECIMAL(5,1)
-#   irrigation_log   — farm_id VARCHAR(50) → farms.hardware_farm_id
-#                      trigger_moisture DECIMAL(5,1)
-#   alerts           — written exclusively by the Python bridge
-#                      reading_id FK SET NULL (history survives deletions)
-#                      farm_id plain VARCHAR (no FK — history is permanent)
+# HARDWARE SCHEMA NOTES:
+#   sensor_readings  — PK is id INTEGER (auto-increment, website standard)
+#                      reading_id VARCHAR(36) UNIQUE (bridge idempotency key)
+#                      farm_id INTEGER → farms.id
+#                      light_intensity nullable
+#   irrigation_log   — farm_id INTEGER → farms.id
+#   alerts           — reading_id plain VARCHAR (no FK), farm_id plain INTEGER (no FK)
 # ============================================================
 
 import os
@@ -141,13 +138,13 @@ BEGIN
             2
         );
 
-        -- Write score back using reading_id (VARCHAR PK — no integer id)
+        -- Write score back using integer id (the PK)
         UPDATE sensor_readings
             SET quality_score = v_final_score
-        WHERE reading_id = NEW.reading_id;
+        WHERE id = NEW.id;
 
         -- Update farms.current_quality_score (rolling avg last 10 readings)
-        -- farm_id in sensor_readings maps to farms.hardware_farm_id
+        -- farm_id in sensor_readings maps to farms.id (integer)
         UPDATE farms
             SET current_quality_score = (
                 SELECT ROUND(AVG(quality_score), 0)
@@ -160,7 +157,7 @@ BEGIN
                     LIMIT 10
                 ) AS recent
             )
-        WHERE hardware_farm_id = NEW.farm_id;
+        WHERE id = NEW.farm_id;
 
     END IF;
 
@@ -303,12 +300,12 @@ def verify(app):
         else:
             print('  ✓ farms columns verified.')
 
-        # ── Verify sensor_readings has hardware schema columns ─
+        # ── Verify sensor_readings has correct columns ─────────
         if 'sensor_readings' in existing:
             sr_cols = {c['name'] for c in inspector.get_columns('sensor_readings')}
             required_sr = {
-                'reading_id', 'farm_id', 'recorded_at', 'inserted_at',
-                'temperature', 'humidity', 'soil_moisture',
+                'id', 'reading_id', 'farm_id', 'recorded_at', 'inserted_at',
+                'temperature', 'humidity', 'soil_moisture', 'light_intensity',
                 'is_raining', 'rain_intensity',
                 'heat_stress_flag', 'irrigation_active',
                 'quality_score', 'sync_status',
